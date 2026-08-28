@@ -34,6 +34,7 @@ export const KpiCards: React.FC<KpiCardsProps> = ({
           ? `${Object.keys(scores[0]?.values || {}).length} dimensions`
           : 'Awaiting data',
       color: '#1a56c4',
+      icon: Activity,
     },
     {
       title: 'Detected Anomalies',
@@ -43,6 +44,7 @@ export const KpiCards: React.FC<KpiCardsProps> = ({
           ? `${highSeverity}H · ${medSeverity}M · ${lowSeverity}L`
           : '0 incidents detected',
       color: totalAnomalies > 0 ? '#d32f2f' : '#2e7d32',
+      icon: AlertCircle,
     },
     {
       title: 'Anomaly Density',
@@ -68,9 +70,10 @@ export const KpiCards: React.FC<KpiCardsProps> = ({
 
   return (
     <div
+      className="grid grid-cols-2 lg:grid-cols-4 gap-3"
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(1rem, 1fr))',
+        gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
         gap: 12,
       }}
     >
@@ -81,19 +84,24 @@ export const KpiCards: React.FC<KpiCardsProps> = ({
             key={idx}
             className="panel"
             style={{
-              padding: '.7rem',
+              padding: '12px 14px',
               display: 'flex',
               alignItems: 'flex-start',
               justifyContent: 'space-between',
+              minWidth: 0,
             }}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, overflow: 'hidden' }}>
               <span
                 style={{
-                  fontSize: '0.7rem',
-                  fontWeight: 500,
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
                   textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
                   color: '#64748b',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
+                  overflow: 'hidden',
                 }}
               >
                 {card.title}
@@ -101,14 +109,29 @@ export const KpiCards: React.FC<KpiCardsProps> = ({
               <span
                 className="tabular-nums"
                 style={{
-                  fontSize: '1rem',
-                  fontWeight: 500,
+                  fontSize: '1.125rem',
+                  fontWeight: 700,
                   color: card.color,
+                  lineHeight: 1.2,
                 }}
               >
                 {card.value}
               </span>
+              <span
+                style={{
+                  fontSize: '0.6875rem',
+                  color: '#94a3b8',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
+                  overflow: 'hidden',
+                }}
+              >
+                {card.sub}
+              </span>
             </div>
+            {Icon && (
+              <Icon size={18} style={{ color: card.color, opacity: 0.8, flexShrink: 0, marginTop: 2 }} />
+            )}
           </div>
         );
       })}

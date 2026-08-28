@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import {
   AnalysisConfig,
@@ -22,12 +22,13 @@ import {
   useChartData,
   useChartSync,
 } from '@/features/visualization';
-import { AlertCircle, Radio } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function DashboardPage() {
   const store = useAnalysisStore();
   const chartData = useChartData();
   const { registerChart, unregisterChart, onDataZoom } = useChartSync();
+  const [showMoreViews, setShowMoreViews] = useState(false);
 
   useAnalysisSSE({
     analysisId: store.activeAnalysisId,
@@ -136,9 +137,9 @@ export default function DashboardPage() {
               color: '#1e3a8a',
             }}
           >
-              <div style={{ fontSize: '0.75rem', fontWeight: 700 }}>
-                Analysis in Progress
-              </div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700 }}>
+              Analysis in Progress
+            </div>
           </div>
         )}
 
@@ -198,9 +199,34 @@ export default function DashboardPage() {
               onDataZoom={onDataZoom}
             />
 
-            <HeatmapChart data={chartData} columns={store.activeColumns} />
+            {/* Show more views toggle */}
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '2px 0' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowMoreViews((prev) => !prev)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 16px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: '#334155',
+                  backgroundColor: '#ffffff',
+                }}
+              >
+                {showMoreViews ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                {showMoreViews ? 'Hide additional views' : 'Show more views'}
+              </button>
+            </div>
 
-            <SeverityCharts anomalies={store.anomalies} columns={store.activeColumns} />
+            {showMoreViews && (
+              <>
+                <HeatmapChart data={chartData} columns={store.activeColumns} />
+                <SeverityCharts anomalies={store.anomalies} columns={store.activeColumns} />
+              </>
+            )}
 
             <AnomaliesTable anomalies={store.anomalies} />
           </div>

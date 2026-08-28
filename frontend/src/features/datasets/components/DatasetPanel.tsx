@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Database, RotateCcw } from 'lucide-react';
+import { Database, Info, RotateCcw } from 'lucide-react';
 import { Panel } from '@/shared/ui';
 import { DATASET_PRESETS } from '@/lib/config';
 import { useAnalysisStore } from '@/features/analysis/hooks/useAnalysis';
@@ -77,6 +77,27 @@ export const DatasetPanel: React.FC = () => {
   return (
     <Panel title="Dataset" icon={<Database size={15} />} style={{ overflow: 'visible' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* First-run workflow hint */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 8,
+            padding: '8px 10px',
+            backgroundColor: '#f0fdfa',
+            border: '1px solid #ccfbf1',
+            borderRadius: 6,
+            color: '#115e59',
+            fontSize: '0.6875rem',
+            lineHeight: 1.4,
+          }}
+        >
+          <Info size={14} style={{ flexShrink: 0, marginTop: 1, color: '#0d9488' }} />
+          <div>
+            <strong>First-run hint:</strong> Select a preset or upload CSV &rarr; click <em>1. Load Series &amp; Scores</em> &rarr; run detection.
+          </div>
+        </div>
+
         <div
           style={{
             display: 'flex',
