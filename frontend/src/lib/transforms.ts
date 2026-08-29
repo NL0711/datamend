@@ -189,7 +189,8 @@ export function generateHeatmapGrid(
 
   for (let i = 0; i < scores.length; i += step) {
     const slice = scores.slice(i, i + step);
-    const rep = slice[Math.floor(slice.length / 2)] || slice[0];
+    const anomalyRep = slice.find((s) => s.isAnomaly);
+    const rep = anomalyRep || slice[Math.floor(slice.length / 2)] || slice[0];
     const maxScoreInBucket = Math.max(...slice.map((s) => s.score));
     const isAnomalyInBucket = slice.some((s) => s.isAnomaly);
     const bucketSeverity = slice.find((s) => s.anomalySeverity === 'HIGH')?.anomalySeverity ||
