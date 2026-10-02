@@ -18,15 +18,12 @@ export const NetworkMap: React.FC<NetworkMapProps> = ({
   const [hoveredStation, setHoveredStation] = useState<Station | null>(null);
 
   const defaultCoordinates: Record<string, { x: number; y: number }> = {
-    'AWS-001': { x: 180, y: 110 },
-    'AWS-002': { x: 320, y: 80 },
-    'AWS-003': { x: 420, y: 150 },
-    'AWS-004': { x: 260, y: 180 },
-    'PUNE-EXT-001': { x: 200, y: 130 },
-    'DELHI-EXT-001': { x: 280, y: 60 },
-    'LONDON-EXT-001': { x: 120, y: 70 },
-    'TOKYO-EXT-001': { x: 460, y: 100 },
-    'DV-EXT-001': { x: 80, y: 140 },
+    'KTLX': { x: 250, y: 120 },
+    'KOKX': { x: 380, y: 90 },
+    'KAMX': { x: 360, y: 160 },
+    'KATX': { x: 120, y: 70 },
+    'KFWS': { x: 240, y: 140 },
+    'KDMX': { x: 270, y: 100 },
   };
 
   const getStationPosition = (st: Station, index: number) => {

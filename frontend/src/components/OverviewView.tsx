@@ -79,11 +79,11 @@ export function OverviewView({
   }, []);
 
   const selectedStation = stations.find((s) => s.station_id === selectedStationId) || stations[0] || {
-    station_id: 'PUNE-EXT-001',
-    name: 'Pune Weather Observatory',
-    latitude: 18.5204,
-    longitude: 73.8567,
-    elevation: 560.0,
+    station_id: 'KTLX',
+    name: 'NOAA NEXRAD Radar KTLX (Oklahoma City, OK)',
+    latitude: 35.3331,
+    longitude: -97.2778,
+    elevation: 370.0,
     health_score: 98,
     health_status: 'EXCELLENT',
     status: 'ACTIVE',

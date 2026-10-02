@@ -122,24 +122,18 @@ export function EventDetailView({
       return `${found.name} [${id}]`;
     }
     switch (id) {
-      case 'AWS-001':
-        return 'Central Observatory (New Delhi) [AWS-001]';
-      case 'AWS-002':
-        return 'Coastal Marine Tower (Mumbai) [AWS-002]';
-      case 'AWS-003':
-        return 'Highland Station (Dharamshala) [AWS-003]';
-      case 'AWS-004':
-        return 'Arid Outpost (Jaisalmer) [AWS-004]';
-      case 'PUNE-EXT-001':
-        return 'Pune Observatory [PUNE-EXT-001]';
-      case 'DELHI-EXT-001':
-        return 'Safdarjung Synoptic Site [DELHI-EXT-001]';
-      case 'LONDON-EXT-001':
-        return 'London Heathrow Station [LONDON-EXT-001]';
-      case 'TOKYO-EXT-001':
-        return 'Tokyo JMA Observation Station [TOKYO-EXT-001]';
-      case 'DV-EXT-001':
-        return 'Death Valley Furnace Creek [DV-EXT-001]';
+      case 'KTLX':
+        return 'NOAA NEXRAD Radar (Oklahoma City) [KTLX]';
+      case 'KOKX':
+        return 'NOAA NEXRAD Radar (New York City) [KOKX]';
+      case 'KAMX':
+        return 'NOAA NEXRAD Radar (Miami) [KAMX]';
+      case 'KATX':
+        return 'NOAA NEXRAD Radar (Seattle) [KATX]';
+      case 'KFWS':
+        return 'NOAA NEXRAD Radar (Dallas-Fort Worth) [KFWS]';
+      case 'KDMX':
+        return 'NOAA NEXRAD Radar (Des Moines) [KDMX]';
       default:
         return id;
     }
@@ -149,24 +143,18 @@ export function EventDetailView({
     const found = stations.find((s) => s.station_id === id);
     if (found) return found.name.split('(')[0].trim();
     switch (id) {
-      case 'AWS-001':
-        return 'New Delhi';
-      case 'AWS-002':
-        return 'Mumbai';
-      case 'AWS-003':
-        return 'Dharamshala';
-      case 'AWS-004':
-        return 'Jaisalmer';
-      case 'PUNE-EXT-001':
-        return 'Pune';
-      case 'DELHI-EXT-001':
-        return 'New Delhi';
-      case 'LONDON-EXT-001':
-        return 'London';
-      case 'TOKYO-EXT-001':
-        return 'Tokyo';
-      case 'DV-EXT-001':
-        return 'Death Valley';
+      case 'KTLX':
+        return 'Oklahoma City';
+      case 'KOKX':
+        return 'New York City';
+      case 'KAMX':
+        return 'Miami';
+      case 'KATX':
+        return 'Seattle';
+      case 'KFWS':
+        return 'Dallas-Fort Worth';
+      case 'KDMX':
+        return 'Des Moines';
       default:
         return id;
     }

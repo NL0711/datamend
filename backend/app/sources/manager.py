@@ -54,26 +54,6 @@ class DataSourceManager:
             csv_path=getattr(settings, "NOAA_ISD_DATA_PATH", "data/noaa_aws_network.csv"),
             tick_interval_seconds=1.5,
         )
-        sim_source = SimulatedDataSource(interval_seconds=1.5)
-        ext_source = ExternalWeatherDataSource(
-            latitude=settings.EXTERNAL_WEATHER_LATITUDE,
-            longitude=settings.EXTERNAL_WEATHER_LONGITUDE,
-            station_id=settings.EXTERNAL_WEATHER_STATION_ID,
-            station_name=settings.EXTERNAL_WEATHER_STATION_NAME,
-            poll_interval_seconds=settings.EXTERNAL_API_POLL_INTERVAL_SECONDS,
-            timeout_seconds=settings.EXTERNAL_API_TIMEOUT_SECONDS,
-        )
-        phy_source = PhysicalAWSDataSource(
-            broker_host=settings.MQTT_BROKER_HOST,
-            broker_port=settings.MQTT_BROKER_PORT,
-            username=settings.MQTT_USERNAME,
-            password=settings.MQTT_PASSWORD,
-            use_tls=settings.MQTT_TLS,
-            telemetry_topic=settings.MQTT_TELEMETRY_TOPIC,
-            heartbeat_topic=settings.MQTT_HEARTBEAT_TOPIC,
-            timeout_seconds=settings.PHYSICAL_AWS_TIMEOUT_SECONDS,
-            default_station_id=settings.PHYSICAL_DEFAULT_STATION_ID,
-        )
 
         replay_source = HistoricalReplayDataSource(
             csv_path=settings.HISTORICAL_DATA_PATH,
@@ -82,15 +62,9 @@ class DataSourceManager:
 
         # Register callbacks to route normalized packets into ingestion pipeline
         noaa_source.subscribe(self._on_telemetry_received)
-        sim_source.subscribe(self._on_telemetry_received)
-        ext_source.subscribe(self._on_telemetry_received)
-        phy_source.subscribe(self._on_telemetry_received)
         replay_source.subscribe(self._on_telemetry_received)
 
         self._sources[DataSourceType.NOAA_ISD] = noaa_source
-        self._sources[DataSourceType.SIMULATED] = sim_source
-        self._sources[DataSourceType.EXTERNAL_API] = ext_source
-        self._sources[DataSourceType.PHYSICAL_AWS] = phy_source
         self._sources[DataSourceType.HISTORICAL_REPLAY] = replay_source
 
         # Set default active source from configuration (defaults to NOAA_ISD)

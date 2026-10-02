@@ -156,17 +156,13 @@ async def init_db() -> None:
         from sqlalchemy import select
         
         seed_stations = [
-            # Standard Regional Cluster
-            {"station_id": "AWS-001", "name": "Central Meteorological Observatory (New Delhi)", "latitude": 28.6139, "longitude": 77.2090, "elevation": 216.0, "status": "ACTIVE"},
-            {"station_id": "AWS-002", "name": "Coastal Marine Weather Tower (Mumbai)", "latitude": 18.9220, "longitude": 72.8347, "elevation": 14.0, "status": "ACTIVE"},
-            {"station_id": "AWS-003", "name": "Plateau Highland Station (Dharamshala)", "latitude": 32.2190, "longitude": 76.3234, "elevation": 1457.0, "status": "ACTIVE"},
-            {"station_id": "AWS-004", "name": "Arid Subtropical Outpost (Jaisalmer)", "latitude": 26.9124, "longitude": 70.9022, "elevation": 225.0, "status": "ACTIVE"},
-            # Global & Regional Synoptic Reference Stations
-            {"station_id": "PUNE-EXT-001", "name": "Pune Weather Observatory", "latitude": 18.5204, "longitude": 73.8567, "elevation": 560.0, "status": "ACTIVE"},
-            {"station_id": "DELHI-EXT-001", "name": "New Delhi Safdarjung Synoptic Site", "latitude": 28.6139, "longitude": 77.2090, "elevation": 216.0, "status": "ACTIVE"},
-            {"station_id": "LONDON-EXT-001", "name": "London Heathrow Synoptic Station", "latitude": 51.5074, "longitude": -0.1278, "elevation": 35.0, "status": "ACTIVE"},
-            {"station_id": "TOKYO-EXT-001", "name": "Tokyo JMA Observation Station", "latitude": 35.6762, "longitude": 139.6503, "elevation": 40.0, "status": "ACTIVE"},
-            {"station_id": "DV-EXT-001", "name": "Death Valley Furnace Creek Station", "latitude": 36.5323, "longitude": -116.9325, "elevation": -86.0, "status": "ACTIVE"},
+            # NOAA NEXRAD Doppler Radar Surface Network (AWS Open Data)
+            {"station_id": "KTLX", "name": "NOAA NEXRAD Radar KTLX (Oklahoma City, OK)", "latitude": 35.3331, "longitude": -97.2778, "elevation": 370.0, "status": "ACTIVE"},
+            {"station_id": "KOKX", "name": "NOAA NEXRAD Radar KOKX (New York / Upton, NY)", "latitude": 40.8656, "longitude": -72.8628, "elevation": 20.0, "status": "ACTIVE"},
+            {"station_id": "KAMX", "name": "NOAA NEXRAD Radar KAMX (Miami, FL)", "latitude": 25.6111, "longitude": -80.4128, "elevation": 4.0, "status": "ACTIVE"},
+            {"station_id": "KATX", "name": "NOAA NEXRAD Radar KATX (Seattle, WA)", "latitude": 48.1947, "longitude": -122.4944, "elevation": 151.0, "status": "ACTIVE"},
+            {"station_id": "KFWS", "name": "NOAA NEXRAD Radar KFWS (Dallas-Fort Worth, TX)", "latitude": 32.5731, "longitude": -97.3031, "elevation": 207.0, "status": "ACTIVE"},
+            {"station_id": "KDMX", "name": "NOAA NEXRAD Radar KDMX (Des Moines, IA)", "latitude": 41.7311, "longitude": -93.7228, "elevation": 299.0, "status": "ACTIVE"},
         ]
 
         for s_data in seed_stations:

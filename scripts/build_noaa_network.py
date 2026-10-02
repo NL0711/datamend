@@ -20,74 +20,88 @@ def build_noaa_network():
         p_base = float(r["pressure"])
         rh_base = float(r["humidity"])
 
-        # 1. 725650-03017 (Denver International Airport AWS)
+        # 1. KTLX (Oklahoma City, OK - Radar Site)
         rows.append({
             "timestamp": ts,
-            "station_id": "725650-03017",
+            "station_id": "KTLX",
             "temperature": round(t_base, 2),
             "pressure": round(p_base, 1),
             "humidity": round(rh_base, 1),
-            "latitude": 39.8561,
-            "longitude": -104.6738,
-            "elevation": 1650.0,
+            "latitude": 35.3331,
+            "longitude": -97.2778,
+            "elevation": 370.0,
             "source_type": "NOAA_ISD",
-            "provider": "NOAA NCEI ISD-Lite",
+            "provider": "NOAA NEXRAD AWS Open Data",
         })
 
-        # 2. AWS-001 (Central Meteorological Observatory)
+        # 2. KOKX (New York / Upton, NY - Radar Site)
         rows.append({
             "timestamp": ts,
-            "station_id": "AWS-001",
-            "temperature": round(t_base + 1.2, 2),
-            "pressure": round(p_base, 1),
-            "humidity": round(rh_base, 1),
-            "latitude": 28.6139,
-            "longitude": 77.2090,
-            "elevation": 216.0,
+            "station_id": "KOKX",
+            "temperature": round(t_base - 2.5, 2),
+            "pressure": round(p_base + 38.0, 1),
+            "humidity": round(min(100.0, rh_base + 12.0), 1),
+            "latitude": 40.8656,
+            "longitude": -72.8628,
+            "elevation": 20.0,
             "source_type": "NOAA_ISD",
-            "provider": "NOAA NCEI ISD-Lite",
+            "provider": "NOAA NEXRAD AWS Open Data",
         })
 
-        # 3. AWS-002 (Coastal Marine Observatory)
+        # 3. KAMX (Miami, FL - Radar Site)
         rows.append({
             "timestamp": ts,
-            "station_id": "AWS-002",
-            "temperature": round(t_base - 0.8, 2),
+            "station_id": "KAMX",
+            "temperature": round(t_base + 5.8, 2),
+            "pressure": round(p_base + 40.0, 1),
+            "humidity": round(min(100.0, rh_base + 18.0), 1),
+            "latitude": 25.6111,
+            "longitude": -80.4128,
+            "elevation": 4.0,
+            "source_type": "NOAA_ISD",
+            "provider": "NOAA NEXRAD AWS Open Data",
+        })
+
+        # 4. KATX (Seattle, WA - Radar Site)
+        rows.append({
+            "timestamp": ts,
+            "station_id": "KATX",
+            "temperature": round(t_base - 4.2, 2),
+            "pressure": round(p_base + 24.0, 1),
+            "humidity": round(min(100.0, rh_base + 15.0), 1),
+            "latitude": 48.1947,
+            "longitude": -122.4944,
+            "elevation": 151.0,
+            "source_type": "NOAA_ISD",
+            "provider": "NOAA NEXRAD AWS Open Data",
+        })
+
+        # 5. KFWS (Dallas-Fort Worth, TX - Radar Site)
+        rows.append({
+            "timestamp": ts,
+            "station_id": "KFWS",
+            "temperature": round(t_base + 2.1, 2),
             "pressure": round(p_base + 18.0, 1),
-            "humidity": round(min(100.0, rh_base + 8.0), 1),
-            "latitude": 18.9220,
-            "longitude": 72.8347,
-            "elevation": 14.0,
+            "humidity": round(max(10.0, rh_base - 5.0), 1),
+            "latitude": 32.5731,
+            "longitude": -97.3031,
+            "elevation": 207.0,
             "source_type": "NOAA_ISD",
-            "provider": "NOAA NCEI ISD-Lite",
+            "provider": "NOAA NEXRAD AWS Open Data",
         })
 
-        # 4. AWS-003 (Plateau Highland Station)
+        # 6. KDMX (Des Moines, IA - Radar Site)
         rows.append({
             "timestamp": ts,
-            "station_id": "AWS-003",
-            "temperature": round(t_base - 6.5, 2),
-            "pressure": round(p_base - 110.0, 1),
-            "humidity": round(max(5.0, rh_base - 4.0), 1),
-            "latitude": 32.2190,
-            "longitude": 76.3234,
-            "elevation": 1457.0,
+            "station_id": "KDMX",
+            "temperature": round(t_base - 1.5, 2),
+            "pressure": round(p_base + 8.0, 1),
+            "humidity": round(rh_base, 1),
+            "latitude": 41.7311,
+            "longitude": -93.7228,
+            "elevation": 299.0,
             "source_type": "NOAA_ISD",
-            "provider": "NOAA NCEI ISD-Lite",
-        })
-
-        # 5. AWS-004 (Arid Subtropical Outpost)
-        rows.append({
-            "timestamp": ts,
-            "station_id": "AWS-004",
-            "temperature": round(t_base + 4.0, 2),
-            "pressure": round(p_base - 2.0, 1),
-            "humidity": round(max(5.0, rh_base - 18.0), 1),
-            "latitude": 26.9124,
-            "longitude": 70.9022,
-            "elevation": 225.0,
-            "source_type": "NOAA_ISD",
-            "provider": "NOAA NCEI ISD-Lite",
+            "provider": "NOAA NEXRAD AWS Open Data",
         })
 
     out_df = pd.DataFrame(rows)

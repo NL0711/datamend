@@ -16,7 +16,7 @@ import { StatusBadge } from '../design-system/components/StatusBadge';
 export function SensorHealthView() {
   const [fleetHealth, setFleetHealth] = useState<FleetHealthSummary | null>(null);
   const [stations, setStations] = useState<Station[]>([]);
-  const [selectedStationId, setSelectedStationId] = useState<string>('AWS-001');
+  const [selectedStationId, setSelectedStationId] = useState<string>('KTLX');
   const [stationHealth, setStationHealth] = useState<StationHealthDetail | null>(null);
 
   const loadData = async () => {

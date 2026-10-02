@@ -165,7 +165,7 @@ export const SettingsCenter: React.FC = () => {
                   </div>
 
                   <div className="space-y-2.5">
-                    {/* NOAA ISD Surface AWS (AWS Open Data) */}
+                    {/* NOAA NEXRAD Radar & Surface AWS (AWS Open Data) */}
                     <div
                       onClick={() => changeSource('NOAA_ISD')}
                       className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
@@ -181,7 +181,7 @@ export const SettingsCenter: React.FC = () => {
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-slate-900 font-mono">NOAA ISD Surface AWS (AWS Open Data)</span>
+                              <span className="text-xs font-bold text-slate-900 font-mono">NOAA NEXRAD Radar & Surface Network (AWS Open Data)</span>
                               {activeSource === 'NOAA_ISD' && (
                                 <span className="text-[10px] font-mono px-2 py-0.2 bg-cyan-500/20 text-cyan-700 border border-cyan-500/40 rounded font-bold">
                                   PRIMARY
@@ -189,121 +189,13 @@ export const SettingsCenter: React.FC = () => {
                               )}
                             </div>
                             <p className="text-[11px] text-slate-500 mt-0.5">
-                              Real in-situ surface weather station observations archived on AWS Open Data (NOAA NCEI ISD)
+                              Real Doppler radar and surface meteorological telemetry archived on AWS Open Data (NOAA NEXRAD / ISD)
                             </p>
                           </div>
                         </div>
                         <StatusBadge
                           label={activeSource === 'NOAA_ISD' ? 'ACTIVE STREAM' : 'AVAILABLE'}
                           variant={activeSource === 'NOAA_ISD' ? 'nominal' : 'neutral'}
-                          size="sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Simulated AWS */}
-                    <div
-                      onClick={() => changeSource('SIMULATED')}
-                      className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                        activeSource === 'SIMULATED'
-                          ? 'bg-[#FFFFFF] border-amber-500/60 ring-1 ring-amber-500/40 shadow-lg'
-                          : 'bg-[#F4F6FA] border-[#D3DCE7] hover:border-slate-500'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <div className="p-1.5 rounded-lg bg-[#EDF1F7] border border-amber-500/40">
-                            {getSourceIcon('SIMULATED')}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-slate-900 font-mono">Simulated AWS Engine</span>
-                              {activeSource === 'SIMULATED' && (
-                                <span className="text-[10px] font-mono px-2 py-0.2 bg-amber-500/20 text-amber-700 border border-amber-500/40 rounded font-bold">
-                                  ACTIVE
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[11px] text-slate-500 mt-0.5">
-                              Deterministic diurnal solar generator with WMO-compliant boundary physics
-                            </p>
-                          </div>
-                        </div>
-                        <StatusBadge
-                          label={activeSource === 'SIMULATED' ? 'RUNNING' : 'STANDBY'}
-                          variant={activeSource === 'SIMULATED' ? 'warning' : 'neutral'}
-                          size="sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Open-Meteo Live Feed */}
-                    <div
-                      onClick={() => changeSource('EXTERNAL_API')}
-                      className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                        activeSource === 'EXTERNAL_API'
-                          ? 'bg-[#FFFFFF] border-sky-400 ring-1 ring-sky-400/40 shadow-lg'
-                          : 'bg-[#F4F6FA] border-[#D3DCE7] hover:border-slate-500'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <div className="p-1.5 rounded-lg bg-[#EDF1F7] border border-sky-500/40">
-                            {getSourceIcon('EXTERNAL_API')}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-slate-900 font-mono">Open-Meteo Live Feed</span>
-                              {activeSource === 'EXTERNAL_API' && (
-                                <span className="text-[10px] font-mono px-2 py-0.2 bg-sky-500/20 text-sky-700 border border-sky-500/40 rounded font-bold">
-                                  ACTIVE
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[11px] text-slate-500 mt-0.5">
-                              Live surface synoptic weather observation queried from global atmospheric reanalysis
-                            </p>
-                          </div>
-                        </div>
-                        <StatusBadge
-                          label={activeSource === 'EXTERNAL_API' ? 'LIVE SYNC' : 'READY'}
-                          variant={activeSource === 'EXTERNAL_API' ? 'nominal' : 'neutral'}
-                          size="sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Physical ESP32 Hardware */}
-                    <div
-                      onClick={() => changeSource('PHYSICAL_AWS')}
-                      className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                        activeSource === 'PHYSICAL_AWS'
-                          ? 'bg-[#FFFFFF] border-emerald-400 ring-1 ring-emerald-400/40 shadow-lg'
-                          : 'bg-[#F4F6FA] border-[#D3DCE7] hover:border-slate-500'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <div className="p-1.5 rounded-lg bg-[#EDF1F7] border border-emerald-500/40">
-                            {getSourceIcon('PHYSICAL_AWS')}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-slate-900 font-mono">Physical ESP32 Transceiver</span>
-                              {activeSource === 'PHYSICAL_AWS' && (
-                                <span className="text-[10px] font-mono px-2 py-0.2 bg-emerald-500/20 text-emerald-700 border border-emerald-500/40 rounded font-bold">
-                                  ACTIVE
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[11px] text-slate-500 mt-0.5">
-                              Hardware serial transceiver & virtual packet ingestion socket (:8899)
-                            </p>
-                          </div>
-                        </div>
-                        <StatusBadge
-                          label={activeSource === 'PHYSICAL_AWS' ? 'CONNECTED' : 'STANDBY'}
-                          variant={activeSource === 'PHYSICAL_AWS' ? 'nominal' : 'neutral'}
                           size="sm"
                         />
                       </div>

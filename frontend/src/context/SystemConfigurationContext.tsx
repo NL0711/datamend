@@ -26,7 +26,7 @@ const DEFAULT_PREFERENCES: OperatorPreferences = {
   displayDensity: 'comfortable',
   reducedMotion: false,
   defaultView: 'overview',
-  defaultStationId: '725650-03017',
+  defaultStationId: 'KTLX',
   defaultDataSource: 'NOAA_ISD',
   timezone: 'UTC',
 };
@@ -79,8 +79,8 @@ export const SystemConfigurationProvider: React.FC<{ children: React.ReactNode }
   });
 
   const [activeSource, setActiveSource] = useState<DataSourceType>('NOAA_ISD');
-  const [selectedCityId, setSelectedCityId] = useState<string>('denver');
-  const [selectedStationId, setSelectedStationId] = useState<string>('725650-03017');
+  const [selectedCityId, setSelectedCityId] = useState<string>('oklahoma_city');
+  const [selectedStationId, setSelectedStationId] = useState<string>('KTLX');
   const [activeSourceStatus, setActiveSourceStatus] = useState<DataSourceStatus | null>(null);
   const [allSources, setAllSources] = useState<DataSourceStatus[]>([]);
   

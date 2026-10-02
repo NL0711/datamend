@@ -108,24 +108,18 @@ export function ExplainabilityViewer() {
     const found = stations.find((s) => s.station_id === id);
     if (found) return found.name.split('(')[0].trim();
     switch (id) {
-      case 'AWS-001':
-        return 'New Delhi';
-      case 'AWS-002':
-        return 'Mumbai';
-      case 'AWS-003':
-        return 'Dharamshala';
-      case 'AWS-004':
-        return 'Jaisalmer';
-      case 'PUNE-EXT-001':
-        return 'Pune';
-      case 'DELHI-EXT-001':
-        return 'New Delhi';
-      case 'LONDON-EXT-001':
-        return 'London';
-      case 'TOKYO-EXT-001':
-        return 'Tokyo';
-      case 'DV-EXT-001':
-        return 'Death Valley';
+      case 'KTLX':
+        return 'Oklahoma City';
+      case 'KOKX':
+        return 'New York City';
+      case 'KAMX':
+        return 'Miami';
+      case 'KATX':
+        return 'Seattle';
+      case 'KFWS':
+        return 'Dallas-Fort Worth';
+      case 'KDMX':
+        return 'Des Moines';
       default:
         return id;
     }

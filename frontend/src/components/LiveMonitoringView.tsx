@@ -153,7 +153,7 @@ export function LiveMonitoringView({
     if (lastItem) {
       return {
         timestamp: lastItem.timestamp,
-        station_id: selectedStationId || 'AWS-001',
+        station_id: selectedStationId || 'KTLX',
         temperature: lastItem.temp,
         pressure: lastItem.press,
         humidity: lastItem.hum,

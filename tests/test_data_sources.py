@@ -266,7 +266,7 @@ async def test_noaa_isd_data_source_lifecycle():
 
     first = received[0]
     assert first.source_type == DataSourceType.NOAA_ISD
-    assert "NOAA NCEI ISD" in first.provider
+    assert "NOAA" in first.provider and "AWS" in first.provider
     assert -90.0 <= first.temperature <= 60.0
     assert 300.0 <= first.pressure <= 1100.0
     assert 0.0 <= first.humidity <= 100.0
@@ -280,25 +280,22 @@ async def test_data_source_manager_switching():
     manager = DataSourceManager()
     manager.initialize()
 
-    # Verify all 5 sources registered
+    # Verify registered sources
     sources_resp = await manager.list_sources()
-    assert len(sources_resp.sources) == 5
+    assert len(sources_resp.sources) == 2
     types = [s.source_type for s in sources_resp.sources]
     assert DataSourceType.NOAA_ISD in types
-    assert DataSourceType.SIMULATED in types
-    assert DataSourceType.EXTERNAL_API in types
-    assert DataSourceType.PHYSICAL_AWS in types
     assert DataSourceType.HISTORICAL_REPLAY in types
 
-    # Switch to EXTERNAL_API
-    with patch("backend.app.sources.external_source.ExternalWeatherDataSource.start", new=AsyncMock()), \
+    # Switch to HISTORICAL_REPLAY
+    with patch("backend.app.sources.replay_source.HistoricalReplayDataSource.start", new=AsyncMock()), \
          patch("backend.app.api.websocket.ConnectionManager.broadcast_alert", new=AsyncMock()):
-        req = DataSourceSelectRequest(source_type=DataSourceType.EXTERNAL_API)
+        req = DataSourceSelectRequest(source_type=DataSourceType.HISTORICAL_REPLAY)
         status = await manager.select_source(req)
-        assert status.source_type == DataSourceType.EXTERNAL_API
-        assert manager._active_source_type == DataSourceType.EXTERNAL_API
+        assert status.source_type == DataSourceType.HISTORICAL_REPLAY
+        assert manager._active_source_type == DataSourceType.HISTORICAL_REPLAY
 
-    # Switch to NOAA_ISD
+    # Switch back to NOAA_ISD
     with patch("backend.app.sources.noaa_source.NoaaISDDataSource.start", new=AsyncMock()), \
          patch("backend.app.api.websocket.ConnectionManager.broadcast_alert", new=AsyncMock()):
         req = DataSourceSelectRequest(source_type=DataSourceType.NOAA_ISD)
@@ -306,11 +303,4 @@ async def test_data_source_manager_switching():
         assert status.source_type == DataSourceType.NOAA_ISD
         assert manager._active_source_type == DataSourceType.NOAA_ISD
 
-    # Switch back to SIMULATED
-    with patch("backend.app.sources.simulated_source.SimulatedDataSource.start", new=AsyncMock()), \
-         patch("backend.app.api.websocket.ConnectionManager.broadcast_alert", new=AsyncMock()):
-        req = DataSourceSelectRequest(source_type=DataSourceType.SIMULATED)
-        status = await manager.select_source(req)
-        assert status.source_type == DataSourceType.SIMULATED
-        assert manager._active_source_type == DataSourceType.SIMULATED
 
