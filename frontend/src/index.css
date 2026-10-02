@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --sg-bg-base: #0F1726;
+    --sg-bg-surface-1: #152033;
+    --sg-bg-surface-2: #1B2A44;
+    --sg-bg-surface-3: #233656;
+    --sg-bg-inset: #0C1320;
+    --sg-border: rgba(255, 255, 255, 0.08);
+    --sg-border-strong: #263B5E;
+  }
+
+  body {
+    margin: 0;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: var(--sg-bg-base);
+    color: #F8FAFC;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+}
+
+/* Precision Scientific Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0F1726;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #263B5E;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3B5480;
+}
