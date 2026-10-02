@@ -525,10 +525,44 @@ async def stop_simulation():
 
 
 @router.post("/simulate/inject", response_model=AnomalyInjectResponse, summary="Inject on-the-fly anomaly into simulation")
+@router.post("/simulation/inject", response_model=AnomalyInjectResponse, summary="Inject on-the-fly anomaly into simulation (alias)")
 async def inject_anomaly(
     req: AnomalyInjectRequest,
 ):
-    return await simulation_service.inject_anomaly(req)
+    inj_resp = await simulation_service.inject_anomaly(req)
+
+    # Immediately synthesize a disturbed observation packet so UI charts, gauges, and alerts respond instantly
+    target_station = req.station_id if req.station_id and req.station_id != "ALL" else "KTLX"
+    try:
+        from backend.app.services.ingestion_service import ingestion_service
+        from backend.app.db.database import get_db_context
+        from backend.app.db.repositories import ObservationRepository
+
+        baseline = {
+            "station_id": target_station,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "temperature": 22.0,
+            "pressure": 1013.25,
+            "humidity": 50.0,
+        }
+        async with get_db_context() as db:
+            obs_repo = ObservationRepository(db)
+            latest = await obs_repo.get_latest(target_station)
+            if latest:
+                baseline["temperature"] = latest.temperature or 22.0
+                baseline["pressure"] = latest.pressure or 1013.25
+                baseline["humidity"] = latest.humidity or 50.0
+
+        disturbed = simulation_service.apply_injection(baseline, target_station)
+        await ingestion_service.ingest_observation(
+            obs_data=disturbed,
+            save_db=True,
+            broadcast=True,
+        )
+    except Exception as e:
+        logger.warning("Could not immediately trigger live observation for anomaly injection: %s", e)
+
+    return inj_resp
 
 
 @router.get("/simulate/status", response_model=SimulationStatusResponse, summary="Get current simulation status")

@@ -60,12 +60,23 @@ class DataSourceManager:
             replay_speed=settings.HISTORICAL_REPLAY_SPEED,
         )
 
+        external_source = ExternalWeatherDataSource(
+            latitude=settings.EXTERNAL_WEATHER_LATITUDE,
+            longitude=settings.EXTERNAL_WEATHER_LONGITUDE,
+            station_id=settings.EXTERNAL_WEATHER_STATION_ID,
+            station_name=settings.EXTERNAL_WEATHER_STATION_NAME,
+            poll_interval_seconds=settings.EXTERNAL_API_POLL_INTERVAL_SECONDS,
+            timeout_seconds=settings.EXTERNAL_API_TIMEOUT_SECONDS,
+        )
+
         # Register callbacks to route normalized packets into ingestion pipeline
         noaa_source.subscribe(self._on_telemetry_received)
         replay_source.subscribe(self._on_telemetry_received)
+        external_source.subscribe(self._on_telemetry_received)
 
         self._sources[DataSourceType.NOAA_ISD] = noaa_source
         self._sources[DataSourceType.HISTORICAL_REPLAY] = replay_source
+        self._sources[DataSourceType.EXTERNAL_API] = external_source
 
         # Set default active source from configuration (defaults to NOAA_ISD)
         try:
@@ -106,10 +117,12 @@ class DataSourceManager:
 
         self._last_forwarded_telemetry = telemetry
 
-        # Forward into existing ingestion service
+        # Forward into existing ingestion service with active disturbance injection support
         from backend.app.services.ingestion_service import ingestion_service
+        from backend.app.services.simulation_service import simulation_service
         try:
             obs_dict = telemetry.to_ml_input_dict()
+            obs_dict = simulation_service.apply_injection(obs_dict, telemetry.station_id)
             await ingestion_service.ingest_observation(
                 obs_data=obs_dict,
                 save_db=True,

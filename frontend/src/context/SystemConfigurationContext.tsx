@@ -177,6 +177,7 @@ export const SystemConfigurationProvider: React.FC<{ children: React.ReactNode }
 
   // Switch Location / Synoptic City Preset
   const changeCity = async (cityId: string) => {
+    if (activeSource !== 'EXTERNAL_API') return;
     const city = CITY_PRESETS.find((c) => c.id === cityId);
     if (!city) return;
 

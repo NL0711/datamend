@@ -4,11 +4,22 @@ import { AnomalyEvent, Station } from '../types';
 import { StatusBadge } from '../design-system/components/StatusBadge';
 import { EmptyState } from '../design-system/components/EmptyState';
 
-export function ExplainabilityViewer() {
+interface ExplainabilityViewerProps {
+  selectedStationId?: string;
+  onSelectStation?: (stationId: string) => void;
+}
+
+export function ExplainabilityViewer({ selectedStationId, onSelectStation }: ExplainabilityViewerProps = {}) {
   const [anomalies, setAnomalies] = useState<AnomalyEvent[]>([]);
   const [stations, setStations] = useState<Station[]>([]);
   const [selectedAnomalyId, setSelectedAnomalyId] = useState<number | null>(null);
-  const [filterStation, setFilterStation] = useState<string>('');
+  const [filterStation, setFilterStation] = useState<string>(selectedStationId || '');
+
+  useEffect(() => {
+    if (selectedStationId) {
+      setFilterStation(selectedStationId);
+    }
+  }, [selectedStationId]);
   const [filterSeverity, setFilterSeverity] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -135,11 +146,8 @@ export function ExplainabilityViewer() {
               
             </div>
             <div>
-              <h2 className="text-sm font-bold text-slate-900 uppercase font-mono tracking-wide flex items-center gap-2">
+              <h2 className="text-sm font-bold text-slate-900 uppercase font-mono tracking-wide">
                 Explainable AI (XAI) & TreeSHAP Attribution Engine
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/15 text-sky-700 border border-sky-500/30 font-semibold">
-                  FLEET-WIDE
-                </span>
               </h2>
               <p className="text-xs text-slate-600">
                 Transparent mathematical reasoning decomposing anomalies across physics rules, statistical density, and temporal autoencoders
@@ -148,9 +156,6 @@ export function ExplainabilityViewer() {
           </div>
 
           <div className="flex items-center gap-2 text-xs font-mono text-slate-600">
-            <span className="px-2.5 py-1 rounded bg-[#F4F6FA] border border-[#D3DCE7] text-slate-600">
-              Active Fleet: <strong className="text-sky-600">{filteredAnomalies.length}</strong> Events
-            </span>
             {(filterStation || filterSeverity || searchQuery) && (
               <button
                 onClick={() => {
@@ -175,12 +180,17 @@ export function ExplainabilityViewer() {
             
             <select
               value={filterStation}
-              onChange={(e) => setFilterStation(e.target.value)}
+              onChange={(e) => {
+                setFilterStation(e.target.value);
+                if (onSelectStation && e.target.value) {
+                  onSelectStation(e.target.value);
+                }
+              }}
               className="bg-transparent text-slate-700 w-full focus:outline-none font-semibold cursor-pointer"
             >
-              <option value="" className="bg-[#F4F6FA]">
-                All Stations (Fleet-Wide)
-              </option>
+                <option value="" className="bg-[#F4F6FA]">
+                  All Stations
+                </option>
               {stations.map((st) => (
                 <option key={st.station_id} value={st.station_id} className="bg-[#F4F6FA]">
                   {st.name} [{st.station_id}]

@@ -39,7 +39,7 @@ export function LiveMonitoringView({
   selectedStationId,
   onSelectStation,
   latestTelemetry,
-  historyBuffer: _historyBuffer,
+  historyBuffer,
   isStreaming,
   onToggleStreaming,
 }: LiveMonitoringViewProps) {
@@ -62,6 +62,32 @@ export function LiveMonitoringView({
     let isMounted = true;
     setIsLoadingHistory(true);
 
+    // 1. Immediately hydrate from in-memory historyBuffer for zero-flicker tab switches
+    const initialBufferedPoints: TelemetryPoint[] = historyBuffer
+      .filter((p) => !selectedStationId || p.station_id === selectedStationId)
+      .slice(-40)
+      .map((p, idx) => {
+        const t = new Date(p.timestamp || Date.now());
+        const temp = p.temperature ?? p.raw_values?.temperature ?? 25.0;
+        const press = p.pressure ?? p.raw_values?.pressure ?? 1013.2;
+        const hum = p.humidity ?? p.raw_values?.humidity ?? 55.0;
+        return {
+          step: idx,
+          time: t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
+          timestamp: p.timestamp || t.toISOString(),
+          temp: Number(temp.toFixed(2)),
+          press: Number(press.toFixed(1)),
+          hum: Number(hum.toFixed(1)),
+          score: Number(((p.anomaly_score ?? 0) * 100).toFixed(0)),
+          is_anomaly: Boolean(p.is_anomaly),
+        };
+      });
+
+    if (initialBufferedPoints.length > 0) {
+      setTimelineData(initialBufferedPoints);
+      lastProcessedTimeRef.current = initialBufferedPoints[initialBufferedPoints.length - 1].timestamp;
+    }
+
     fetchObservations({ station_id: selectedStationId || undefined, limit: 40 })
       .then((res) => {
         if (!isMounted) return;
@@ -75,32 +101,24 @@ export function LiveMonitoringView({
             step: idx,
             time: t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
             timestamp: obs.timestamp,
-            temp: Number(obs.temperature?.toFixed(2) ?? 25.0),
-            press: Number(obs.pressure?.toFixed(1) ?? 1013.2),
-            hum: Number(obs.humidity?.toFixed(1) ?? 55.0),
+            temp: Number(obs.temperature?.toFixed(2) ?? 0),
+            press: Number(obs.pressure?.toFixed(1) ?? 0),
+            hum: Number(obs.humidity?.toFixed(1) ?? 0),
             score: obs.validation_status === 'QC_FLAGGED' || obs.validation_status === 'ANOMALY' ? 85 : 0,
             is_anomaly: obs.validation_status === 'QC_FLAGGED' || obs.validation_status === 'ANOMALY',
           };
         });
 
         if (formatted.length > 0) {
-          setTimelineData(formatted);
-          lastProcessedTimeRef.current = formatted[formatted.length - 1].timestamp;
-        } else {
-          // If no historical records, populate with a baseline point
-          const now = new Date();
-          setTimelineData([
-            {
-              step: 0,
-              time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
-              timestamp: now.toISOString(),
-              temp: 28.5,
-              press: 980.2,
-              hum: 72.0,
-              score: 0,
-              is_anomaly: false,
-            },
-          ]);
+          const latestApiTime = new Date(formatted[formatted.length - 1].timestamp).getTime();
+          const newerBuffer = initialBufferedPoints.filter(
+            (bp) => new Date(bp.timestamp).getTime() > latestApiTime
+          );
+          const combined = [...formatted, ...newerBuffer].slice(-50).map((pt, idx) => ({ ...pt, step: idx }));
+          setTimelineData(combined);
+          lastProcessedTimeRef.current = combined[combined.length - 1].timestamp;
+        } else if (initialBufferedPoints.length === 0) {
+          setTimelineData([]);
         }
         setIsLoadingHistory(false);
       })
@@ -144,7 +162,7 @@ export function LiveMonitoringView({
     });
   }, [latestTelemetry, selectedStationId]);
 
-  // Current reading values
+  // Current reading values strictly matching selected station
   const current = useMemo(() => {
     if (latestTelemetry && (!selectedStationId || latestTelemetry.station_id === selectedStationId)) {
       return latestTelemetry;
@@ -194,11 +212,14 @@ export function LiveMonitoringView({
     return (b * alpha) / (a - alpha);
   };
 
-  const currentTemp = current?.temperature ?? current?.raw_values?.temperature ?? 24.5;
-  const currentHumidity = current?.humidity ?? current?.raw_values?.humidity ?? 58.0;
-  const currentPressure = current?.pressure ?? current?.raw_values?.pressure ?? 1012.3;
-  const dewPoint = calcDewPoint(currentTemp, currentHumidity);
-  const dewPointDepression = currentTemp - dewPoint;
+  const currentTemp = current?.temperature ?? current?.raw_values?.temperature ?? null;
+  const currentHumidity = current?.humidity ?? current?.raw_values?.humidity ?? null;
+  const currentPressure = current?.pressure ?? current?.raw_values?.pressure ?? null;
+  const dewPoint = (currentTemp != null && currentHumidity != null) ? calcDewPoint(currentTemp, currentHumidity) : null;
+  const dewPointDepression = (currentTemp != null && dewPoint != null) ? currentTemp - dewPoint : null;
+  const vaporPressure = (currentTemp != null && currentHumidity != null)
+    ? ((currentHumidity / 100) * 6.112 * Math.exp((17.67 * currentTemp) / (currentTemp + 243.5)))
+    : null;
 
   const getSeverityVariant = (severity?: string) => {
     switch (severity?.toUpperCase()) {
@@ -379,18 +400,22 @@ export function LiveMonitoringView({
 
           <div className="flex items-baseline justify-between">
             <span className="text-4xl font-bold font-mono text-slate-900 tracking-tight">
-              {currentTemp.toFixed(1)}
+              {currentTemp != null ? currentTemp.toFixed(1) : '--.-'}
               <span className="text-xl text-slate-500 ml-1 font-sans">°C</span>
             </span>
             <div className="text-right text-xs font-mono">
               <span className="text-slate-500 block text-[10px]">Dew Point</span>
-              <span className="text-emerald-600 font-bold">{dewPoint.toFixed(1)}°C</span>
+              <span className="text-emerald-600 font-bold">
+                {dewPoint != null ? `${dewPoint.toFixed(1)}°C` : '--.-°C'}
+              </span>
             </div>
           </div>
 
           <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs font-mono text-slate-500">
             <span>Dew Point Depression:</span>
-            <span className="text-slate-700">{dewPointDepression.toFixed(1)}°C</span>
+            <span className="text-slate-700">
+              {dewPointDepression != null ? `${dewPointDepression.toFixed(1)}°C` : '--.-°C'}
+            </span>
           </div>
         </div>
 
@@ -407,18 +432,22 @@ export function LiveMonitoringView({
 
           <div className="flex items-baseline justify-between">
             <span className="text-4xl font-bold font-mono text-slate-900 tracking-tight">
-              {currentPressure.toFixed(1)}
+              {currentPressure != null ? currentPressure.toFixed(1) : '----.-'}
               <span className="text-base text-slate-500 ml-1 font-sans">hPa</span>
             </span>
             <div className="text-right text-xs font-mono">
               <span className="text-slate-500 block text-[10px]">Sea-Level MSLP</span>
-              <span className="text-sky-600 font-bold">{(currentPressure + 12.0).toFixed(1)} hPa</span>
+              <span className="text-sky-600 font-bold">
+                {currentPressure != null ? `${(currentPressure + 12.0).toFixed(1)} hPa` : '----.- hPa'}
+              </span>
             </div>
           </div>
 
           <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs font-mono text-slate-500">
             <span>Hydrostatic Tendency:</span>
-            <span className="text-emerald-600">STABLE (&lt; 0.5 hPa/3h)</span>
+            <span className="text-emerald-600">
+              {currentPressure != null ? 'STABLE (< 0.5 hPa/3h)' : 'NO SIGNAL'}
+            </span>
           </div>
         </div>
 
@@ -435,18 +464,13 @@ export function LiveMonitoringView({
 
           <div className="flex items-baseline justify-between">
             <span className="text-4xl font-bold font-mono text-slate-900 tracking-tight">
-              {currentHumidity.toFixed(1)}
+              {currentHumidity != null ? currentHumidity.toFixed(1) : '--.-'}
               <span className="text-xl text-slate-500 ml-1 font-sans">%</span>
             </span>
             <div className="text-right text-xs font-mono">
               <span className="text-slate-500 block text-[10px]">Vapor Pressure</span>
-              <span className="text-indigo-300 font-bold">
-                {(
-                  (currentHumidity / 100) *
-                  6.112 *
-                  Math.exp((17.67 * currentTemp) / (currentTemp + 243.5))
-                ).toFixed(1)}{' '}
-                hPa
+              <span className="text-indigo-600 font-bold">
+                {vaporPressure != null ? `${vaporPressure.toFixed(1)} hPa` : '--.- hPa'}
               </span>
             </div>
           </div>
@@ -454,7 +478,11 @@ export function LiveMonitoringView({
           <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs font-mono text-slate-500">
             <span>Saturation Envelope:</span>
             <span className="text-slate-700">
-              {currentHumidity > 85 ? 'High Moisture' : 'Nominal Ambient'}
+              {currentHumidity != null
+                ? currentHumidity > 85
+                  ? 'High Moisture'
+                  : 'Nominal Ambient'
+                : 'Awaiting Sensor Feed'}
             </span>
           </div>
         </div>

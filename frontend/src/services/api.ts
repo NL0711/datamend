@@ -140,8 +140,8 @@ export async function injectAnomaly(data: {
   magnitude?: number;
   duration_steps?: number;
   decay?: boolean;
-}): Promise<{ status: string; message: string; injection_id?: string }> {
-  const res = await fetch(`${API_BASE_URL}/simulation/inject`, {
+}): Promise<{ status?: string; success?: boolean; message: string; injection_id?: string }> {
+  const res = await fetch(`${API_BASE_URL}/simulate/inject`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -174,11 +174,23 @@ export async function uploadCSV(file: File): Promise<{
   const formData = new FormData();
   formData.append('file', file);
 
-  const res = await fetch(`${API_BASE_URL}/data/upload`, {
+  const res = await fetch(`${API_BASE_URL}/upload`, {
     method: 'POST',
     body: formData,
   });
-  return handleResponse(res);
+  const data = await handleResponse<{
+    total_rows: number;
+    valid_rows: number;
+    anomalies_detected: number;
+    execution_time_ms: number;
+  }>(res);
+  return {
+    total_records: data.total_rows,
+    valid_records: data.valid_rows,
+    anomalies_detected: data.anomalies_detected,
+    processing_time_ms: data.execution_time_ms,
+    results: [],
+  };
 }
 
 // ---------------------------------------------------------------------------

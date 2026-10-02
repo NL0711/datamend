@@ -1,20 +1,15 @@
 import { useEffect, useState } from 'react';
 import {
   fetchStations,
-  fetchFleetHealth,
-  fetchAnomalyStats,
   fetchAnomalies,
-  fetchMetrics,
+  fetchObservations,
 } from '../services/api';
 import {
   Station,
-  FleetHealthSummary,
-  AnomalyStats,
   AnomalyEvent,
-  SystemMetrics,
   InferenceResult,
+  Observation,
 } from '../types';
-import { MetricCard } from '../design-system/components/MetricCard';
 import { StatusBadge } from '../design-system/components/StatusBadge';
 import { NetworkMap } from '../design-system/components/NetworkMap';
 import { StationGlobe3D } from '../design-system/components/StationGlobe3D';
@@ -39,28 +34,19 @@ export function OverviewView({
 }: OverviewViewProps) {
   const { openSettings } = useSystemConfiguration();
   const [stations, setStations] = useState<Station[]>([]);
-  const [fleetHealth, setFleetHealth] = useState<FleetHealthSummary | null>(null);
-  const [anomalyStats, setAnomalyStats] = useState<AnomalyStats | null>(null);
   const [recentAnomalies, setRecentAnomalies] = useState<AnomalyEvent[]>([]);
-  const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [mapViewMode, setMapViewMode] = useState<'3D' | '2D'>('3D');
 
   const loadData = async () => {
     try {
-      const [stRes, fhRes, asRes, anRes, mtRes] = await Promise.all([
+      const [stRes, anRes] = await Promise.all([
         fetchStations().catch(() => ({ items: [], total: 0 })),
-        fetchFleetHealth().catch(() => null),
-        fetchAnomalyStats(24).catch(() => null),
         fetchAnomalies({ limit: 6 }).catch(() => ({ items: [], total: 0 })),
-        fetchMetrics().catch(() => null),
       ]);
 
       setStations(stRes.items);
-      setFleetHealth(fhRes);
-      setAnomalyStats(asRes);
       setRecentAnomalies(anRes.items);
-      setMetrics(mtRes);
     } catch (err) {
       console.error('Error loading overview data:', err);
     } finally {
@@ -71,9 +57,7 @@ export function OverviewView({
   useEffect(() => {
     loadData();
     const interval = setInterval(() => {
-      fetchAnomalyStats(24).then(setAnomalyStats).catch(() => null);
       fetchAnomalies({ limit: 6 }).then((res) => setRecentAnomalies(res.items)).catch(() => null);
-      fetchMetrics().then(setMetrics).catch(() => null);
     }, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -89,24 +73,60 @@ export function OverviewView({
     status: 'ACTIVE',
   };
 
-  // Find latest telemetry specific to the selected station
+  const [stationLatestObs, setStationLatestObs] = useState<Observation | null>(null);
+
+  // Fetch the latest persistent observation for the selected station if telemetry hasn't arrived yet
+  useEffect(() => {
+    if (selectedStation?.station_id) {
+      fetchObservations({ station_id: selectedStation.station_id, limit: 1 })
+        .then((res) => {
+          if (res.items && res.items.length > 0) {
+            setStationLatestObs(res.items[0]);
+          } else {
+            setStationLatestObs(null);
+          }
+        })
+        .catch(() => setStationLatestObs(null));
+    }
+  }, [selectedStation?.station_id]);
+
+  // Find latest telemetry strictly specific to the selected station
   const stationRecentPackets = historyBuffer.filter((p) => p.station_id === selectedStation.station_id);
   const activeObs: InferenceResult | null =
     stationRecentPackets.length > 0
       ? stationRecentPackets[stationRecentPackets.length - 1]
       : latestTelemetry?.station_id === selectedStation.station_id
       ? latestTelemetry
-      : latestTelemetry || null;
+      : null;
 
-  // Magnus-Tetens Dew Point Formula
-  const currentTemp = activeObs?.temperature ?? activeObs?.raw_values?.temperature ?? 24.5;
-  const currentHumidity = activeObs?.humidity ?? activeObs?.raw_values?.humidity ?? 58.0;
-  const currentPressure = activeObs?.pressure ?? activeObs?.raw_values?.pressure ?? 1012.3;
+  // Real readings (no dummy fallback constants)
+  const currentTemp =
+    activeObs?.temperature ??
+    activeObs?.raw_values?.temperature ??
+    stationLatestObs?.temperature ??
+    null;
+  const currentHumidity =
+    activeObs?.humidity ??
+    activeObs?.raw_values?.humidity ??
+    stationLatestObs?.humidity ??
+    null;
+  const currentPressure =
+    activeObs?.pressure ??
+    activeObs?.raw_values?.pressure ??
+    stationLatestObs?.pressure ??
+    null;
   
   const a = 17.27;
   const b = 237.7;
-  const alpha = (a * currentTemp) / (b + currentTemp) + Math.log(Math.max(1, currentHumidity) / 100.0);
-  const dewPoint = (b * alpha) / (a - alpha);
+  const dewPoint =
+    currentTemp != null && currentHumidity != null
+      ? (() => {
+          const alpha =
+            (a * currentTemp) / (b + currentTemp) +
+            Math.log(Math.max(1, currentHumidity) / 100.0);
+          return (b * alpha) / (a - alpha);
+        })()
+      : null;
 
   const getSeverityVariant = (severity?: string) => {
     switch (severity?.toUpperCase()) {
@@ -127,44 +147,7 @@ export function OverviewView({
       {/* 1-Line Compact Operational Context Strip */}
       <ContextualStatusStrip />
 
-      {/* KPI Metric Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          label="Fleet Health Index"
-          value={fleetHealth ? Math.round(fleetHealth.average_health_score) : 98}
-          unit="/ 100"
-          delta={{ value: 'Calibrated', isPositive: true }}
-          footerLeft={<span>{stations.length} Active AWS Nodes</span>}
-          footerRight={<span className="text-emerald-600 font-semibold">Optimal</span>}
-        />
 
-        <MetricCard
-          label="24h Flagged Events"
-          value={anomalyStats?.total_anomalies ?? 0}
-          unit="events"
-          delta={{ value: 'Monitored', isNeutral: true }}
-          footerLeft={<span>{anomalyStats?.sensor_faults ?? 0} Sensor Faults</span>}
-          footerRight={<span>{anomalyStats?.meteorological_extremes ?? 0} Met Extremes</span>}
-        />
-
-        <MetricCard
-          label="Inference Latency"
-          value={metrics ? metrics.average_inference_latency_ms.toFixed(1) : '< 2.0'}
-          unit="ms"
-          delta={{ value: 'Sub-5ms Target', isPositive: true }}
-          footerLeft={<span>P95: {metrics ? metrics.p95_inference_latency_ms.toFixed(1) : '3.2'} ms</span>}
-          footerRight={<span className="text-emerald-600">Real-time</span>}
-        />
-
-        <MetricCard
-          label="Persisted Records"
-          value={metrics?.total_observations_ingested ? metrics.total_observations_ingested.toLocaleString() : '1,200+'}
-          unit="obs"
-          delta={{ value: 'Active WAL', isPositive: true }}
-          footerLeft={<span>SQLite / Timescale</span>}
-          footerRight={<span className="text-slate-600">Synchronous Ingest</span>}
-        />
-      </div>
 
       {/* Integrated Split Command Deck: 3D Globe (60%) + Station Dossier (40%) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -271,9 +254,19 @@ export function OverviewView({
                 <span className="text-[10px] uppercase font-bold text-slate-500 font-mono tracking-wider">
                   Live Synchronized Telemetry
                 </span>
-                <span className="text-[10px] font-mono text-emerald-600 flex items-center gap-1">
-                   Live Feed Active
-                </span>
+                {activeObs ? (
+                  <span className="text-[10px] font-mono text-emerald-600 flex items-center gap-1 font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live Telemetry Feed
+                  </span>
+                ) : stationLatestObs ? (
+                  <span className="text-[10px] font-mono text-sky-600 flex items-center gap-1 font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500" /> Recorded Observation
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-mono text-amber-600 flex items-center gap-1 font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" /> Awaiting Telemetry
+                  </span>
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-2 text-center font-mono">
@@ -281,28 +274,36 @@ export function OverviewView({
                   <div className="flex items-center justify-center gap-1 text-[10px] text-slate-500 mb-0.5">
                      Temperature
                   </div>
-                  <span className="text-base font-bold text-slate-900">{currentTemp.toFixed(1)}°C</span>
+                  <span className="text-base font-bold text-slate-900">
+                    {currentTemp != null ? `${currentTemp.toFixed(1)}°C` : '--.-°C'}
+                  </span>
                 </div>
 
                 <div className="bg-[#F4F6FA] p-2.5 rounded-lg border border-[#D3DCE7]/60">
                   <div className="flex items-center justify-center gap-1 text-[10px] text-slate-500 mb-0.5">
                      Pressure
                   </div>
-                  <span className="text-base font-bold text-slate-900">{currentPressure.toFixed(1)} hPa</span>
+                  <span className="text-base font-bold text-slate-900">
+                    {currentPressure != null ? `${currentPressure.toFixed(1)} hPa` : '----.- hPa'}
+                  </span>
                 </div>
 
                 <div className="bg-[#F4F6FA] p-2.5 rounded-lg border border-[#D3DCE7]/60">
                   <div className="flex items-center justify-center gap-1 text-[10px] text-slate-500 mb-0.5">
                      Humidity
                   </div>
-                  <span className="text-base font-bold text-slate-900">{currentHumidity.toFixed(1)}%</span>
+                  <span className="text-base font-bold text-slate-900">
+                    {currentHumidity != null ? `${currentHumidity.toFixed(1)}%` : '--.-%'}
+                  </span>
                 </div>
               </div>
 
               {/* Calculated Dew Point & Magnus-Tetens Relation */}
               <div className="bg-[#F4F6FA] p-2.5 rounded-lg border border-[#D3DCE7]/60 flex items-center justify-between text-xs font-mono">
                 <span className="text-slate-500">Magnus-Tetens Dew Point:</span>
-                <span className="text-emerald-600 font-bold">{dewPoint.toFixed(1)}°C</span>
+                <span className="text-emerald-600 font-bold">
+                  {dewPoint != null ? `${dewPoint.toFixed(1)}°C` : '--.-°C'}
+                </span>
               </div>
             </div>
 

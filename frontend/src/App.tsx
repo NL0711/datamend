@@ -5,10 +5,8 @@ import {
   Cpu,
   Database,
   Eye,
-  Radio,
   Zap,
   Layers,
-  Signal,
   Clock,
   CheckCircle2,
   Compass,
@@ -46,9 +44,8 @@ function AppContent() {
   >(preferences.defaultView || 'overview');
 
   const [selectedIncidentId, setSelectedIncidentId] = useState<number | null>(null);
-  const [latestTelemetry, setLatestTelemetry] = useState<InferenceResult | null>(null);
+  const [latestByStation, setLatestByStation] = useState<Record<string, InferenceResult>>({});
   const [historyBuffer, setHistoryBuffer] = useState<InferenceResult[]>([]);
-  const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
   const [isStreaming, setIsStreaming] = useState<boolean>(true);
   const [utcTime, setUtcTime] = useState<string>('');
   const isStreamingRef = useRef<boolean>(true);
@@ -110,18 +107,15 @@ function AppContent() {
   // WebSocket Live Connection
   useEffect(() => {
     const wsClient = new TelemetryStreamClient({
-      onOpen: () => {
-        setIsWsConnected(true);
-      },
-      onClose: () => {
-        setIsWsConnected(false);
-      },
       onTelemetry: (data: InferenceResult) => {
         if (!isStreamingRef.current) return;
-        setLatestTelemetry(data);
+        setLatestByStation((prev) => ({
+          ...prev,
+          [data.station_id]: data,
+        }));
         setHistoryBuffer((prev) => {
           const next = [...prev, data];
-          return next.length > 150 ? next.slice(-150) : next;
+          return next.length > 200 ? next.slice(-200) : next;
         });
       },
     });
@@ -146,8 +140,34 @@ function AppContent() {
 
   const getSourceBadge = () => {
     switch (activeSource) {
-      case 'PHYSICAL_AWS':
+      case 'EXTERNAL_API':
+        return (
+          <button
+            onClick={openSettings}
+            className="flex items-center gap-1.5 px-3 py-1 bg-[#F4F6FA] hover:bg-[#EDF1F7] border border-sky-500/50 rounded-lg transition-all text-xs font-mono shadow-sm"
+            title="Click to configure Climate Site / Open-Meteo Source"
+          >
+            <Globe className="w-3.5 h-3.5 text-sky-600" />
+            <span className="text-sky-800 font-bold">
+              OPEN-METEO: {selectedCity ? selectedCity.name.toUpperCase() : 'LIVE'}
+            </span>
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse ml-0.5" />
+          </button>
+        );
+      case 'HISTORICAL_REPLAY':
+        return (
+          <button
+            onClick={openSettings}
+            className="flex items-center gap-1.5 px-3 py-1 bg-[#F4F6FA] hover:bg-[#EDF1F7] border border-amber-500/50 rounded-lg transition-all text-xs font-mono shadow-sm"
+            title="Click to configure Historical Replay Telemetry Source"
+          >
+            <Clock className="w-3.5 h-3.5 text-amber-600" />
+            <span className="text-amber-800 font-bold">HISTORICAL REPLAY</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse ml-0.5" />
+          </button>
+        );
       case 'NOAA_ISD':
+      default:
         return (
           <button
             onClick={openSettings}
@@ -157,43 +177,6 @@ function AppContent() {
             <Globe className="w-3.5 h-3.5 text-sky-600" />
             <span className="text-sky-800 font-bold">NOAA ISD AWS (REAL)</span>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5" />
-          </button>
-        );
-      case 'PHYSICAL_AWS':
-        return (
-          <button
-            onClick={openSettings}
-            className="flex items-center gap-1.5 px-2.5 py-1 bg-[#F4F6FA] hover:bg-[#EDF1F7] border border-emerald-500/40 rounded-lg transition-all text-xs font-mono"
-            title="Click to configure Telemetry Source"
-          >
-            <Signal className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="text-emerald-700 font-bold">PHYSICAL ESP32</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping ml-0.5" />
-          </button>
-        );
-      case 'EXTERNAL_API':
-        return (
-          <button
-            onClick={openSettings}
-            className="flex items-center gap-1.5 px-2.5 py-1 bg-[#F4F6FA] hover:bg-[#EDF1F7] border border-sky-500/40 rounded-lg transition-all text-xs font-mono"
-            title="Click to configure Climate Site / Source"
-          >
-            <Globe className="w-3.5 h-3.5 text-sky-600" />
-            <span className="text-sky-700 font-bold">
-              OPEN-METEO: {selectedCity ? selectedCity.name.toUpperCase() : 'LIVE'}
-            </span>
-          </button>
-        );
-      case 'SIMULATED':
-      default:
-        return (
-          <button
-            onClick={openSettings}
-            className="flex items-center gap-1.5 px-2.5 py-1 bg-[#F4F6FA] hover:bg-[#EDF1F7] border border-amber-500/40 rounded-lg transition-all text-xs font-mono"
-            title="Click to configure Telemetry Source"
-          >
-            <Radio className="w-3.5 h-3.5 text-amber-600" />
-            <span className="text-amber-700 font-bold">SIMULATED AWS</span>
           </button>
         );
     }
@@ -248,21 +231,6 @@ function AppContent() {
             <span>{utcTime || '00:00:00 UTC'}</span>
           </div>
 
-          {/* WebSocket Ingestion Status */}
-          <div
-            className={`flex items-center gap-2 px-2.5 py-1 rounded border text-[11px] font-bold transition-all ${
-              isWsConnected
-                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600'
-                : 'bg-amber-500/15 border-amber-500/40 text-amber-600'
-            }`}
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                isWsConnected ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'
-              }`}
-            />
-            <span className="hidden md:inline">{isWsConnected ? 'STREAM ACTIVE' : 'CONNECTING...'}</span>
-          </div>
 
           {/* Global System Settings Trigger Button */}
           <button
@@ -333,7 +301,7 @@ function AppContent() {
             <OverviewView
               selectedStationId={selectedStationId}
               onSelectStation={selectStation}
-              latestTelemetry={latestTelemetry}
+              latestTelemetry={latestByStation[selectedStationId] || null}
               historyBuffer={historyBuffer}
               onNavigate={(tab) => setActiveTab(tab as any)}
             />
@@ -342,7 +310,7 @@ function AppContent() {
             <LiveMonitoringView
               selectedStationId={selectedStationId}
               onSelectStation={selectStation}
-              latestTelemetry={latestTelemetry}
+              latestTelemetry={latestByStation[selectedStationId] || null}
               historyBuffer={historyBuffer}
               isStreaming={isStreaming}
               onToggleStreaming={() => setIsStreaming((s) => !s)}
@@ -350,6 +318,8 @@ function AppContent() {
           )}
           {activeTab === 'alerts' && (
             <AlertCenterView
+              selectedStationId={selectedStationId}
+              onSelectStation={selectStation}
               onNavigateToEvent={(eventId, stationId) => {
                 setSelectedIncidentId(eventId);
                 selectStation(stationId);
@@ -361,7 +331,12 @@ function AppContent() {
               }}
             />
           )}
-          {activeTab === 'health' && <SensorHealthView />}
+          {activeTab === 'health' && (
+            <SensorHealthView
+              selectedStationId={selectedStationId}
+              onSelectStation={selectStation}
+            />
+          )}
           {activeTab === 'events' && (
             <EventDetailView
               initialEventId={selectedIncidentId}
@@ -373,11 +348,25 @@ function AppContent() {
               }}
             />
           )}
-          {activeTab === 'explorer' && <DataExplorerView />}
-          {activeTab === 'injector' && (
-            <AnomalyInjectorUI onNavigateToLive={() => setActiveTab('live')} />
+          {activeTab === 'explorer' && (
+            <DataExplorerView
+              selectedStationId={selectedStationId}
+              onSelectStation={selectStation}
+            />
           )}
-          {activeTab === 'explainability' && <ExplainabilityViewer />}
+          {activeTab === 'injector' && (
+            <AnomalyInjectorUI
+              selectedStationId={selectedStationId}
+              onSelectStation={selectStation}
+              onNavigateToLive={() => setActiveTab('live')}
+            />
+          )}
+          {activeTab === 'explainability' && (
+            <ExplainabilityViewer
+              selectedStationId={selectedStationId}
+              onSelectStation={selectStation}
+            />
+          )}
         </main>
       </div>
 

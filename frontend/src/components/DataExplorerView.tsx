@@ -4,10 +4,21 @@ import { Observation, Station, InferenceResult } from '../types';
 import { StatusBadge } from '../design-system/components/StatusBadge';
 import { TableSkeleton } from '../design-system/components/SkeletonLoader';
 
-export function DataExplorerView() {
+interface DataExplorerViewProps {
+  selectedStationId?: string;
+  onSelectStation?: (stationId: string) => void;
+}
+
+export function DataExplorerView({ selectedStationId, onSelectStation }: DataExplorerViewProps = {}) {
   const [observations, setObservations] = useState<Observation[]>([]);
   const [stations, setStations] = useState<Station[]>([]);
-  const [selectedStation, setSelectedStation] = useState<string>('');
+  const [selectedStation, setSelectedStation] = useState<string>(selectedStationId || '');
+
+  useEffect(() => {
+    if (selectedStationId !== undefined) {
+      setSelectedStation(selectedStationId);
+    }
+  }, [selectedStationId]);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [page, setPage] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -163,6 +174,9 @@ export function DataExplorerView() {
               onChange={(e) => {
                 setSelectedStation(e.target.value);
                 setPage(1);
+                if (onSelectStation && e.target.value) {
+                  onSelectStation(e.target.value);
+                }
               }}
               className="bg-[#F4F6FA] border border-[#D3DCE7] text-slate-700 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 font-bold"
             >

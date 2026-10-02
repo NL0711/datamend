@@ -60,12 +60,14 @@ class SimulationService:
         self._init_generators()
 
     def _init_generators(self) -> None:
-        """Initializes station generators for standard regional microclimate presets."""
+        """Initializes station generators for standard NOAA NEXRAD AWS presets."""
         stations_config = [
-            ("AWS-001", "Central Meteorological Observatory", 28.6139, 77.2090, 216.0, "subtropical_delhi"),
-            ("AWS-002", "Coastal Marine Weather Tower", 18.9220, 72.8347, 14.0, "temperate_marine"),
-            ("AWS-003", "Plateau Highland Station", 32.2190, 76.3234, 1457.0, "high_altitude_plateau"),
-            ("AWS-004", "Arid Subtropical Outpost", 26.9124, 70.9022, 225.0, "arid_desert"),
+            ("KTLX", "Oklahoma City, OK (NOAA NEXRAD AWS)", 35.3331, -97.2778, 370.0, "subtropical_delhi"),
+            ("KOKX", "New York City, NY (NOAA NEXRAD AWS)", 40.8656, -72.8628, 30.0, "temperate_marine"),
+            ("KAMX", "Miami, FL (NOAA NEXRAD AWS)", 25.6111, -80.4128, 5.0, "temperate_marine"),
+            ("KATX", "Seattle, WA (NOAA NEXRAD AWS)", 48.1947, -122.4944, 150.0, "temperate_marine"),
+            ("KFWS", "Dallas-Fort Worth, TX (NOAA NEXRAD AWS)", 32.5731, -97.3031, 210.0, "subtropical_delhi"),
+            ("KDMX", "Des Moines, IA (NOAA NEXRAD AWS)", 41.7311, -93.7228, 290.0, "subtropical_delhi"),
         ]
 
         for st_id, name, lat, lon, elev, preset_key in stations_config:
@@ -224,11 +226,12 @@ class SimulationService:
             message="Simulation running" if self._is_running else "Simulation idle",
         )
 
-    def _apply_injection(self, telemetry: Dict[str, Any], st_id: str) -> Dict[str, Any]:
+    def apply_injection(self, telemetry: Dict[str, Any], st_id: str) -> Dict[str, Any]:
         """Applies active anomaly injections to raw telemetry before ML processing."""
         data = dict(telemetry)
         for inj in list(self._active_injections):
-            if inj.station_id is not None and inj.station_id != st_id:
+            # Target matching: None, "", or "ALL" affects all stations
+            if inj.station_id not in (None, "", "ALL") and inj.station_id != st_id:
                 continue
 
             param = inj.parameter
@@ -238,11 +241,15 @@ class SimulationService:
                 factor = (0.5 ** inj.step_count) if inj.decay else 1.0
                 if param in data and data[param] is not None:
                     data[param] = round(data[param] + inj.magnitude * factor, 2)
+                    if param == "humidity":
+                        data[param] = max(0.0, min(100.0, data[param]))
 
             elif a_type == "DRIFT":
                 drift_offset = (inj.drift_rate or 0.5) * (inj.step_count + 1)
                 if param in data and data[param] is not None:
                     data[param] = round(data[param] + drift_offset, 2)
+                    if param == "humidity":
+                        data[param] = max(0.0, min(100.0, data[param]))
 
             elif a_type == "FROZEN":
                 if inj.frozen_val is None:
@@ -256,6 +263,8 @@ class SimulationService:
                 noise = float(np.random.normal(0, inj.magnitude))
                 if param in data and data[param] is not None:
                     data[param] = round(data[param] + noise, 2)
+                    if param == "humidity":
+                        data[param] = max(0.0, min(100.0, data[param]))
 
             elif a_type == "MULTIVARIATE_INCONSISTENCY":
                 # Increase temperature while simultaneously increasing humidity
@@ -283,6 +292,8 @@ class SimulationService:
                 self._active_injections.remove(inj)
 
         return data
+
+    _apply_injection = apply_injection
 
     async def _simulation_loop(self) -> None:
         """Background asynchronous simulation generation loop."""

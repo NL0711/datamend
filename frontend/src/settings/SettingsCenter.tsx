@@ -5,6 +5,7 @@
  */
 
 import React, { useState } from 'react';
+import { Lock } from 'lucide-react';
 import { useSystemConfiguration } from '../context/SystemConfigurationContext';
 import { CITY_PRESETS, DataSourceType, DisplayDensity } from '../types';
 import { StatusBadge } from '../design-system/components/StatusBadge';
@@ -200,60 +201,124 @@ export const SettingsCenter: React.FC = () => {
                         />
                       </div>
                     </div>
+
+                    {/* Open-Meteo Global Weather API (Live REST) */}
+                    <div
+                      onClick={() => changeSource('EXTERNAL_API')}
+                      className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                        activeSource === 'EXTERNAL_API'
+                          ? 'bg-[#FFFFFF] border-sky-500 ring-1 ring-sky-500/40 shadow-lg'
+                          : 'bg-[#F4F6FA] border-[#D3DCE7] hover:border-slate-500'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 rounded-lg bg-[#EDF1F7] border border-sky-500/40">
+                            {getSourceIcon('EXTERNAL_API')}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-900 font-mono">Open-Meteo Global Weather API (Live REST)</span>
+                              {activeSource === 'EXTERNAL_API' && (
+                                <span className="text-[10px] font-mono px-2 py-0.2 bg-sky-500/20 text-sky-700 border border-sky-500/40 rounded font-bold">
+                                  LIVE REST
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              Live high-resolution meteorological telemetry polled from global station models via Open-Meteo REST API
+                            </p>
+                          </div>
+                        </div>
+                        <StatusBadge
+                          label={activeSource === 'EXTERNAL_API' ? 'ACTIVE STREAM' : 'AVAILABLE'}
+                          variant={activeSource === 'EXTERNAL_API' ? 'nominal' : 'neutral'}
+                          size="sm"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {/* 2. Synoptic Station Climate Site Presets (Open-Meteo) */}
-                <div className="space-y-3 pt-3 border-t border-[#D3DCE7]">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-600 font-mono flex items-center gap-1.5">
-                      
-                      2. Synoptic Observation Location
-                    </span>
-                    {isConfiguringCity && (
-                      <span className="text-[11px] text-sky-600 font-mono flex items-center gap-1">
-                         Fetching Live Coordinates...
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    Selecting a location configures backend coordinates, triggers an immediate Open-Meteo live query, and centers the 3D Earth digital twin.
-                  </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {CITY_PRESETS.map((city) => {
-                      const isSelected = selectedCityId === city.id;
-                      return (
-                        <button
-                          key={city.id}
-                          onClick={() => changeCity(city.id)}
-                          disabled={isConfiguringCity}
-                          className={`p-3 rounded-xl border text-left transition-all relative ${
-                            isSelected
-                              ? 'bg-sky-500/20 border-sky-400 text-slate-900 shadow-md ring-1 ring-sky-400/40'
-                              : 'bg-[#F4F6FA] border-[#D3DCE7] text-slate-600 hover:bg-[#EDF1F7] hover:text-slate-900'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-xs font-mono">{city.name}</span>
-                            <span className="text-[10px] font-mono text-slate-500">{city.country}</span>
-                          </div>
-                          <div className="text-[10px] font-mono text-slate-500 mt-1">
-                            {city.latitude.toFixed(4)}°N, {city.longitude.toFixed(4)}°E
-                          </div>
-                          <div className="text-[10px] text-slate-500 truncate mt-1" title={city.description}>
-                            {city.description}
-                          </div>
-                          {isSelected && (
-                            <div className="absolute top-2.5 right-2 text-sky-600">
-                              
-                            </div>
+                {(() => {
+                  const isLocationDisabled = activeSource !== 'EXTERNAL_API';
+                  return (
+                    <div className="space-y-3 pt-3 border-t border-[#D3DCE7]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-600 font-mono flex items-center gap-1.5">
+                          2. Synoptic Observation Location
+                          {isLocationDisabled && (
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-200 text-slate-600 border border-slate-300 font-semibold">
+                              OPEN-METEO ONLY
+                            </span>
                           )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                        </span>
+                        {isConfiguringCity && (
+                          <span className="text-[11px] text-sky-600 font-mono flex items-center gap-1">
+                             Fetching Live Coordinates...
+                          </span>
+                        )}
+                      </div>
+
+                      {isLocationDisabled ? (
+                        <div className="p-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-600 text-xs font-mono space-y-1.5">
+                          <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                            <Lock className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Location selection locked under NOAA ISD / Radar</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                            Synoptic observation locations are governed by active NOAA NEXRAD radar sites (KTLX, KOKX, KAMX, etc.). Location presets are only configurable when <strong>Open-Meteo Global Weather API</strong> is active.
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-slate-500">
+                          Selecting a location configures backend coordinates, triggers an immediate Open-Meteo live query, and centers the 3D Earth digital twin.
+                        </p>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {CITY_PRESETS.map((city) => {
+                          const isSelected = !isLocationDisabled && selectedCityId === city.id;
+                          return (
+                            <button
+                              key={city.id}
+                              onClick={() => {
+                                if (!isLocationDisabled) {
+                                  changeCity(city.id);
+                                }
+                              }}
+                              disabled={isLocationDisabled || isConfiguringCity}
+                              className={`p-3 rounded-xl border text-left transition-all relative ${
+                                isLocationDisabled
+                                  ? 'bg-[#E8EDF4]/60 border-[#D3DCE7] text-slate-400 cursor-not-allowed opacity-50'
+                                  : isSelected
+                                  ? 'bg-sky-500/20 border-sky-400 text-slate-900 shadow-md ring-1 ring-sky-400/40'
+                                  : 'bg-[#F4F6FA] border-[#D3DCE7] text-slate-600 hover:bg-[#EDF1F7] hover:text-slate-900'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-xs font-mono">{city.name}</span>
+                                <span className="text-[10px] font-mono text-slate-500">{city.country}</span>
+                              </div>
+                              <div className="text-[10px] font-mono text-slate-500 mt-1">
+                                {city.latitude.toFixed(4)}°N, {city.longitude.toFixed(4)}°E
+                              </div>
+                              <div className="text-[10px] text-slate-500 truncate mt-1" title={city.description}>
+                                {city.description}
+                              </div>
+                              {isSelected && (
+                                <div className="absolute top-2.5 right-2 text-sky-600 font-bold text-xs">
+                                  ✓
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* 3. Mode Specific Details */}
                 {activeSource === 'SIMULATED' && (

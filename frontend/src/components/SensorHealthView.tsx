@@ -8,21 +8,29 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
-import { fetchFleetHealth, fetchStationHealth, fetchStations } from '../services/api';
-import { FleetHealthSummary, Station, StationHealthDetail } from '../types';
-import { MetricCard } from '../design-system/components/MetricCard';
+import { fetchStationHealth, fetchStations } from '../services/api';
+import { Station, StationHealthDetail } from '../types';
 import { StatusBadge } from '../design-system/components/StatusBadge';
 
-export function SensorHealthView() {
-  const [fleetHealth, setFleetHealth] = useState<FleetHealthSummary | null>(null);
+interface SensorHealthViewProps {
+  selectedStationId?: string;
+  onSelectStation?: (stationId: string) => void;
+}
+
+export function SensorHealthView({ selectedStationId: propStationId, onSelectStation }: SensorHealthViewProps = {}) {
   const [stations, setStations] = useState<Station[]>([]);
-  const [selectedStationId, setSelectedStationId] = useState<string>('KTLX');
+  const [selectedStationId, setSelectedStationId] = useState<string>(propStationId || 'KTLX');
   const [stationHealth, setStationHealth] = useState<StationHealthDetail | null>(null);
+
+  useEffect(() => {
+    if (propStationId) {
+      setSelectedStationId(propStationId);
+    }
+  }, [propStationId]);
 
   const loadData = async () => {
     try {
-      const [fh, st] = await Promise.all([fetchFleetHealth(), fetchStations()]);
-      setFleetHealth(fh);
+      const st = await fetchStations();
       setStations(st.items);
       if (st.items.length > 0 && !selectedStationId) {
         setSelectedStationId(st.items[0].station_id);
@@ -63,41 +71,6 @@ export function SensorHealthView() {
 
   return (
     <div className="space-y-6">
-      {/* Fleet Overview Health Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          label="Average Fleet Health"
-          value={fleetHealth ? Math.round(fleetHealth.average_health_score) : 98}
-          unit="/ 100"
-          footerLeft={<span>Nominal Operations</span>}
-          footerRight={<span className="text-emerald-600 font-semibold">Optimal</span>}
-        />
-
-        <MetricCard
-          label="Optimal Stations"
-          value={fleetHealth?.active_stations ?? 4}
-          unit={`/ ${stations.length || 4}`}
-          footerLeft={<span>Health Index ≥ 85%</span>}
-          footerRight={<span className="text-emerald-600 font-semibold">Calibrated</span>}
-        />
-
-        <MetricCard
-          label="Degraded Sensors"
-          value={fleetHealth?.degraded_stations ?? 0}
-          unit="units"
-          footerLeft={<span>Health Index 50–74%</span>}
-          footerRight={<span className="text-amber-600 font-semibold">Monitor</span>}
-        />
-
-        <MetricCard
-          label="Critical / Failing"
-          value={fleetHealth?.critical_stations ?? 0}
-          unit="units"
-          footerLeft={<span>Health Index &lt; 50%</span>}
-          footerRight={<span className="text-rose-600 font-semibold">Replace</span>}
-        />
-      </div>
-
       {/* Station Specific Health Analysis & Predictive Maintenance */}
       <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200">
@@ -115,7 +88,10 @@ export function SensorHealthView() {
             <span className="text-xs text-slate-600 font-mono">Select Station:</span>
             <select
               value={selectedStationId}
-              onChange={(e) => setSelectedStationId(e.target.value)}
+              onChange={(e) => {
+                setSelectedStationId(e.target.value);
+                onSelectStation?.(e.target.value);
+              }}
               className="bg-[#F4F6FA] border border-[#D3DCE7] text-slate-700 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 font-mono font-bold"
             >
               {stations.map((st) => (

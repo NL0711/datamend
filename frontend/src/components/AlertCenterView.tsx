@@ -7,18 +7,31 @@ import { MetricCard } from '../design-system/components/MetricCard';
 import { TableSkeleton } from '../design-system/components/SkeletonLoader';
 
 interface AlertCenterViewProps {
+  selectedStationId?: string;
+  onSelectStation?: (stationId: string) => void;
   onNavigateToEvent?: (eventId: number, stationId: string) => void;
   onLocateOnGlobe?: (stationId: string) => void;
 }
 
-export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCenterViewProps = {}) {
+export function AlertCenterView({
+  selectedStationId,
+  onSelectStation,
+  onNavigateToEvent,
+  onLocateOnGlobe,
+}: AlertCenterViewProps = {}) {
   const [anomalies, setAnomalies] = useState<AnomalyEvent[]>([]);
   const [stats, setStats] = useState<AnomalyStats | null>(null);
   const [stations, setStations] = useState<Station[]>([]);
-  const [selectedStation, setSelectedStation] = useState<string>('');
+  const [selectedStation, setSelectedStation] = useState<string>(selectedStationId || '');
   const [selectedSeverity, setSelectedSeverity] = useState<string>('');
   const [selectedClassification, setSelectedClassification] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  useEffect(() => {
+    if (selectedStationId !== undefined) {
+      setSelectedStation(selectedStationId);
+    }
+  }, [selectedStationId]);
 
   // Selected incident ID as the single source of truth
   const [selectedIncidentId, setSelectedIncidentId] = useState<number | null>(null);
@@ -255,7 +268,12 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
           {/* Station Filter */}
           <select
             value={selectedStation}
-            onChange={(e) => setSelectedStation(e.target.value)}
+            onChange={(e) => {
+              setSelectedStation(e.target.value);
+              if (onSelectStation && e.target.value) {
+                onSelectStation(e.target.value);
+              }
+            }}
             className="bg-[#F4F6FA] border border-[#D3DCE7] text-slate-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 font-bold"
           >
             <option value="">All Stations (Fleet-Wide)</option>
