@@ -24,16 +24,17 @@ import uuid
 import numpy as np
 import pandas as pd
 
-from backend.app.ml.tier0_screener import tier0_screener, Tier0Result
-from backend.app.ml.stage1_stl import STLBaselineEngine, CHANNELS
-from backend.app.ml.stage2_ensemble import MultivariateEnsembleDetector
-from backend.app.ml.stage3_physics import ThermodynamicPhysicsValidator
-from backend.app.spatial.consensus import spatial_consensus_engine, haversine_distance_km
-from backend.app.ml.stage4_classifier import (
+from backend.app.ml.screening import tier0_screener, Tier0Result
+from backend.app.ml.stages import (
+    STLBaselineEngine,
+    CHANNELS,
+    MultivariateEnsembleDetector,
+    ThermodynamicPhysicsValidator,
     DiagnosticEvidence,
     EvidenceFusionClassifier,
     ClassificationResult,
 )
+from backend.app.spatial.consensus import spatial_consensus_engine, haversine_distance_km
 
 logger = logging.getLogger(__name__)
 

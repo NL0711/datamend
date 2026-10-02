@@ -17,7 +17,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
-from backend.app.ml.stage1_stl import StationBaseline, CHANNELS
+from backend.app.ml.stages.stage1_stl import StationBaseline, CHANNELS
 from backend.app.spatial.consensus import haversine_distance_km
 
 logger = logging.getLogger(__name__)
