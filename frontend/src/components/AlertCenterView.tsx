@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { fetchAnomalies, fetchAnomalyDetail, fetchAnomalyStats, fetchStations } from '../services/api';
 import { AnomalyEvent, AnomalyEventDetail, AnomalyStats, Station } from '../types';
+import { TriageActions } from './TriageActions';
 import { StatusBadge } from '../design-system/components/StatusBadge';
 import { MetricCard } from '../design-system/components/MetricCard';
 import { TableSkeleton } from '../design-system/components/SkeletonLoader';
@@ -463,6 +464,15 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
               </div>
             )}
           </div>
+
+          {/* Operator triage actions for the selected incident */}
+          {incidentDetail && !isDetailLoading && (
+            <TriageActions
+              eventId={incidentDetail.id}
+              stationId={incidentDetail.station_id}
+              hasImputation={true}
+            />
+          )}
 
           {/* Dossier Content Area with Loading & Error States */}
           {isDetailLoading ? (

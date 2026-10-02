@@ -316,3 +316,110 @@ class InferenceRequest(BaseModel):
     pressure: float = Field(..., ge=100.0, le=1500.0)
     humidity: float = Field(..., ge=-20.0, le=150.0)
     persist: bool = False
+
+
+# ---------------------------------------------------------------------------
+# 10. Phase 4 Production Pipeline & Operator Feedback Schemas
+# ---------------------------------------------------------------------------
+class TelemetryProcessRequest(BaseModel):
+    station_id: str = Field(..., description="Station identifier")
+    timestamp: Optional[datetime] = None
+    temperature_c: Optional[float] = Field(None, description="Temperature in Celsius")
+    pressure_hpa: Optional[float] = Field(None, description="Atmospheric pressure in hPa")
+    humidity_pct: Optional[float] = Field(None, description="Relative humidity %")
+    elevation_m: float = Field(0.0, description="Station elevation above sea level in meters")
+    persist: bool = Field(True, description="Whether to persist event and health to database")
+
+
+class Phase3FeatureContributionSchema(BaseModel):
+    feature: str
+    attribution: float
+    raw_value: Optional[float] = None
+    residual_value: Optional[float] = None
+    direction: str
+    meaning: str
+
+
+class Phase3ExplanationSchema(BaseModel):
+    summary: str
+    top_drivers: List[str]
+    contributions: List[Phase3FeatureContributionSchema]
+
+
+class Phase3ImputationSchema(BaseModel):
+    applied: bool
+    parameter: Optional[str] = None
+    original_value: Optional[float] = None
+    imputed_value: Optional[float] = None
+    method: Optional[str] = None
+
+
+class Phase3StationHealthSchema(BaseModel):
+    sensor_health_index: float
+    status: str
+    hours_to_failure: Optional[float] = None
+
+
+class Phase3InferenceResponse(BaseModel):
+    station_id: str
+    timestamp: datetime
+    predicted_class: str
+    anomaly_score: float
+    confidence: float
+    is_fault: bool
+    justification: str
+    explanation: Phase3ExplanationSchema
+    imputation: Phase3ImputationSchema
+    health: Phase3StationHealthSchema
+    latency_ms: float
+    event_id: Optional[str] = None
+
+
+class OperatorFeedbackCreate(BaseModel):
+    event_id: str = Field(..., description="Anomaly event UUID or ID")
+    operator_id: str = Field(..., description="Operator or analyst ID")
+    verification_status: str = Field(..., description="CONFIRMED_FAULT, FALSE_POSITIVE, or IMPUTATION_APPROVED")
+    override_class: Optional[str] = Field(None, description="Optional override fault class")
+    imputation_accepted: bool = Field(True, description="Whether the operator accepted safe imputation")
+    notes: Optional[str] = Field(None, description="Forensic notes")
+
+
+class OperatorFeedbackResponse(BaseModel):
+    id: int
+    event_id: str
+    operator_id: str
+    verification_status: str
+    override_class: Optional[str] = None
+    imputation_accepted: bool
+    notes: Optional[str] = None
+    created_at: datetime
+
+
+class StationHealthSnapshotResponse(BaseModel):
+    station_id: str
+    sensor_health_index: float
+    status: str
+    recent_anomaly_rate: float
+    baseline_anomaly_rate: float
+    hours_to_failure: Optional[float] = None
+    degradation_slope_per_hour: float
+    consecutive_frozen_streak: int
+    evaluation_time: datetime
+
+
+# ---------------------------------------------------------------------------
+# Task 4 parity aliases (OpenSpec task4-parity-closeout, capability api-parity).
+# Spec-named contracts subclassing the canonical models so validation is
+# identical by construction. Canonical names remain the source of truth.
+# ---------------------------------------------------------------------------
+class AWSReading(ObservationBase):
+    """Spec-named alias of ObservationBase: a single AWS telemetry reading."""
+
+
+class AnomalyEvent(AnomalyEventResponse):
+    """Spec-named alias of AnomalyEventResponse: a detected anomaly event."""
+
+
+class SensorHealth(SensorHealthRecord):
+    """Spec-named alias of SensorHealthRecord: a sensor health snapshot record."""
+

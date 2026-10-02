@@ -1,6 +1,10 @@
 """
-backend/app/ml/stage2_ensemble.py
+backend/app/ml/stages/stage2_ensemble.py
 SkyGuard AI / DataMend — Stage 2: Multivariate Residual Anomaly Ensemble.
+
+CANONICAL Phase 4 detector: ResidualIsolationForest on 3-channel Stage-1
+STL residuals ordered [T_resid, P_resid, RH_resid] (m, 3).
+Legacy 9D IsolationForestPointDetector path is NOT supported here.
 
 Combines point-density isolation (PyOD Isolation Forest) with temporal sequence
 reconstruction (PyTorch GRU / 1D-Conv Autoencoder) to evaluate de-trended residual vectors.
@@ -12,20 +16,31 @@ from __future__ import annotations
 
 import logging
 import time
+import warnings
 from dataclasses import dataclass
-from typing import Dict, List, Literal, Optional, Tuple
+from pathlib import Path
+from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Attempt PyOD import; gracefully fallback to scikit-learn
+# Canonical Phase 4 residual contract (see OpenSpec phase4-residual-isolation-forest).
+RESIDUAL_CHANNELS: List[str] = ["T_resid", "P_resid", "RH_resid"]
+RESIDUAL_CONTRACT_VERSION: str = "1.0.0"
+EXPECTED_N_FEATURES: int = 3
+MIN_FIT_ROWS: int = 10
+
+# Attempt PyOD import; gracefully fallback to scikit-learn.
+# NOTE: sklearn fallback is ALWAYS imported (pre-existing bug fixed: previously
+# SkIForest was undefined when PyOD was present, breaking the fallback path).
+from sklearn.ensemble import IsolationForest as SkIForest
+
 try:
     from pyod.models.iforest import IForest as PyODIForest
     _HAS_PYOD = True
 except Exception:
     _HAS_PYOD = False
-    from sklearn.ensemble import IsolationForest as SkIForest
 
 
 def _sigmoid(x: np.ndarray | float) -> np.ndarray | float:
@@ -34,11 +49,40 @@ def _sigmoid(x: np.ndarray | float) -> np.ndarray | float:
     return 1.0 / (1.0 + np.exp(-arr))
 
 
+def _validate_residuals(X: np.ndarray, *, context: str) -> np.ndarray:
+    """Validate canonical (m, 3) residual contract; reject legacy 9D vectors."""
+    arr = np.asarray(X, dtype=float)
+    if arr.ndim == 1:
+        if arr.shape[0] == 9:
+            raise ValueError(
+                f"{context}: got 1D legacy 9D feature vector; canonical Phase 4 input "
+                f"is 3-channel STL residuals {RESIDUAL_CHANNELS} (contract {RESIDUAL_CONTRACT_VERSION})."
+            )
+        if arr.shape[0] != EXPECTED_N_FEATURES:
+            raise ValueError(
+                f"{context}: expected 3 residual channels {RESIDUAL_CHANNELS}, got shape {arr.shape}."
+            )
+        return arr.reshape(1, -1)
+    if arr.ndim != 2 or arr.shape[1] != EXPECTED_N_FEATURES:
+        if arr.ndim == 2 and arr.shape[1] == 9:
+            raise ValueError(
+                f"{context}: got (m, 9) legacy feature matrix; canonical Phase 4 input "
+                f"is (m, 3) STL residuals {RESIDUAL_CHANNELS} (contract {RESIDUAL_CONTRACT_VERSION})."
+            )
+        raise ValueError(
+            f"{context}: expected (m, 3) residuals {RESIDUAL_CHANNELS}, got shape {arr.shape}."
+        )
+    return arr
+
+
 class ResidualIsolationForest:
     """
-    Isolation Forest fitted on 3-channel de-trended residuals [T_resid, P_resid, RH_resid].
-    Emits continuous outlier score in [0.0, 1.0].
+    CANONICAL Phase 4 detector: Isolation Forest fitted on 3-channel
+    de-trended STL residuals [T_resid, P_resid, RH_resid].
+    Emits continuous outlier score in [0.0, 1.0] with fitted threshold mapped to 0.50.
     """
+
+    residual_contract_version: str = RESIDUAL_CONTRACT_VERSION
 
     def __init__(self, contamination: float = 0.02, random_state: int = 42) -> None:
         self.contamination = contamination
@@ -46,10 +90,25 @@ class ResidualIsolationForest:
         self._model = None
         self._is_fitted: bool = False
 
+    @property
+    def is_fitted(self) -> bool:
+        """Whether a fitted Isolation Forest model is loaded."""
+        return bool(self._is_fitted and self._model is not None)
+
+    @property
+    def engine_name(self) -> str:
+        """Active engine tag: 'pyod' when PyOD available, else 'sklearn'."""
+        return "pyod" if _HAS_PYOD else "sklearn"
+
     def fit(self, residuals: np.ndarray) -> ResidualIsolationForest:
-        """Fits Isolation Forest on baseline historical residuals."""
-        X = np.asarray(residuals, dtype=float)
-        if len(X) < 10:
+        """Fits Isolation Forest on baseline historical STL residuals (m, 3)."""
+        X = _validate_residuals(residuals, context="ResidualIsolationForest.fit")
+        if len(X) < MIN_FIT_ROWS:
+            logger.warning(
+                "ResidualIsolationForest.fit: insufficient history (%d < %d); "
+                "remaining UNFITTED (degraded mode).",
+                len(X), MIN_FIT_ROWS,
+            )
             return self
 
         if _HAS_PYOD:
@@ -77,9 +136,17 @@ class ResidualIsolationForest:
         Maps the decision threshold to exactly 0.50 via piecewise linear scaling:
         - Normal observations: [0.0, 0.50)
         - Anomaly observations: [0.50, 1.0]
+
+        DEGRADED MODE: when unfitted, returns deterministic MAD/z fallback scores
+        and emits a warning so callers never mistake them for fitted IF scores.
+        Use `is_fitted` to distinguish.
         """
-        X = np.asarray(residuals, dtype=float)
+        X = _validate_residuals(residuals, context="ResidualIsolationForest.score")
         if not self._is_fitted or self._model is None:
+            logger.warning(
+                "ResidualIsolationForest.score: UNFITTED model — returning degraded "
+                "MAD/z fallback scores (is_fitted=False), not Isolation Forest scores."
+            )
             if len(X) > 1:
                 med = np.nanmedian(X, axis=0)
                 mad = np.nanmedian(np.abs(X - med), axis=0) + 1e-6
@@ -112,6 +179,54 @@ class ResidualIsolationForest:
         norm_scores[above] = np.clip(0.50 + 0.50 * (raw[above] - thresh) / denom_above, 0.50, 1.0)
 
         return norm_scores
+
+    def save(self, filepath: Union[str, Path]) -> None:
+        """Persist fitted residual detector with engine + contract metadata."""
+        import joblib
+
+        if not self.is_fitted:
+            raise RuntimeError("Cannot save unfitted ResidualIsolationForest.")
+        path = Path(filepath)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        artifact = {
+            "version": "1.0.0",
+            "model": self._model,
+            "engine": self.engine_name,
+            "contamination": self.contamination,
+            "random_state": self.random_state,
+            "thresh_": getattr(self, "thresh_", 0.0),
+            "min_val_": getattr(self, "min_val_", -1.0),
+            "max_val_": getattr(self, "max_val_", 1.0),
+            "residual_channels": list(RESIDUAL_CHANNELS),
+            "residual_contract_version": RESIDUAL_CONTRACT_VERSION,
+        }
+        joblib.dump(artifact, path)
+        logger.info("Saved ResidualIsolationForest (%s) to %s", self.engine_name, path)
+
+    def load(self, filepath: Union[str, Path]) -> ResidualIsolationForest:
+        """Load fitted residual detector; validates contract metadata."""
+        import joblib
+
+        path = Path(filepath)
+        if not path.exists():
+            raise FileNotFoundError(f"Residual IF artifact not found at {path}")
+        artifact = joblib.load(path)
+        channels = artifact.get("residual_channels", RESIDUAL_CHANNELS)
+        if list(channels) != list(RESIDUAL_CHANNELS):
+            raise ValueError(
+                f"Residual contract mismatch: artifact channels {channels} != {RESIDUAL_CHANNELS}"
+            )
+        self._model = artifact["model"]
+        self.contamination = artifact.get("contamination", self.contamination)
+        self.random_state = artifact.get("random_state", self.random_state)
+        self.thresh_ = float(artifact.get("thresh_", 0.0))
+        self.min_val_ = float(artifact.get("min_val_", -1.0))
+        self.max_val_ = float(artifact.get("max_val_", 1.0))
+        self.residual_contract_version = artifact.get(
+            "residual_contract_version", RESIDUAL_CONTRACT_VERSION
+        )
+        self._is_fitted = True
+        return self
 
 
 class SequenceAutoencoderScorer:

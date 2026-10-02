@@ -15,6 +15,7 @@ from backend.app.db.models import (
     AnomalyEvent,
     ModelRun,
     Observation,
+    OperatorFeedback,
     SensorHealth,
     Station,
     utcnow,
@@ -603,3 +604,28 @@ class ModelRunRepository:
         updated = result.scalars().first()
         await self.session.flush()
         return updated
+
+
+# ---------------------------------------------------------------------------
+# 6. Operator Feedback Repository
+# ---------------------------------------------------------------------------
+class OperatorFeedbackRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def create(self, feedback_data: Dict[str, Any]) -> OperatorFeedback:
+        fb = OperatorFeedback(**feedback_data)
+        self.session.add(fb)
+        await self.session.flush()
+        return fb
+
+    async def get_by_event_id(self, event_id: int) -> List[OperatorFeedback]:
+        stmt = select(OperatorFeedback).where(OperatorFeedback.event_id == event_id)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_recent(self, limit: int = 50) -> List[OperatorFeedback]:
+        stmt = select(OperatorFeedback).order_by(desc(OperatorFeedback.created_at)).limit(limit)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+

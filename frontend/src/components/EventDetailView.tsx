@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { fetchAnomalies, fetchStations } from '../services/api';
 import { AnomalyEvent, Station } from '../types';
+import { TriageActions } from './TriageActions';
 import { StatusBadge } from '../design-system/components/StatusBadge';
 import { EmptyState } from '../design-system/components/EmptyState';
 
@@ -391,6 +392,13 @@ export function EventDetailView({
                   </div>
                 </div>
               </div>
+
+              {/* Operator triage actions for this incident */}
+              <TriageActions
+                eventId={current.id}
+                stationId={current.station_id}
+                hasImputation={true}
+              />
 
               {/* Observed Channel Telemetry */}
               <div className="grid grid-cols-3 gap-3 font-mono text-center">

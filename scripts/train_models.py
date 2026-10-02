@@ -36,6 +36,8 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from backend.app.ml.preprocessor import DataPreprocessor, FEATURE_NAMES
 from backend.app.ml.tier2_point_ml import IsolationForestPointDetector
+from backend.app.ml.stages.stage2_ensemble import ResidualIsolationForest
+from backend.app.ml.stages.stage1_stl import STLBaselineEngine
 from backend.app.ml.tier2_temporal_ml import TemporalAutoencoder, TemporalAutoencoderDetector
 from backend.app.ml.tier3_multivariate import Tier3MultivariateDetector
 from backend.app.ml.tier4_classifier import FaultClassifier
@@ -96,6 +98,32 @@ def train_all_models(
     point_detector.fit(X_train_scaled)
     point_detector.save(output_dir / "isolation_forest.joblib")
     logger.info("  --> Saved %s", output_dir / "isolation_forest.joblib")
+    logger.warning(
+        "  --> LEGACY artifact isolation_forest.joblib (9D + kappa/tau) is SUPERSEDED "
+        "and unsupported for Phase 4; canonical detector is ResidualIsolationForest "
+        "(see OpenSpec phase4-residual-isolation-forest)."
+    )
+
+    # 3b. Train Canonical Residual Isolation Forest (Phase 4 truth) on STL residuals
+    logger.info("\n[2b/5] Training Canonical Residual Isolation Forest on STL residuals...")
+    stl_engine = STLBaselineEngine()
+    train_std = df_train.rename(columns={
+        "temperature": "temperature_c",
+        "pressure": "pressure_hpa",
+        "humidity": "humidity_pct",
+    })
+    stl_engine.fit_station("TRAIN", train_std)
+    residuals_train = stl_engine.get_residuals("TRAIN", train_std)
+    residual_if = ResidualIsolationForest(contamination=0.02, random_state=seed)
+    residual_if.fit(residuals_train)
+    residual_if.save(output_dir / "residual_iforest.joblib")
+    logger.info(
+        "  --> Saved %s (engine=%s, contract=%s, n=%d)",
+        output_dir / "residual_iforest.joblib",
+        residual_if.engine_name,
+        residual_if.residual_contract_version,
+        len(residuals_train),
+    )
 
     # 4. Train PyTorch GRU Autoencoder (Temporal ML)
     logger.info("\n[3/5] Training PyTorch GRU Temporal Autoencoder (seq_len=%d)...", seq_len)
@@ -203,6 +231,12 @@ def train_all_models(
         "isolation_forest_n_trees": 100,
         "autoencoder_latent_dim": 16,
         "mahalanobis_df": 3,
+        "phase4_canonical": "ResidualIsolationForest",
+        "phase4_residual_contract": residual_if.residual_contract_version,
+        "phase4_residual_channels": ["T_resid", "P_resid", "RH_resid"],
+        "phase4_residual_engine": residual_if.engine_name,
+        "phase4_residual_contamination": 0.02,
+        "phase4_legacy_superseded": "models/isolation_forest.joblib (9D + kappa/tau) UNSUPPORTED",
     }
     with open(output_dir / "model_metadata.json", "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)

@@ -127,6 +127,41 @@ class ConnectionManager:
                 for ws in dead_clients:
                     self._active_connections.pop(ws, None)
 
+    async def broadcast_phase3_event(self, station_id: str, event_data: Dict[str, Any]) -> None:
+        """Broadcasts unified Phase 3 anomaly and telemetry event to connected clients."""
+        is_fault = bool(event_data.get("is_fault", False))
+        payload_type = "ANOMALY_ALERT" if is_fault else "TELEMETRY_TICK"
+        payload = {
+            "type": payload_type,
+            "station_id": station_id,
+            "data": event_data,
+            "server_time": datetime.now(timezone.utc).isoformat(),
+        }
+        message = json.dumps(payload, default=str)
+        dead_clients: List[WebSocket] = []
+
+        async with self._lock:
+            targets = [
+                ws for ws, subs in self._active_connections.items()
+                if "*" in subs or "ALL" in subs or station_id in subs
+            ]
+
+        if not targets:
+            return
+
+        async def _safe_send(ws: WebSocket) -> None:
+            try:
+                await asyncio.wait_for(ws.send_text(message), timeout=1.5)
+            except Exception:
+                dead_clients.append(ws)
+
+        await asyncio.gather(*[_safe_send(ws) for ws in targets], return_exceptions=True)
+
+        if dead_clients:
+            async with self._lock:
+                for ws in dead_clients:
+                    self._active_connections.pop(ws, None)
+
 
 # Global WebSocket connection manager singleton
 ws_manager = ConnectionManager()

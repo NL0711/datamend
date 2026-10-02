@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Union
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +17,7 @@ from backend.app.db.repositories import (
     AnomalyRepository,
     HealthRepository,
     ObservationRepository,
+    OperatorFeedbackRepository,
     StationRepository,
 )
 from backend.app.schemas.schemas import (
@@ -43,10 +44,22 @@ from backend.app.schemas.schemas import (
     StationHealthDetailResponse,
     UploadSummaryResponse,
     MetricsResponse,
+    TelemetryProcessRequest,
+    Phase3InferenceResponse,
+    Phase3ExplanationSchema,
+    Phase3FeatureContributionSchema,
+    Phase3ImputationSchema,
+    Phase3StationHealthSchema,
+    OperatorFeedbackCreate,
+    OperatorFeedbackResponse,
+    StationHealthSnapshotResponse,
 )
 from backend.app.services.analytics_service import analytics_service
 from backend.app.services.ingestion_service import ingestion_service
 from backend.app.services.simulation_service import simulation_service
+from backend.app.services.phase3_service import phase3_pipeline_service
+from backend.app.health.tracker import predictive_health_tracker
+from backend.app.ml.stages import stage5_explain_engine, meteorological_safe_imputer
 
 logger = logging.getLogger(__name__)
 
@@ -220,6 +233,23 @@ async def ingest_observations_batch(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
+@router.post("/telemetry/live", response_model=ObservationIngestResponse, status_code=status.HTTP_201_CREATED, summary="Ingest single live AWS observation and broadcast (Task 4 parity alias of /observations)")
+async def ingest_telemetry_live(
+    obs: ObservationCreate,
+):
+    """Task 4 parity alias: same standard ingest path (persist + live broadcast) under the spec-named route."""
+    try:
+        res = await ingestion_service.ingest_observation(
+            obs_data=obs.model_dump(),
+            save_db=True,
+            broadcast=True,
+        )
+        return res
+    except Exception as e:
+        logger.error("Live telemetry ingestion failed: %s", e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
 @router.get("/observations", response_model=ObservationListResponse, summary="Query historical observations")
 async def get_observations(
     station_id: Optional[str] = Query(None, description="Station identifier"),
@@ -327,6 +357,7 @@ async def get_anomalies(
 
 
 @router.get("/anomalies/alerts/active", response_model=List[AnomalyEventResponse], summary="Get active operational alerts")
+@router.get("/alerts", response_model=List[AnomalyEventResponse], summary="Get active operational alerts (Task 4 parity alias of /anomalies/alerts/active)")
 async def get_active_alerts(
     station_id: Optional[str] = Query(None),
     min_severity: str = Query("MEDIUM", description="Minimum severity: MEDIUM, HIGH, CRITICAL"),
@@ -677,4 +708,165 @@ async def ingest_virtual_physical_packet(payload: Dict[str, Any]):
     except Exception as e:
         logger.error("Virtual physical packet ingestion failed: %s", e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# 11. Phase 4 Operational Serving Endpoints
+# ---------------------------------------------------------------------------
+@router.post(
+    "/telemetry/process",
+    response_model=Phase3InferenceResponse,
+    summary="Process observation through 6-Stage Deep ML Pipeline",
+)
+async def process_telemetry_reading(
+    req: TelemetryProcessRequest,
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Executes the full 6-Stage Deep ML Pipeline:
+    Tier 0 screening -> STL decomposition -> Multivariate Ensemble ->
+    Thermodynamic Consistency -> 8-Class Fault Classifier -> TreeSHAP Explanation ->
+    Safe Meteorological Imputation -> Predictive Sensor Health Tracking.
+    """
+    reading_dict = {
+        "station_id": req.station_id,
+        "timestamp": req.timestamp or datetime.now(timezone.utc),
+        "temperature_c": req.temperature_c,
+        "pressure_hpa": req.pressure_hpa,
+        "humidity_pct": req.humidity_pct,
+        "elevation_m": req.elevation_m,
+    }
+    try:
+        result = await phase3_pipeline_service.process_observation(
+            session=session,
+            reading=reading_dict,
+            persist=req.persist,
+        )
+        return Phase3InferenceResponse(
+            station_id=result.station_id,
+            timestamp=result.timestamp,
+            predicted_class=result.predicted_class,
+            anomaly_score=result.anomaly_score,
+            confidence=result.confidence,
+            is_fault=result.is_fault,
+            justification=result.justification,
+            explanation=Phase3ExplanationSchema(
+                summary=result.explanation.summary,
+                top_drivers=result.explanation.top_drivers,
+                contributions=[
+                    Phase3FeatureContributionSchema(
+                        feature=c.feature,
+                        attribution=c.attribution,
+                        raw_value=c.raw_value,
+                        residual_value=c.residual_value,
+                        direction=c.direction,
+                        meaning=c.meaning,
+                    )
+                    for c in result.explanation.contributions
+                ],
+            ),
+            imputation=Phase3ImputationSchema(
+                applied=result.imputation.applied,
+                parameter=result.imputation.parameter,
+                original_value=result.imputation.original_value,
+                imputed_value=result.imputation.imputed_value,
+                method=result.imputation.method,
+            ),
+            health=Phase3StationHealthSchema(
+                sensor_health_index=result.health_snapshot.sensor_health_index,
+                status=result.health_snapshot.status,
+                hours_to_failure=result.health_snapshot.hours_to_failure,
+            ),
+            latency_ms=result.latency_ms,
+            event_id=result.event_id,
+        )
+    except Exception as e:
+        logger.error("Failed to process telemetry reading: %s", e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get(
+    "/stations/{station_id}/health",
+    response_model=StationHealthSnapshotResponse,
+    summary="Get real-time sensor health and RUL predictive maintenance status",
+)
+async def get_station_predictive_health(station_id: str):
+    """Retrieves rolling health score (SHI 0-100), degradation slope, and remaining useful life."""
+    snapshot = predictive_health_tracker.get_station_health(station_id)
+    return StationHealthSnapshotResponse(
+        station_id=snapshot.station_id,
+        sensor_health_index=snapshot.sensor_health_index,
+        status=snapshot.status,
+        recent_anomaly_rate=snapshot.recent_anomaly_rate,
+        baseline_anomaly_rate=snapshot.baseline_anomaly_rate,
+        hours_to_failure=snapshot.hours_to_failure,
+        degradation_slope_per_hour=snapshot.degradation_slope_per_hour,
+        consecutive_frozen_streak=snapshot.consecutive_frozen_streak,
+        evaluation_time=snapshot.evaluation_time,
+    )
+
+
+@router.post(
+    "/feedback",
+    response_model=OperatorFeedbackResponse,
+    summary="Submit human-in-the-loop analyst triage feedback",
+)
+async def submit_operator_feedback(
+    payload: OperatorFeedbackCreate,
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Records operator confirmation, false-alarm rejection, or imputation approval
+    for model recalibration and audit compliance. Default store is SQLite
+    (OpenSpec task4-parity-closeout, sqlite-truth); PostgreSQL/TimescaleDB
+    remains the opt-in production path.
+    """
+    valid_statuses = {"CONFIRMED_FAULT", "FALSE_POSITIVE", "IMPUTATION_APPROVED", "REJECTED"}
+    if payload.verification_status not in valid_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid verification_status. Must be one of {valid_statuses}",
+        )
+
+    # Resolve integer event_id if numeric or lookup anomaly event
+    event_int: Optional[int] = None
+    station_id: str = "AWS-UNKNOWN"
+    try:
+        event_int = int(payload.event_id)
+    except ValueError:
+        pass
+
+    anomaly_repo = AnomalyRepository(session)
+    if event_int:
+        event = await anomaly_repo.get_by_id(event_int)
+        if event:
+            station_id = event.station_id
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Anomaly event '{payload.event_id}' not found.",
+            )
+
+    feedback_repo = OperatorFeedbackRepository(session)
+    fb = await feedback_repo.create({
+        "event_id": event_int,
+        "station_id": station_id,
+        "timestamp": datetime.now(timezone.utc),
+        "operator_id": payload.operator_id,
+        "verification_status": payload.verification_status,
+        "notes": payload.notes,
+    })
+    await session.commit()
+
+    return OperatorFeedbackResponse(
+        id=fb.id,
+        event_id=str(payload.event_id),
+        operator_id=fb.operator_id,
+        verification_status=fb.verification_status,
+        override_class=payload.override_class,
+        imputation_accepted=payload.imputation_accepted,
+        notes=fb.notes,
+        created_at=fb.created_at,
+    )
+
 

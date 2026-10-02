@@ -7,7 +7,18 @@ Organized into three modular layers:
 """
 
 import sys
+import warnings
 from importlib import import_module
+
+# Canonical Phase 4 truth (OpenSpec phase4-residual-isolation-forest):
+# supported flows MUST import from backend.app.ml.stages.stage2_ensemble
+# (ResidualIsolationForest). The legacy tier2_point_ml alias below is retained
+# ONLY for backward compatibility and is NOT supported for Phase 4
+# training/inference/evaluation.
+_LEGACY_UNSUPPORTED = {
+    "backend.app.ml.tier2_point_ml",
+    "backend.app.ml.preprocessor",
+}
 
 # Backward compatibility alias map: legacy/flat paths -> organized subpackages
 _MODULE_ALIASES = {
@@ -39,6 +50,16 @@ class _MlPackageMetaFinder:
 
     def find_spec(self, fullname: str, path, target=None):
         if fullname in _MODULE_ALIASES:
+            if fullname in _LEGACY_UNSUPPORTED:
+                warnings.warn(
+                    f"{fullname} is a LEGACY unsupported alias; use "
+                    f"{_MODULE_ALIASES[fullname]} (stages) or "
+                    f"backend.app.ml.stages.stage2_ensemble.ResidualIsolationForest "
+                    f"for canonical Phase 4. See OpenSpec "
+                    f"phase4-residual-isolation-forest.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
             target_name = _MODULE_ALIASES[fullname]
             mod = import_module(target_name)
             sys.modules[fullname] = mod

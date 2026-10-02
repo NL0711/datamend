@@ -13,6 +13,10 @@ import {
   Station,
   StationHealthDetail,
   SystemMetrics,
+  Phase3InferenceResult,
+  StationHealthSnapshot,
+  OperatorFeedbackPayload,
+  OperatorFeedbackRecord,
 } from '../types';
 
 export const API_BASE_URL = '/api';
@@ -232,4 +236,36 @@ export async function ingestVirtualPhysicalPacket(payload: Record<string, any>):
   });
   return handleResponse(res);
 }
+
+export async function processTelemetryReading(reading: {
+  station_id: string;
+  timestamp?: string;
+  temperature_c?: number;
+  pressure_hpa?: number;
+  humidity_pct?: number;
+  elevation_m?: number;
+  persist?: boolean;
+}): Promise<Phase3InferenceResult> {
+  const res = await fetch(`${API_BASE_URL}/telemetry/process`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(reading),
+  });
+  return handleResponse(res);
+}
+
+export async function fetchStationPredictiveHealth(stationId: string): Promise<StationHealthSnapshot> {
+  const res = await fetch(`${API_BASE_URL}/stations/${encodeURIComponent(stationId)}/health`);
+  return handleResponse(res);
+}
+
+export async function submitOperatorFeedback(payload: OperatorFeedbackPayload): Promise<OperatorFeedbackRecord> {
+  const res = await fetch(`${API_BASE_URL}/feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(res);
+}
+
 

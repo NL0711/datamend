@@ -1,3 +1,8 @@
+# SkyGuard AI — OPTIONAL production stack (TimescaleDB + backend + frontend).
+# Default dev/demo/test path needs none of this: the backend runs on local
+# SQLite (DATABASE_URL=sqlite+aiosqlite:///./skyguard.db). Bring this stack
+# up only to operate against PostgreSQL/TimescaleDB (OpenSpec task4-parity-closeout,
+# capability sqlite-truth).
 services:
   timescaledb:
     image: timescale/timescaledb:latest-pg16

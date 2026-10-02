@@ -1,0 +1,22 @@
+{
+  "measured_at": "2026-10-02T18:33:03.061000+00:00",
+  "transport": "in-process-ASGI",
+  "endpoint": "GET /api/health",
+  "total_requests": 500,
+  "concurrency": 500,
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.13.1",
+  "p50_ms": 8423.67,
+  "p95_ms": 13298.66,
+  "p99_ms": 13576.5,
+  "max_ms": 13698.49,
+  "mean_ms": 8198.77,
+  "wall_ms": 14924.93,
+  "throughput_rps": 33.5,
+  "errors": 0,
+  "status_counts": {
+    "200": 500
+  },
+  "budget_p99_ms": 20.0,
+  "budget_met": false
+}

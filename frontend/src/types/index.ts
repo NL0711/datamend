@@ -314,3 +314,91 @@ export interface SystemConfiguration {
   systemHealth: SystemHealthStatus;
 }
 
+// ---------------------------------------------------------------------------
+// Phase 4: Production 6-Stage Deep ML & Operator Forensics Types
+// ---------------------------------------------------------------------------
+export type Phase3FaultClass =
+  | 'SPIKE'
+  | 'FROZEN_SENSOR'
+  | 'COMMUNICATION_DROPOUT'
+  | 'CALIBRATION_DRIFT'
+  | 'POWER_FLUCTUATION'
+  | 'DATA_CORRUPTION'
+  | 'GENUINE_WEATHER_EVENT'
+  | 'NORMAL';
+
+export interface Phase3FeatureContribution {
+  feature: string;
+  attribution: number;
+  raw_value?: number;
+  residual_value?: number;
+  direction: 'increases' | 'decreases' | string;
+  meaning: string;
+}
+
+export interface Phase3ExplanationReport {
+  summary: string;
+  top_drivers: string[];
+  contributions: Phase3FeatureContribution[];
+}
+
+export interface Phase3Imputation {
+  applied: boolean;
+  parameter?: string;
+  original_value?: number;
+  imputed_value?: number;
+  method?: string;
+}
+
+export interface StationHealthSnapshot {
+  station_id: string;
+  sensor_health_index: number;
+  status: 'EXCELLENT' | 'STABLE' | 'DEGRADED' | 'CRITICAL' | string;
+  recent_anomaly_rate: number;
+  baseline_anomaly_rate: number;
+  hours_to_failure?: number | null;
+  degradation_slope_per_hour: number;
+  consecutive_frozen_streak: number;
+  evaluation_time: string;
+}
+
+export interface OperatorFeedbackPayload {
+  event_id: string;
+  operator_id: string;
+  verification_status: 'CONFIRMED_FAULT' | 'FALSE_POSITIVE' | 'IMPUTATION_APPROVED' | 'REJECTED' | string;
+  override_class?: string;
+  imputation_accepted: boolean;
+  notes?: string;
+}
+
+export interface OperatorFeedbackRecord {
+  id: number;
+  event_id: string;
+  operator_id: string;
+  verification_status: string;
+  override_class?: string;
+  imputation_accepted: boolean;
+  notes?: string;
+  created_at: string;
+}
+
+export interface Phase3InferenceResult {
+  station_id: string;
+  timestamp: string;
+  predicted_class: Phase3FaultClass;
+  anomaly_score: number;
+  confidence: number;
+  is_fault: boolean;
+  justification: string;
+  explanation: Phase3ExplanationReport;
+  imputation: Phase3Imputation;
+  health: {
+    sensor_health_index: number;
+    status: string;
+    hours_to_failure?: number | null;
+  };
+  latency_ms: number;
+  event_id?: string;
+}
+
+

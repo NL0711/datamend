@@ -28,6 +28,9 @@
 # Install Python dependencies
 pip install -r requirements.txt
 
+# Storage (default): local SQLite at ./skyguard.db — no database server needed.
+# Production opt-in: TimescaleDB via docker-compose.yml (set a real DATABASE_URL).
+
 # Run Automated Test Suites
 python -m pytest tests/test_data_sources.py tests/test_sanity.py -v
 
