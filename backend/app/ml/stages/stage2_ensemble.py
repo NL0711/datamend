@@ -80,11 +80,16 @@ class ResidualIsolationForest:
         """
         X = np.asarray(residuals, dtype=float)
         if not self._is_fitted or self._model is None:
-            # Fallback to robust MAD distance if model is unfitted
-            med = np.nanmedian(X, axis=0)
-            mad = np.nanmedian(np.abs(X - med), axis=0) + 1e-6
-            z = np.nan_to_num(np.abs(X - med) / (1.4826 * mad))
-            return np.clip(0.25 * z.mean(axis=1), 0.0, 1.0)
+            if len(X) > 1:
+                med = np.nanmedian(X, axis=0)
+                mad = np.nanmedian(np.abs(X - med), axis=0) + 1e-6
+                z = np.nan_to_num(np.abs(X - med) / (1.4826 * mad))
+                return np.clip(0.25 * z.mean(axis=1), 0.0, 1.0)
+            else:
+                scales = np.array([3.0, 3.0, 15.0])
+                z = np.abs(X[0]) / scales
+                score = np.clip(0.50 * np.max(z) / 3.0, 0.0, 1.0)
+                return np.array([score])
 
         if _HAS_PYOD:
             raw = np.asarray(self._model.decision_function(X), dtype=float)

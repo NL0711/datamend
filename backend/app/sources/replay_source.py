@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from backend.app.config import settings
-from backend.app.ml.tier0_screener import tier0_screener, Tier0Result
+from backend.app.ml.screening import tier0_screener, Tier0Result
 from backend.app.schemas.canonical import (
     CanonicalTelemetry,
     DataSourceStatus,
