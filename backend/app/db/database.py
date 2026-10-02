@@ -24,8 +24,10 @@ from backend.app.config import settings
 
 logger = logging.getLogger(__name__)
 
+is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+
 # Ensure data directory exists if a relative/absolute sqlite path is used
-if settings.DATABASE_URL.startswith("sqlite+aiosqlite:///"):
+if is_sqlite and settings.DATABASE_URL.startswith("sqlite+aiosqlite:///"):
     db_raw_path = settings.DATABASE_URL.replace("sqlite+aiosqlite:///", "")
     if db_raw_path and not db_raw_path.startswith(":memory:"):
         db_file = Path(db_raw_path)
@@ -37,27 +39,37 @@ class Base(DeclarativeBase):
     pass
 
 
+# Dialect-specific engine configurations
+engine_kwargs = {
+    "echo": False,
+    "pool_pre_ping": True,
+}
+
+if is_sqlite:
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    engine_kwargs["pool_size"] = 10
+    engine_kwargs["max_overflow"] = 20
+
 # Create Async Engine
 engine: AsyncEngine = create_async_engine(
     settings.DATABASE_URL,
-    echo=False,
-    connect_args={"check_same_thread": False},
-    pool_pre_ping=True,
+    **engine_kwargs,
 )
 
-
-@event.listens_for(engine.sync_engine, "connect")
-def set_sqlite_pragmas(dbapi_connection, connection_record) -> None:
-    """Configures SQLite connection pragmas for high concurrency, durability, and referential integrity."""
-    if isinstance(dbapi_connection, SQLite3Connection) or hasattr(dbapi_connection, "cursor"):
-        cursor = dbapi_connection.cursor()
-        try:
-            cursor.execute("PRAGMA journal_mode=WAL;")
-            cursor.execute("PRAGMA synchronous=NORMAL;")
-            cursor.execute("PRAGMA foreign_keys=ON;")
-            cursor.execute("PRAGMA busy_timeout=10000;")
-        finally:
-            cursor.close()
+if is_sqlite:
+    @event.listens_for(engine.sync_engine, "connect")
+    def set_sqlite_pragmas(dbapi_connection, connection_record) -> None:
+        """Configures SQLite connection pragmas for high concurrency, durability, and referential integrity."""
+        if isinstance(dbapi_connection, SQLite3Connection) or hasattr(dbapi_connection, "cursor"):
+            cursor = dbapi_connection.cursor()
+            try:
+                cursor.execute("PRAGMA journal_mode=WAL;")
+                cursor.execute("PRAGMA synchronous=NORMAL;")
+                cursor.execute("PRAGMA foreign_keys=ON;")
+                cursor.execute("PRAGMA busy_timeout=10000;")
+            finally:
+                cursor.close()
 
 
 # Async Session Factory
@@ -105,8 +117,9 @@ async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         
-        # Check and safely add new columns to existing SQLite tables if missing
+        # Check and safely add new columns if missing
         migration_statements = [
+            "ALTER TABLE observations ADD COLUMN tier0_flag VARCHAR(32) DEFAULT 'PASS';",
             "ALTER TABLE observations ADD COLUMN source_type VARCHAR(32) DEFAULT 'SIMULATED';",
             "ALTER TABLE observations ADD COLUMN source_id VARCHAR(64);",
             "ALTER TABLE observations ADD COLUMN provider VARCHAR(64);",
@@ -120,6 +133,22 @@ async def init_db() -> None:
             except Exception:
                 # Column already exists
                 pass
+
+        if not is_sqlite:
+            # PostgreSQL / TimescaleDB hypertable and indexing
+            try:
+                await conn.execute(text("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"))
+                await conn.execute(text(
+                    "SELECT create_hypertable('observations', 'timestamp', chunk_time_interval => INTERVAL '1 day', if_not_exists => TRUE);"
+                ))
+                await conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS idx_obs_station_time ON observations (station_id, timestamp DESC);"
+                ))
+                await conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS idx_obs_time_station ON observations (timestamp DESC, station_id);"
+                ))
+            except Exception as e:
+                logger.warning("TimescaleDB extension or hypertable initialization note: %s", e)
     
     # Seed default AWS and City Preset stations if not present
     async with get_db_context() as session:

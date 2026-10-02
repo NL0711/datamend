@@ -177,6 +177,7 @@ class IngestionService:
                         "pressure": float_p,
                         "humidity": float_rh,
                         "validation_status": "QC_FLAGGED" if qc_flag else "VALID",
+                        "tier0_flag": str(data.get("tier0_flag") or ("PASS" if not qc_flag else "FLAGGED")),
                         "source_type": data.get("source_type", "SIMULATED"),
                         "source_id": data.get("source_id", "diurnal_generator"),
                         "provider": data.get("provider"),

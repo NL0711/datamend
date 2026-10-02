@@ -12,7 +12,11 @@ import logging
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
-import paho.mqtt.client as mqtt
+
+try:
+    import paho.mqtt.client as mqtt
+except ImportError:
+    mqtt = None
 
 from backend.app.config import settings
 from backend.app.schemas.canonical import (
@@ -76,6 +80,12 @@ class PhysicalAWSDataSource(BaseDataSource):
             self._event_loop = asyncio.get_running_loop()
             self._is_running = True
             self._status = SourceConnectionStatus.CONNECTING
+
+            if mqtt is None:
+                self._status = SourceConnectionStatus.ERROR
+                self._error_message = "paho-mqtt library not installed."
+                logger.warning("[DATA_SOURCE] paho-mqtt not installed; physical MQTT source disabled.")
+                return
 
             try:
                 client_id = f"skyguard_backend_{int(time.time())}"

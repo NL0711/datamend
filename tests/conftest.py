@@ -1,10 +1,20 @@
 import warnings
-import pytest
-import pytest_asyncio
 from pathlib import Path
-from httpx import AsyncClient, ASGITransport
-from backend.app.main import app
-from backend.app.db.database import init_db
+import pytest
+try:
+    import pytest_asyncio
+except ImportError:
+    pytest_asyncio = None
+
+try:
+    from httpx import AsyncClient, ASGITransport
+    from backend.app.main import app
+    from backend.app.db.database import init_db
+except ImportError:
+    AsyncClient = None
+    ASGITransport = None
+    app = None
+    init_db = None
 from scripts.train_models import train_all_models
 
 # Ignore third-party deprecation warnings from upstream SHAP and matplotlib
@@ -39,13 +49,16 @@ def ensure_trained_models():
             epochs=15,
         )
 
-@pytest_asyncio.fixture(autouse=True)
-async def initialize_test_database():
-    """Ensures database tables and default stations exist before each test."""
-    await init_db()
+if pytest_asyncio is not None:
+    @pytest_asyncio.fixture(autouse=True)
+    async def initialize_test_database():
+        """Ensures database tables and default stations exist before each test."""
+        if init_db is not None:
+            await init_db()
 
-@pytest_asyncio.fixture
-async def async_client():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        yield client
+    @pytest_asyncio.fixture
+    async def async_client():
+        if ASGITransport is not None and app is not None and AsyncClient is not None:
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                yield client

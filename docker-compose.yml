@@ -1,24 +1,85 @@
-version: '3.8'
-
 services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: datamend-timescaledb
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-datamend}
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ./scripts/init_timescaledb.sql:/docker-entrypoint-initdb.d/01_init_timescaledb.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-datamend}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skyguard-net
+
   backend:
     build:
       context: .
       dockerfile: Dockerfile.backend
+    container_name: datamend-backend
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
       - ENVIRONMENT=production
-      - DATABASE_URL=sqlite+aiosqlite:///./skyguard.db
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-datamend}
+      - DEFAULT_DATA_SOURCE=SIMULATED
+      - EXTERNAL_WEATHER_PROVIDER=open_meteo
+      - MQTT_BROKER_HOST=broker.hivemq.com
+      - MQTT_BROKER_PORT=1883
     volumes:
       - ./data:/app/data
       - ./models:/app/models
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    networks:
+      - skyguard-net
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+    container_name: datamend-frontend
+    restart: unless-stopped
     ports:
       - "5173:80"
     depends_on:
       - backend
+    networks:
+      - skyguard-net
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: datamend-pgadmin
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-admin@datamend.ai}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+      - PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION=False
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./scripts/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    networks:
+      - skyguard-net
+
+volumes:
+  timescale_data:
+  pgadmin_data:
+
+networks:
+  skyguard-net:
+    driver: bridge

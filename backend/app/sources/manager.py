@@ -24,6 +24,7 @@ from backend.app.schemas.canonical import (
 from backend.app.sources.base import BaseDataSource
 from backend.app.sources.external_source import ExternalWeatherDataSource
 from backend.app.sources.physical_source import PhysicalAWSDataSource
+from backend.app.sources.replay_source import HistoricalReplayDataSource
 from backend.app.sources.simulated_source import SimulatedDataSource
 
 logger = logging.getLogger(__name__)
@@ -69,14 +70,21 @@ class DataSourceManager:
             default_station_id=settings.PHYSICAL_DEFAULT_STATION_ID,
         )
 
+        replay_source = HistoricalReplayDataSource(
+            csv_path=settings.HISTORICAL_DATA_PATH,
+            replay_speed=settings.HISTORICAL_REPLAY_SPEED,
+        )
+
         # Register callbacks to route normalized packets into ingestion pipeline
         sim_source.subscribe(self._on_telemetry_received)
         ext_source.subscribe(self._on_telemetry_received)
         phy_source.subscribe(self._on_telemetry_received)
+        replay_source.subscribe(self._on_telemetry_received)
 
         self._sources[DataSourceType.SIMULATED] = sim_source
         self._sources[DataSourceType.EXTERNAL_API] = ext_source
         self._sources[DataSourceType.PHYSICAL_AWS] = phy_source
+        self._sources[DataSourceType.HISTORICAL_REPLAY] = replay_source
 
         # Set default active source from configuration
         try:
