@@ -15,10 +15,10 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     String,
     Text,
 )
-from sqlalchemy.dialects.sqlite import JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.db.database import Base
@@ -68,6 +68,7 @@ class Observation(Base):
     pressure: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     humidity: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     validation_status: Mapped[str] = mapped_column(String(32), default="VALID", nullable=False)
+    tier0_flag: Mapped[str] = mapped_column(String(32), default="PASS", index=True, nullable=False)
     source_type: Mapped[Optional[str]] = mapped_column(String(32), default="SIMULATED", nullable=True)
     source_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     provider: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
@@ -166,3 +167,26 @@ class ModelRun(Base):
     __table_args__ = (
         Index("ix_model_runs_name_version", "model_name", "version"),
     )
+
+
+class OperatorFeedback(Base):
+    """Human-in-the-loop operator confirmation/rejection of anomaly alerts for active learning."""
+    __tablename__ = "operator_feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    event_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("anomaly_events.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    station_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("stations.station_id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True, nullable=False)
+    operator_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    verification_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("ix_operator_feedback_station_timestamp", "station_id", "timestamp"),
+    )
+

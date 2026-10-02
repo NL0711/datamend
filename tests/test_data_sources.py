@@ -22,6 +22,7 @@ from backend.app.sources.simulated_source import SimulatedDataSource
 from backend.app.sources.external_source import ExternalWeatherDataSource
 from backend.app.sources.physical_source import PhysicalAWSDataSource
 from backend.app.sources.manager import DataSourceManager
+import backend.app.api.websocket
 
 
 # ---------------------------------------------------------------------------
@@ -241,13 +242,14 @@ async def test_data_source_manager_switching():
     manager = DataSourceManager()
     manager.initialize()
 
-    # Verify all 3 sources registered
+    # Verify all 4 sources registered
     sources_resp = await manager.list_sources()
-    assert len(sources_resp.sources) == 3
+    assert len(sources_resp.sources) == 4
     types = [s.source_type for s in sources_resp.sources]
     assert DataSourceType.SIMULATED in types
     assert DataSourceType.EXTERNAL_API in types
     assert DataSourceType.PHYSICAL_AWS in types
+    assert DataSourceType.HISTORICAL_REPLAY in types
 
     # Switch to EXTERNAL_API
     with patch("backend.app.sources.external_source.ExternalWeatherDataSource.start", new=AsyncMock()), \

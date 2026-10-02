@@ -1,5 +1,18 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 from typing import List, Optional
+
+try:
+    from pydantic_settings import BaseSettings, SettingsConfigDict
+except ImportError:
+    from pydantic import BaseModel
+    SettingsConfigDict = dict
+
+    class BaseSettings(BaseModel):
+        def __init__(self, **values):
+            for k in self.model_fields.keys():
+                if k in os.environ and k not in values:
+                    values[k] = os.environ[k]
+            super().__init__(**values)
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "SkyGuard AI"
@@ -23,8 +36,10 @@ class Settings(BaseSettings):
     HEALTH_EMA_ALPHA: float = 0.10
     ANOMALY_THRESHOLD: float = 0.50
 
-    # Data Source defaults
-    DEFAULT_DATA_SOURCE: str = "SIMULATED"  # SIMULATED | EXTERNAL_API | PHYSICAL_AWS
+    # Data Source defaults (SIMULATED | EXTERNAL_API | PHYSICAL_AWS | HISTORICAL_REPLAY)
+    DEFAULT_DATA_SOURCE: str = "SIMULATED"
+    HISTORICAL_DATA_PATH: str = "data/historical_benchmark_30d.csv"
+    HISTORICAL_REPLAY_SPEED: float = 1.0  # 1.0 = real-time, 10.0 = 10x, 0.0 = instantaneous burst
 
     # External Weather API settings (Open-Meteo)
     EXTERNAL_WEATHER_PROVIDER: str = "open_meteo"

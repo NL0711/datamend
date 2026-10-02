@@ -17,6 +17,7 @@ class DataSourceType(str, Enum):
     SIMULATED = "SIMULATED"
     EXTERNAL_API = "EXTERNAL_API"
     PHYSICAL_AWS = "PHYSICAL_AWS"
+    HISTORICAL_REPLAY = "HISTORICAL_REPLAY"
 
 
 class SourceConnectionStatus(str, Enum):
@@ -38,9 +39,9 @@ class CanonicalTelemetry(BaseModel):
     """
     station_id: str = Field(..., min_length=1, max_length=64, description="AWS station identifier (e.g. AWS-001, PUNE-EXT-001)")
     timestamp: str = Field(..., description="Observation timestamp in ISO 8601 UTC string")
-    temperature: float = Field(..., ge=-100.0, le=100.0, description="Temperature in Celsius (°C)")
-    pressure: float = Field(..., ge=100.0, le=1500.0, description="Atmospheric pressure in hPa")
-    humidity: float = Field(..., ge=-20.0, le=150.0, description="Relative humidity in percentage (%)")
+    temperature: Optional[float] = Field(None, ge=-100.0, le=100.0, description="Temperature in Celsius (°C)")
+    pressure: Optional[float] = Field(None, ge=100.0, le=1500.0, description="Atmospheric pressure in hPa")
+    humidity: Optional[float] = Field(None, ge=-20.0, le=150.0, description="Relative humidity in percentage (%)")
     
     # Provenance & Source Metadata
     source_type: DataSourceType = Field(DataSourceType.SIMULATED, description="Origin classification")
@@ -59,6 +60,9 @@ class CanonicalTelemetry(BaseModel):
     received_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat(), description="UTC timestamp when received by backend")
     data_quality: str = Field("GOOD", description="Initial ingestion quality assessment (GOOD, SUSPECT, INVALID)")
     connectivity_status: SourceConnectionStatus = Field(SourceConnectionStatus.CONNECTED, description="Source connection health")
+    tier0_flag: Optional[str] = Field("PASS", description="Deterministic screener flag (PASS, BOUNDS_OUT_OF_RANGE, STEP_SPIKE, FROZEN_SENSOR, NULL_DROPOUT)")
+    is_valid: bool = Field(True, description="True if payload passed baseline screening")
+    validation_flags: List[str] = Field(default_factory=list, description="Validation failure reasons if invalid")
     raw_metadata: Dict[str, Any] = Field(default_factory=dict, description="Original unparsed payload fields")
 
     model_config = ConfigDict(from_attributes=True)
