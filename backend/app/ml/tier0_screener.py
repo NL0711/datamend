@@ -35,8 +35,8 @@ class Tier0Screener:
     """
 
     PHYSICAL_LIMITS: Dict[str, Tuple[float, float]] = {
-        "temperature": (-60.0, 60.0),
-        "pressure": (500.0, 1085.0),
+        "temperature": (-10.0, 60.0),
+        "pressure": (870.0, 1085.0),
         "humidity": (0.0, 100.0),
     }
 
@@ -67,7 +67,7 @@ class Tier0Screener:
         """Clears rolling buffers for a specific station."""
         self._history.pop(station_id, None)
 
-    def screen(self, station_id: str, reading: Dict[str, Any]) -> Tier0Result:
+    def screen(self, station_id: str, reading: Dict[str, Any], altitude_m: float = 0.0) -> Tier0Result:
         """
         Screens a single observation record in-memory.
 
@@ -77,6 +77,8 @@ class Tier0Screener:
             Unique AWS station identifier.
         reading : dict
             Dictionary containing 'temperature', 'pressure', 'humidity'.
+        altitude_m : float, optional
+            Station elevation in meters above sea level (default: 0.0).
         """
         temp = reading.get("temperature")
         press = reading.get("pressure")
@@ -103,12 +105,15 @@ class Tier0Screener:
         for param, (low, high) in self.PHYSICAL_LIMITS.items():
             val = norm_telemetry[param]
             assert val is not None
-            if val < low or val > high:
+            actual_low = low
+            if param == "pressure" and altitude_m > 500:
+                actual_low = max(500.0, 870.0 - 0.1 * altitude_m)
+            if val < actual_low or val > high:
                 return Tier0Result(
                     status="REJECTED",
                     flag="OUT_OF_RANGE",
                     violated_param=param,
-                    reason=f"{param.capitalize()} {val} outside physically allowable range [{low}, {high}].",
+                    reason=f"{param.capitalize()} {val} outside physically allowable range [{actual_low}, {high}].",
                     telemetry=norm_telemetry,
                 )
 
