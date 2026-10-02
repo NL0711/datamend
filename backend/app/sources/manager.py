@@ -23,6 +23,7 @@ from backend.app.schemas.canonical import (
 )
 from backend.app.sources.base import BaseDataSource
 from backend.app.sources.external_source import ExternalWeatherDataSource
+from backend.app.sources.noaa_source import NoaaISDDataSource
 from backend.app.sources.physical_source import PhysicalAWSDataSource
 from backend.app.sources.replay_source import HistoricalReplayDataSource
 from backend.app.sources.simulated_source import SimulatedDataSource
@@ -39,16 +40,20 @@ class DataSourceManager:
 
     def __init__(self) -> None:
         self._sources: Dict[DataSourceType, BaseDataSource] = {}
-        self._active_source_type: DataSourceType = DataSourceType.SIMULATED
+        self._active_source_type: DataSourceType = DataSourceType.NOAA_ISD
         self._lock = asyncio.Lock()
         self._is_initialized: bool = False
         self._last_forwarded_telemetry: Optional[CanonicalTelemetry] = None
 
     def initialize(self) -> None:
-        """Registers the standard three telemetry adapters."""
+        """Registers the standard telemetry adapters."""
         if self._is_initialized:
             return
 
+        noaa_source = NoaaISDDataSource(
+            csv_path=getattr(settings, "NOAA_ISD_DATA_PATH", "data/noaa_aws_network.csv"),
+            tick_interval_seconds=1.5,
+        )
         sim_source = SimulatedDataSource(interval_seconds=1.5)
         ext_source = ExternalWeatherDataSource(
             latitude=settings.EXTERNAL_WEATHER_LATITUDE,
@@ -76,21 +81,23 @@ class DataSourceManager:
         )
 
         # Register callbacks to route normalized packets into ingestion pipeline
+        noaa_source.subscribe(self._on_telemetry_received)
         sim_source.subscribe(self._on_telemetry_received)
         ext_source.subscribe(self._on_telemetry_received)
         phy_source.subscribe(self._on_telemetry_received)
         replay_source.subscribe(self._on_telemetry_received)
 
+        self._sources[DataSourceType.NOAA_ISD] = noaa_source
         self._sources[DataSourceType.SIMULATED] = sim_source
         self._sources[DataSourceType.EXTERNAL_API] = ext_source
         self._sources[DataSourceType.PHYSICAL_AWS] = phy_source
         self._sources[DataSourceType.HISTORICAL_REPLAY] = replay_source
 
-        # Set default active source from configuration
+        # Set default active source from configuration (defaults to NOAA_ISD)
         try:
             self._active_source_type = DataSourceType(settings.DEFAULT_DATA_SOURCE.upper())
         except ValueError:
-            self._active_source_type = DataSourceType.SIMULATED
+            self._active_source_type = DataSourceType.NOAA_ISD
 
         self._is_initialized = True
         logger.info("[DATA_SOURCE_MANAGER] Initialized with sources: %s. Default active: %s",

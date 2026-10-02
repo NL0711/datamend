@@ -22,18 +22,31 @@ export const ContextualStatusStrip: React.FC<ContextualStatusStripProps> = ({ cl
   } = useSystemConfiguration();
 
   const getSourceIcon = () => {
-    const code = activeSource === 'SIMULATED' ? 'SIM' : activeSource === 'EXTERNAL_API' ? 'EXT' : 'HW';
-    return <span className="text-[10px] font-bold text-slate-600 font-mono">{code}</span>;
+    switch (activeSource) {
+      case 'NOAA_ISD':
+        return <span className="text-[10px] font-bold text-sky-700 font-mono">NOAA</span>;
+      case 'SIMULATED':
+        return <span className="text-[10px] font-bold text-slate-600 font-mono">SIM</span>;
+      case 'EXTERNAL_API':
+        return <span className="text-[10px] font-bold text-slate-600 font-mono">EXT</span>;
+      case 'PHYSICAL_AWS':
+      default:
+        return <span className="text-[10px] font-bold text-slate-600 font-mono">HW</span>;
+    }
   };
 
   const getSourceLabel = () => {
     switch (activeSource) {
+      case 'NOAA_ISD':
+        return 'NOAA ISD SURFACE AWS (AWS OPEN DATA)';
       case 'SIMULATED':
         return 'SIMULATED AWS';
       case 'EXTERNAL_API':
         return selectedCity ? `OPEN-METEO: ${selectedCity.name.toUpperCase()}` : 'OPEN-METEO LIVE';
       case 'PHYSICAL_AWS':
         return 'PHYSICAL AWS (ESP32)';
+      default:
+        return 'NOAA ISD SURFACE AWS';
     }
   };
 

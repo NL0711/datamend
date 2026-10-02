@@ -56,14 +56,14 @@ export interface InferenceResult {
   pressure?: number;
   humidity?: number;
   source?: {
-    type: 'SIMULATED' | 'EXTERNAL_API' | 'PHYSICAL_AWS';
+    type: 'NOAA_ISD' | 'SIMULATED' | 'EXTERNAL_API' | 'PHYSICAL_AWS' | 'HISTORICAL_REPLAY';
     id: string;
     provider?: string;
     device_id?: string;
   };
 }
 
-export type DataSourceType = 'SIMULATED' | 'EXTERNAL_API' | 'PHYSICAL_AWS';
+export type DataSourceType = 'NOAA_ISD' | 'SIMULATED' | 'EXTERNAL_API' | 'PHYSICAL_AWS' | 'HISTORICAL_REPLAY';
 
 export type SourceConnectionStatus =
   | 'CONNECTED'

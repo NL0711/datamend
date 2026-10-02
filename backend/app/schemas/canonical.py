@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class DataSourceType(str, Enum):
     """Normalized classification of telemetry origin."""
+    NOAA_ISD = "NOAA_ISD"
     SIMULATED = "SIMULATED"
     EXTERNAL_API = "EXTERNAL_API"
     PHYSICAL_AWS = "PHYSICAL_AWS"

@@ -53,8 +53,17 @@ export const SettingsCenter: React.FC = () => {
   };
 
   const getSourceIcon = (type: DataSourceType) => {
-    const code = type === 'SIMULATED' ? 'SIM' : type === 'EXTERNAL_API' ? 'EXT' : 'HW';
-    return <span className="text-[10px] font-bold text-slate-600 font-mono">{code}</span>;
+    switch (type) {
+      case 'NOAA_ISD':
+        return <span className="text-[10px] font-bold text-sky-700 font-mono">NOAA</span>;
+      case 'SIMULATED':
+        return <span className="text-[10px] font-bold text-slate-600 font-mono">SIM</span>;
+      case 'EXTERNAL_API':
+        return <span className="text-[10px] font-bold text-slate-600 font-mono">EXT</span>;
+      case 'PHYSICAL_AWS':
+      default:
+        return <span className="text-[10px] font-bold text-slate-600 font-mono">HW</span>;
+    }
   };
 
   return (
@@ -156,6 +165,42 @@ export const SettingsCenter: React.FC = () => {
                   </div>
 
                   <div className="space-y-2.5">
+                    {/* NOAA ISD Surface AWS (AWS Open Data) */}
+                    <div
+                      onClick={() => changeSource('NOAA_ISD')}
+                      className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                        activeSource === 'NOAA_ISD'
+                          ? 'bg-[#FFFFFF] border-cyan-500 ring-1 ring-cyan-500/40 shadow-lg'
+                          : 'bg-[#F4F6FA] border-[#D3DCE7] hover:border-slate-500'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 rounded-lg bg-[#EDF1F7] border border-cyan-500/40">
+                            {getSourceIcon('NOAA_ISD')}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-900 font-mono">NOAA ISD Surface AWS (AWS Open Data)</span>
+                              {activeSource === 'NOAA_ISD' && (
+                                <span className="text-[10px] font-mono px-2 py-0.2 bg-cyan-500/20 text-cyan-700 border border-cyan-500/40 rounded font-bold">
+                                  PRIMARY
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              Real in-situ surface weather station observations archived on AWS Open Data (NOAA NCEI ISD)
+                            </p>
+                          </div>
+                        </div>
+                        <StatusBadge
+                          label={activeSource === 'NOAA_ISD' ? 'ACTIVE STREAM' : 'AVAILABLE'}
+                          variant={activeSource === 'NOAA_ISD' ? 'nominal' : 'neutral'}
+                          size="sm"
+                        />
+                      </div>
+                    </div>
+
                     {/* Simulated AWS */}
                     <div
                       onClick={() => changeSource('SIMULATED')}

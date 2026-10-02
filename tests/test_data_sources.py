@@ -20,6 +20,7 @@ from backend.app.schemas.canonical import (
 from backend.app.sources.base import BaseDataSource
 from backend.app.sources.simulated_source import SimulatedDataSource
 from backend.app.sources.external_source import ExternalWeatherDataSource
+from backend.app.sources.noaa_source import NoaaISDDataSource
 from backend.app.sources.physical_source import PhysicalAWSDataSource
 from backend.app.sources.manager import DataSourceManager
 import backend.app.api.websocket
@@ -235,17 +236,55 @@ async def test_physical_aws_heartbeat():
 
 
 # ---------------------------------------------------------------------------
-# 5. Master Data Source Manager Tests
+# 5. NOAA ISD Data Source Adapter Tests (Real Surface AWS on AWS Open Data)
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_noaa_isd_data_source_lifecycle():
+    source = NoaaISDDataSource(
+        csv_path="data/noaa_aws_network.csv",
+        tick_interval_seconds=0.05,
+        loop_playback=False,
+    )
+    rec_count = source.load_dataset()
+    assert rec_count > 0
+    assert len(source._records_by_timestamp) > 0
+
+    received = []
+
+    async def _on_packet(packet: CanonicalTelemetry):
+        received.append(packet)
+
+    source.subscribe(_on_packet)
+    await source.start()
+    assert source._is_running is True
+
+    # Allow tick cycle to emit multiple station observations
+    await asyncio.sleep(0.2)
+    await source.stop()
+    assert source._is_running is False
+    assert len(received) >= 1
+
+    first = received[0]
+    assert first.source_type == DataSourceType.NOAA_ISD
+    assert "NOAA NCEI ISD" in first.provider
+    assert -90.0 <= first.temperature <= 60.0
+    assert 300.0 <= first.pressure <= 1100.0
+    assert 0.0 <= first.humidity <= 100.0
+
+
+# ---------------------------------------------------------------------------
+# 6. Master Data Source Manager Tests
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_data_source_manager_switching():
     manager = DataSourceManager()
     manager.initialize()
 
-    # Verify all 4 sources registered
+    # Verify all 5 sources registered
     sources_resp = await manager.list_sources()
-    assert len(sources_resp.sources) == 4
+    assert len(sources_resp.sources) == 5
     types = [s.source_type for s in sources_resp.sources]
+    assert DataSourceType.NOAA_ISD in types
     assert DataSourceType.SIMULATED in types
     assert DataSourceType.EXTERNAL_API in types
     assert DataSourceType.PHYSICAL_AWS in types
@@ -259,6 +298,14 @@ async def test_data_source_manager_switching():
         assert status.source_type == DataSourceType.EXTERNAL_API
         assert manager._active_source_type == DataSourceType.EXTERNAL_API
 
+    # Switch to NOAA_ISD
+    with patch("backend.app.sources.noaa_source.NoaaISDDataSource.start", new=AsyncMock()), \
+         patch("backend.app.api.websocket.ConnectionManager.broadcast_alert", new=AsyncMock()):
+        req = DataSourceSelectRequest(source_type=DataSourceType.NOAA_ISD)
+        status = await manager.select_source(req)
+        assert status.source_type == DataSourceType.NOAA_ISD
+        assert manager._active_source_type == DataSourceType.NOAA_ISD
+
     # Switch back to SIMULATED
     with patch("backend.app.sources.simulated_source.SimulatedDataSource.start", new=AsyncMock()), \
          patch("backend.app.api.websocket.ConnectionManager.broadcast_alert", new=AsyncMock()):
@@ -266,3 +313,4 @@ async def test_data_source_manager_switching():
         status = await manager.select_source(req)
         assert status.source_type == DataSourceType.SIMULATED
         assert manager._active_source_type == DataSourceType.SIMULATED
+

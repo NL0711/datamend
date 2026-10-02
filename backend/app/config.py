@@ -36,8 +36,9 @@ class Settings(BaseSettings):
     HEALTH_EMA_ALPHA: float = 0.10
     ANOMALY_THRESHOLD: float = 0.50
 
-    # Data Source defaults (SIMULATED | EXTERNAL_API | PHYSICAL_AWS | HISTORICAL_REPLAY)
-    DEFAULT_DATA_SOURCE: str = "SIMULATED"
+    # Data Source defaults (NOAA_ISD | SIMULATED | EXTERNAL_API | PHYSICAL_AWS | HISTORICAL_REPLAY)
+    DEFAULT_DATA_SOURCE: str = "NOAA_ISD"
+    NOAA_ISD_DATA_PATH: str = "data/noaa_aws_network.csv"
     HISTORICAL_DATA_PATH: str = "data/historical_benchmark_30d.csv"
     HISTORICAL_REPLAY_SPEED: float = 1.0  # 1.0 = real-time, 10.0 = 10x, 0.0 = instantaneous burst
 

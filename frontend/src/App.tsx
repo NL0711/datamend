@@ -147,6 +147,19 @@ function AppContent() {
   const getSourceBadge = () => {
     switch (activeSource) {
       case 'PHYSICAL_AWS':
+      case 'NOAA_ISD':
+        return (
+          <button
+            onClick={openSettings}
+            className="flex items-center gap-1.5 px-3 py-1 bg-[#F4F6FA] hover:bg-[#EDF1F7] border border-sky-500/50 rounded-lg transition-all text-xs font-mono shadow-sm"
+            title="Click to configure NOAA ISD Surface Telemetry Source"
+          >
+            <Globe className="w-3.5 h-3.5 text-sky-600" />
+            <span className="text-sky-800 font-bold">NOAA ISD AWS (REAL)</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5" />
+          </button>
+        );
+      case 'PHYSICAL_AWS':
         return (
           <button
             onClick={openSettings}

@@ -26,8 +26,8 @@ const DEFAULT_PREFERENCES: OperatorPreferences = {
   displayDensity: 'comfortable',
   reducedMotion: false,
   defaultView: 'overview',
-  defaultStationId: 'PUNE-EXT-001',
-  defaultDataSource: 'EXTERNAL_API',
+  defaultStationId: '725650-03017',
+  defaultDataSource: 'NOAA_ISD',
   timezone: 'UTC',
 };
 
@@ -78,9 +78,9 @@ export const SystemConfigurationProvider: React.FC<{ children: React.ReactNode }
     return DEFAULT_PREFERENCES;
   });
 
-  const [activeSource, setActiveSource] = useState<DataSourceType>('EXTERNAL_API');
-  const [selectedCityId, setSelectedCityId] = useState<string>('pune');
-  const [selectedStationId, setSelectedStationId] = useState<string>('PUNE-EXT-001');
+  const [activeSource, setActiveSource] = useState<DataSourceType>('NOAA_ISD');
+  const [selectedCityId, setSelectedCityId] = useState<string>('denver');
+  const [selectedStationId, setSelectedStationId] = useState<string>('725650-03017');
   const [activeSourceStatus, setActiveSourceStatus] = useState<DataSourceStatus | null>(null);
   const [allSources, setAllSources] = useState<DataSourceStatus[]>([]);
   
