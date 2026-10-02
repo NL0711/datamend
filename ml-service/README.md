@@ -386,3 +386,24 @@ Output:
 - `trend_and_seasonal` - Trend + seasonality
 - `high_noise` - High noise AR process
 - `low_noise` - Low noise AR process
+
+## Closed-Loop Recalibration (Phase 5)
+
+Feedback curation and rolling refits live under `src/learning/`:
+
+- `src/learning/feedback_curator.py` — joins raw telemetry, residual
+  features, and operator labels into versioned training partitions, with
+  integrity validation and operator-disagreement flagging.
+- `src/learning/recalibration_worker.py` — scheduled STL refits and
+  adaptive threshold adjustment with dry-run diff and recall rollback.
+
+**Layout note:** the rest of `ml-service` uses a flat package layout
+(`detectors/`, `datasets/`, ...) importable directly with
+`pythonpath=["."]`. The `src/learning/` subtree is the deliberate
+exception (Phase 5 request): import it as `src.learning....`, e.g.
+
+```python
+from src.learning.feedback_curator import build_partitions
+```
+
+and verify with `python -c "import src.learning"` from `ml-service/`.

@@ -1,0 +1,79 @@
+{
+  "timestamp_utc": "2026-10-02T19:30:38.225864Z",
+  "trigger": "daily",
+  "phase_results": {
+    "phase_1_feedback_curation": {
+      "partitions": [
+        {
+          "station": "station1",
+          "version": "v1",
+          "valid": true,
+          "reasons": []
+        }
+      ],
+      "missing_windows": [],
+      "valid_partition_count": 1,
+      "missing_window_count": 0
+    },
+    "phase_2_stl_refit": {
+      "trigger": "daily",
+      "timestamp_utc": "2026-10-02T19:30:38.235330Z",
+      "ran": 1,
+      "skipped": 0,
+      "skipped_reasons": [],
+      "baselines_written": 1
+    },
+    "phase_3_threshold_adjustment": {
+      "adjustments": [
+        {
+          "station": "station1",
+          "old_threshold": 0.5,
+          "new_threshold": 0.6,
+          "shift": 0.09999999999999998,
+          "reason": "raised"
+        }
+      ]
+    },
+    "phase_4_dry_run_diff": {
+      "old_series_hash": "abc123",
+      "new_series_hash": "def456",
+      "hash_changed": true,
+      "old_trend": [
+        1.0,
+        2.0
+      ],
+      "new_trend": [
+        1.1,
+        2.1
+      ],
+      "old_seasonal": [
+        0.1,
+        0.2
+      ],
+      "new_seasonal": [
+        0.15,
+        0.25
+      ],
+      "old_residual": [
+        0.01,
+        0.02
+      ],
+      "new_residual": [
+        0.015,
+        0.025
+      ],
+      "old_window_start": "2024-01-01",
+      "new_window_start": "2024-01-01",
+      "old_window_end": "2024-01-31",
+      "new_window_end": "2024-01-31",
+      "changed": true
+    },
+    "phase_5_fp_reduction": {
+      "pre_recurrent_fp": 50,
+      "post_recurrent_fp": 10,
+      "reduction_pct": 80.0,
+      "gate_passed": true
+    }
+  },
+  "report_path": "recalibration_report.json"
+}

@@ -1,0 +1,8 @@
+[
+  {
+    "station": "station1",
+    "version": "v1",
+    "timestamp_utc": "2026-10-02T19:30:38.235330Z",
+    "baseline_path": "baselines\\station1\\baseline-v1.json"
+  }
+]
