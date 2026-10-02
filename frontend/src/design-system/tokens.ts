@@ -1,24 +1,24 @@
 /**
  * frontend/src/design-system/tokens.ts
- * SkyGuard AI — Atmospheric Scientific Command Center Design Tokens.
+ * DataMend — Light Operations Theme Design Tokens.
  */
 
 export const COLORS = {
-  // Atmospheric Slate & Navy Canvas Foundation (No pure pitch black)
+  // Light Canvas Foundation
   bg: {
-    base: '#0F1726',       // Deep mission space canvas
-    surface1: '#152033',   // Primary panel & container background
-    surface2: '#1B2A44',   // Elevated cards, drawers, and headers
-    surface3: '#233656',   // Hover surfaces, active states, popovers
-    inset: '#0C1320',      // Muted technical wells and table zebra rows
+    base: '#F4F6FA',       // Page canvas
+    surface1: '#FFFFFF',   // Primary panel & container background
+    surface2: '#EDF1F7',   // Elevated cards, drawers, and headers
+    surface3: '#E2E8F2',   // Hover surfaces, active states, popovers
+    inset: '#E8EDF4',      // Muted technical wells and table zebra rows
   },
 
-  // Refined Translucent Hairline Borders
+  // Refined Hairline Borders
   border: {
-    subtle: 'rgba(255, 255, 255, 0.08)',
-    strong: '#263B5E',
+    subtle: 'rgba(15, 23, 42, 0.10)',
+    strong: '#D3DCE7',
     focus: '#0284C7',
-    glow: 'rgba(2, 132, 199, 0.25)',
+    glow: 'rgba(2, 132, 199, 0.18)',
   },
 
   // Primary Operational Accents
@@ -28,42 +28,42 @@ export const COLORS = {
     indigo: '#6366F1',     // Deep analytical accent
   },
 
-  // Strict WMO / Scientific Semantic Status Palette
+  // Strict WMO / Scientific Semantic Status Palette (light-background text)
   status: {
     nominal: {
-      text: '#10B981',
-      bg: 'rgba(16, 185, 129, 0.12)',
+      text: '#047857',
+      bg: 'rgba(16, 185, 129, 0.10)',
       border: 'rgba(16, 185, 129, 0.35)',
-      badge: '#059669',
+      badge: '#047857',
     },
     info: {
-      text: '#38BDF8',
+      text: '#0369A1',
       bg: 'rgba(56, 189, 248, 0.12)',
       border: 'rgba(56, 189, 248, 0.35)',
-      badge: '#0284C7',
+      badge: '#0369A1',
     },
     warning: {
-      text: '#F59E0B',
+      text: '#B45309',
       bg: 'rgba(245, 158, 11, 0.12)',
       border: 'rgba(245, 158, 11, 0.35)',
-      badge: '#D97706',
+      badge: '#B45309',
     },
     critical: {
-      text: '#EF4444',
-      bg: 'rgba(239, 68, 68, 0.14)',
+      text: '#BE123C',
+      bg: 'rgba(239, 68, 68, 0.10)',
       border: 'rgba(239, 68, 68, 0.40)',
-      badge: '#DC2626',
+      badge: '#BE123C',
     },
     extremeMet: {
-      text: '#06B6D4',
-      bg: 'rgba(6, 182, 212, 0.14)',
+      text: '#0E7490',
+      bg: 'rgba(6, 182, 212, 0.10)',
       border: 'rgba(6, 182, 212, 0.40)',
       badge: '#0891B2',
     },
     neutral: {
-      text: '#94A3B8',
-      bg: 'rgba(148, 163, 184, 0.10)',
-      border: 'rgba(148, 163, 184, 0.25)',
+      text: '#64748B',
+      bg: 'rgba(148, 163, 184, 0.14)',
+      border: 'rgba(148, 163, 184, 0.35)',
       badge: '#64748B',
     },
   },

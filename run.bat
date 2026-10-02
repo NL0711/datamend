@@ -1,9 +1,9 @@
 @echo off
-title SkyGuard AI — Full System Launcher
+title DataMend — Full System Launcher
 color 0A
 
 echo ============================================================
-echo    SKYGUARD AI — Intelligent Anomaly Detection Platform
+echo    DATAMEND AI — Intelligent Anomaly Detection Platform
 echo    Starting Full System (Backend + Frontend)
 echo ============================================================
 echo.
@@ -82,7 +82,7 @@ echo.
 :: ──────────────────────────────────────────────
 :: 5. Launch Backend + Frontend
 :: ──────────────────────────────────────────────
-echo [5/5] Launching SkyGuard AI...
+echo [5/5] Launching DataMend...
 echo.
 echo        Backend:  http://localhost:8899
 echo        API Docs: http://localhost:8899/docs
@@ -95,13 +95,13 @@ echo ============================================================
 echo.
 
 :: Start backend in a new window
-start "SkyGuard Backend (port 8899)" cmd /k "cd /d "%PROJECT_DIR%" && python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8899 --reload"
+start "DataMend Backend (port 8899)" cmd /k "cd /d "%PROJECT_DIR%" && python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8899 --reload"
 
 :: Small delay to let backend start first
 timeout /t 3 /nobreak >nul
 
 :: Start frontend in a new window
-start "SkyGuard Frontend (port 5199)" cmd /k "cd /d "%PROJECT_DIR%\frontend" && npm run dev"
+start "DataMend Frontend (port 5199)" cmd /k "cd /d "%PROJECT_DIR%\frontend" && npm run dev"
 
 :: Wait a moment then open browser
 timeout /t 5 /nobreak >nul
@@ -109,7 +109,7 @@ echo Opening dashboard in browser...
 start http://localhost:5199
 
 echo.
-echo SkyGuard AI is running!
+echo DataMend is running!
 echo.
 echo   Backend:  http://localhost:8899      (API Docs: http://localhost:8899/docs)
 echo   Frontend: http://localhost:5199

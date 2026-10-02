@@ -1,6 +1,6 @@
 """
 backend/app/db/models.py
-SkyGuard AI — SQLAlchemy 2.0 ORM Models for AWS Telemetry, AI Diagnostics, and Sensor Health.
+DataMend — SQLAlchemy 2.0 ORM Models for AWS Telemetry, AI Diagnostics, and Sensor Health.
 """
 
 from __future__ import annotations

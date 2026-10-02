@@ -7,14 +7,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        skyguard: {
-          base: '#0F1726',
-          surface1: '#152033',
-          surface2: '#1B2A44',
-          surface3: '#233656',
-          inset: '#0C1320',
-          border: 'rgba(255, 255, 255, 0.08)',
-          borderStrong: '#263B5E',
+        datamend: {
+          base: '#F4F6FA',
+          surface1: '#FFFFFF',
+          surface2: '#EDF1F7',
+          surface3: '#E2E8F2',
+          inset: '#E8EDF4',
+          border: 'rgba(15, 23, 42, 0.10)',
+          borderStrong: '#D3DCE7',
           primary: '#0284C7',
           primaryLight: '#38BDF8',
           nominal: '#10B981',

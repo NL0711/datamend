@@ -1,14 +1,14 @@
-# SKYGUARD AI — E2E TEST INFRASTRUCTURE & ARCHITECTURE SPECIFICATION
+# DATAMEND AI — E2E TEST INFRASTRUCTURE & ARCHITECTURE SPECIFICATION
 
 ## 1. System Overview & Testing Philosophy
 
-SkyGuard AI is a production-grade meteorological quality control, real-time anomaly detection, fault classification, explainability, and sensor health platform for Automatic Weather Stations (AWS).
+DataMend is a production-grade meteorological quality control, real-time anomaly detection, fault classification, explainability, and sensor health platform for Automatic Weather Stations (AWS).
 The core system operates strictly on three primary thermodynamic variables:
 - **Temperature ($T$)**: $-40^\circ\text{C} \le T \le +60^\circ\text{C}$
 - **Atmospheric Pressure ($P$)**: $300\text{ hPa} \le P \le 1100\text{ hPa}$
 - **Relative Humidity ($RH$)**: $0\% \le RH \le 104\%$ (allowing up to 104% for supersaturation)
 
-Because SkyGuard AI combines deterministic physical limits, non-linear ML models (Isolation Forest, PyTorch GRU/LSTM Autoencoder), thermodynamic equations (Clausius-Clapeyron / Magnus-Tetens), multi-tier fusion, rolling sensor health estimation, and real-time streaming over WebSockets and REST, testing must guarantee both scientific correctness and operational robustness.
+Because DataMend combines deterministic physical limits, non-linear ML models (Isolation Forest, PyTorch GRU/LSTM Autoencoder), thermodynamic equations (Clausius-Clapeyron / Magnus-Tetens), multi-tier fusion, rolling sensor health estimation, and real-time streaming over WebSockets and REST, testing must guarantee both scientific correctness and operational robustness.
 
 ### Core Testing Mandates:
 1. **Zero Hardcoded Fakes**: Tests must strictly assert that anomaly scores, SHAP explanations, health indices, and predictions derive dynamically from real models and physics calculations.

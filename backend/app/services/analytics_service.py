@@ -1,6 +1,6 @@
 """
 backend/app/services/analytics_service.py
-SkyGuard AI — Operational Analytics, Performance Metrics, and Fleet Aggregation Service.
+DataMend — Operational Analytics, Performance Metrics, and Fleet Aggregation Service.
 """
 
 from __future__ import annotations

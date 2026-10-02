@@ -1,4 +1,4 @@
-# SkyGuard AI — Master Live System Final Audit Report
+# DataMend — Master Live System Final Audit Report
 
 **Version:** v0.2.0 PRO  
 **Date of Audit:** August 25, 2026  
@@ -8,7 +8,7 @@
 
 ## 1. Executive Summary
 
-SkyGuard AI v0.2.0 PRO is a verified, production-grade meteorological quality control, anomaly detection, and sensor health monitoring platform for Automatic Weather Stations (AWS).
+DataMend v0.2.0 PRO is a verified, production-grade meteorological quality control, anomaly detection, and sensor health monitoring platform for Automatic Weather Stations (AWS).
 
 The system seamlessly unifies three interchangeable telemetry sources (**Simulated AWS**, **Open-Meteo Live API**, and **Physical AWS ESP32+BME280**) through a standardized **Canonical Telemetry Contract** into an unchanged **5-Tier ML Pipeline**.
 
@@ -57,7 +57,7 @@ Zero mock/fake dashboard data and zero silent fallbacks are strictly maintained 
 - **OPEN-METEO EXTERNAL FEED:** **🟢 LIVE VERIFIED & TESTED (PASS)**
   - Successfully executes real HTTPS GET requests to Open-Meteo endpoint; ingests genuine Pune surface weather ($T=27.7^\circ\text{C}, P=947.4\text{ hPa}, RH=66.0\%$).
 - **PHYSICAL AWS (ESP32 + BME280):** **🟢 IMPLEMENTED / 🟡 HARDWARE TEST PENDING**
-  - Complete Arduino C++ firmware package in `hardware/esp32/skyguard_aws/`; `PhysicalAWSDataSource` listens on MQTT topics; virtual packet testing verified.
+  - Complete Arduino C++ firmware package in `hardware/esp32/datamend_aws/`; `PhysicalAWSDataSource` listens on MQTT topics; virtual packet testing verified.
 
 ---
 

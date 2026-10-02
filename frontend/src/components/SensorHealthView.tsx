@@ -8,17 +8,6 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
-import {
-  ShieldCheck,
-  TrendingDown,
-  AlertOctagon,
-  Wrench,
-  Activity,
-  CheckCircle,
-  Thermometer,
-  Gauge,
-  Droplets,
-} from 'lucide-react';
 import { fetchFleetHealth, fetchStationHealth, fetchStations } from '../services/api';
 import { FleetHealthSummary, Station, StationHealthDetail } from '../types';
 import { MetricCard } from '../design-system/components/MetricCard';
@@ -80,58 +69,54 @@ export function SensorHealthView() {
           label="Average Fleet Health"
           value={fleetHealth ? Math.round(fleetHealth.average_health_score) : 98}
           unit="/ 100"
-          icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />}
           footerLeft={<span>Nominal Operations</span>}
-          footerRight={<span className="text-emerald-400 font-semibold">Optimal</span>}
+          footerRight={<span className="text-emerald-600 font-semibold">Optimal</span>}
         />
 
         <MetricCard
           label="Optimal Stations"
           value={fleetHealth?.active_stations ?? 4}
           unit={`/ ${stations.length || 4}`}
-          icon={<CheckCircle className="w-4 h-4 text-emerald-400" />}
           footerLeft={<span>Health Index ≥ 85%</span>}
-          footerRight={<span className="text-emerald-400 font-semibold">Calibrated</span>}
+          footerRight={<span className="text-emerald-600 font-semibold">Calibrated</span>}
         />
 
         <MetricCard
           label="Degraded Sensors"
           value={fleetHealth?.degraded_stations ?? 0}
           unit="units"
-          icon={<TrendingDown className="w-4 h-4 text-amber-400" />}
           footerLeft={<span>Health Index 50–74%</span>}
-          footerRight={<span className="text-amber-400 font-semibold">Monitor</span>}
+          footerRight={<span className="text-amber-600 font-semibold">Monitor</span>}
         />
 
         <MetricCard
           label="Critical / Failing"
           value={fleetHealth?.critical_stations ?? 0}
           unit="units"
-          icon={<AlertOctagon className="w-4 h-4 text-rose-400" />}
           footerLeft={<span>Health Index &lt; 50%</span>}
-          footerRight={<span className="text-rose-400 font-semibold">Replace</span>}
+          footerRight={<span className="text-rose-600 font-semibold">Replace</span>}
         />
       </div>
 
       {/* Station Specific Health Analysis & Predictive Maintenance */}
-      <div className="bg-[#152033] border border-[#263B5E] rounded-xl p-5 shadow-lg space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
+      <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2 font-mono">
-              <Activity className="w-4 h-4 text-sky-400" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 font-mono">
+              
               Sensor Health & Degradation Forecasting Matrix
             </h3>
-            <p className="text-xs text-slate-300">
+            <p className="text-xs text-slate-600">
               Exponential Moving Average (EMA-α=0.10) drift estimation and remaining useful operating life prediction
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-300 font-mono">Select Station:</span>
+            <span className="text-xs text-slate-600 font-mono">Select Station:</span>
             <select
               value={selectedStationId}
               onChange={(e) => setSelectedStationId(e.target.value)}
-              className="bg-[#10192A] border border-[#263B5E] text-slate-200 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 font-mono font-bold"
+              className="bg-[#F4F6FA] border border-[#D3DCE7] text-slate-700 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 font-mono font-bold"
             >
               {stations.map((st) => (
                 <option key={st.station_id} value={st.station_id}>
@@ -144,16 +129,16 @@ export function SensorHealthView() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Health Index Card & Subsystem Breakdown */}
-          <div className="p-5 bg-[#10192A] border border-[#263B5E]/70 rounded-xl flex flex-col justify-between space-y-4">
+          <div className="p-5 bg-[#F4F6FA] border border-[#D3DCE7]/70 rounded-xl flex flex-col justify-between space-y-4">
             <div>
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider font-mono">
                 Current Station Health Index
               </span>
               <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-4xl font-bold font-mono text-white">
+                <span className="text-4xl font-bold font-mono text-slate-900">
                   {currentHealth}
                 </span>
-                <span className="text-sm font-semibold font-mono text-slate-400">/ 100</span>
+                <span className="text-sm font-semibold font-mono text-slate-500">/ 100</span>
                 <StatusBadge
                   label={stationHealth?.health_status || 'EXCELLENT'}
                   variant={
@@ -171,7 +156,7 @@ export function SensorHealthView() {
               </div>
 
               {/* Segmented Progress Bar */}
-              <div className="mt-3.5 w-full bg-[#152033] h-2 rounded-full overflow-hidden flex border border-[#263B5E]/60">
+              <div className="mt-3.5 w-full bg-[#FFFFFF] h-2 rounded-full overflow-hidden flex border border-[#D3DCE7]/60">
                 <div
                   className="bg-emerald-500 h-full transition-all duration-500"
                   style={{ width: `${Math.min(100, currentHealth)}%` }}
@@ -180,45 +165,45 @@ export function SensorHealthView() {
 
               {/* Subsystem Health Breakdown */}
               <div className="mt-5 space-y-3 font-mono text-xs">
-                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
                   Subsystem Transducer Integrity
                 </div>
 
-                <div className="flex items-center justify-between p-2.5 bg-[#152033] rounded border border-[#263B5E]/60">
+                <div className="flex items-center justify-between p-2.5 bg-[#FFFFFF] rounded border border-[#D3DCE7]/60">
                   <div className="flex items-center gap-2">
-                    <Thermometer className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="text-slate-200">Thermistor RTD</span>
+                    
+                    <span className="text-slate-700">Thermistor RTD</span>
                   </div>
-                  <span className="font-bold text-emerald-400">98.4%</span>
+                  <span className="font-bold text-emerald-600">98.4%</span>
                 </div>
 
-                <div className="flex items-center justify-between p-2.5 bg-[#152033] rounded border border-[#263B5E]/60">
+                <div className="flex items-center justify-between p-2.5 bg-[#FFFFFF] rounded border border-[#D3DCE7]/60">
                   <div className="flex items-center gap-2">
-                    <Gauge className="w-3.5 h-3.5 text-sky-400" />
-                    <span className="text-slate-200">Piezoresistive Barometer</span>
+                    
+                    <span className="text-slate-700">Piezoresistive Barometer</span>
                   </div>
-                  <span className="font-bold text-emerald-400">99.1%</span>
+                  <span className="font-bold text-emerald-600">99.1%</span>
                 </div>
 
-                <div className="flex items-center justify-between p-2.5 bg-[#152033] rounded border border-[#263B5E]/60">
+                <div className="flex items-center justify-between p-2.5 bg-[#FFFFFF] rounded border border-[#D3DCE7]/60">
                   <div className="flex items-center gap-2">
-                    <Droplets className="w-3.5 h-3.5 text-indigo-400" />
-                    <span className="text-slate-200">Capacitive Hygrometer</span>
+                    
+                    <span className="text-slate-700">Capacitive Hygrometer</span>
                   </div>
-                  <span className="font-bold text-emerald-400">96.8%</span>
+                  <span className="font-bold text-emerald-600">96.8%</span>
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-white/[0.08] space-y-2 text-xs font-mono">
-                <div className="flex justify-between text-slate-300">
+              <div className="mt-4 pt-3 border-t border-slate-200 space-y-2 text-xs font-mono">
+                <div className="flex justify-between text-slate-600">
                   <span>Degradation Risk:</span>
-                  <span className="font-bold text-sky-400">
+                  <span className="font-bold text-sky-600">
                     {stationHealth?.degradation_risk || 'STABLE'}
                   </span>
                 </div>
-                <div className="flex justify-between text-slate-300">
+                <div className="flex justify-between text-slate-600">
                   <span>Estimated Time to Failure:</span>
-                  <span className="text-slate-400">
+                  <span className="text-slate-500">
                     {stationHealth?.estimated_hours_to_failure
                       ? `${stationHealth.estimated_hours_to_failure.toFixed(0)} hours`
                       : '> 500 hours (Nominal)'}
@@ -228,12 +213,12 @@ export function SensorHealthView() {
             </div>
 
             {/* Operator Recommendation */}
-            <div className="pt-3 border-t border-white/[0.08]">
-              <div className="flex items-start gap-2 bg-[#152033] p-3 rounded-lg border border-[#263B5E]/60 text-xs">
-                <Wrench className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="pt-3 border-t border-slate-200">
+              <div className="flex items-start gap-2 bg-[#FFFFFF] p-3 rounded-lg border border-[#D3DCE7]/60 text-xs">
+                
                 <div>
-                  <span className="font-semibold text-slate-200 block font-mono">Maintenance Action</span>
-                  <p className="text-slate-300 mt-0.5 font-sans leading-relaxed text-[11px]">
+                  <span className="font-semibold text-slate-700 block font-mono">Maintenance Action</span>
+                  <p className="text-slate-600 mt-0.5 font-sans leading-relaxed text-[11px]">
                     {stationHealth?.recommended_action || 'Continue routine operational monitoring. All sensor channels responding within nominal factory calibration tolerances.'}
                   </p>
                 </div>
@@ -242,19 +227,19 @@ export function SensorHealthView() {
           </div>
 
           {/* Historical Health Trend Chart */}
-          <div className="lg:col-span-2 p-5 bg-[#10192A] border border-[#263B5E]/70 rounded-xl flex flex-col justify-between">
+          <div className="lg:col-span-2 p-5 bg-[#F4F6FA] border border-[#D3DCE7]/70 rounded-xl flex flex-col justify-between">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200 font-mono">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
                 Health Index & EMA Drift Time-Series Trend
               </h4>
               <div className="flex items-center gap-4 text-[11px] font-mono">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  <span className="text-slate-300">Health Index</span>
+                  <span className="text-slate-600">Health Index</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-amber-400" />
-                  <span className="text-slate-300">Drift Score %</span>
+                  <span className="text-slate-600">Drift Score %</span>
                 </div>
               </div>
             </div>
@@ -262,13 +247,13 @@ export function SensorHealthView() {
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#263B5E" opacity={0.6} />
-                  <XAxis dataKey="time" stroke="#94A3B8" tick={{ fontSize: 10 }} />
-                  <YAxis stroke="#94A3B8" tick={{ fontSize: 10 }} domain={[0, 100]} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#D3DCE7" opacity={0.6} />
+                  <XAxis dataKey="time" stroke="#64748B" tick={{ fontSize: 10 }} />
+                  <YAxis stroke="#64748B" tick={{ fontSize: 10 }} domain={[0, 100]} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#152033',
-                      borderColor: '#263B5E',
+                      backgroundColor: '#FFFFFF',
+                      borderColor: '#D3DCE7',
                       fontSize: '11px',
                       borderRadius: '8px',
                       fontFamily: 'monospace',
@@ -295,7 +280,7 @@ export function SensorHealthView() {
               </ResponsiveContainer>
             </div>
 
-            <div className="mt-3 pt-2.5 border-t border-white/[0.08] flex items-center justify-between text-[11px] font-mono text-slate-400">
+            <div className="mt-3 pt-2.5 border-t border-slate-200 flex items-center justify-between text-[11px] font-mono text-slate-500">
               <span>Baseline Tolerance: &lt; 5.0% EMA Drift</span>
               <span>Sampling Frequency: Continuous</span>
             </div>

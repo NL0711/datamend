@@ -1,4 +1,4 @@
-# SkyGuard AI — 3D Earth Globe & Geospatial Data Overlay Report
+# DataMend — 3D Earth Globe & Geospatial Data Overlay Report
 **Component:** Geospatial Digital Twin (`StationGlobe3D.tsx`)  
 **Reference Model:** [Earth Globe 🌍 by matousekfoto (Sketchfab `98d2b04d46474bafb4250cc75dc583b3`)](https://sketchfab.com/3d-models/earth-globe-98d2b04d46474bafb4250cc75dc583b3)  
 **Status:** FULLY IMPLEMENTED & INTEGRATED
@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-The previous procedural geometric ellipse globe has been replaced with a **Photorealistic 3D Earth Digital Twin** integrated directly with SkyGuard AI's real-time Automatic Weather Station (AWS) telemetry stream, 5-Tier ML Quality-Control engine, and Tier 3.5 Spatial Consensus network.
+The previous procedural geometric ellipse globe has been replaced with a **Photorealistic 3D Earth Digital Twin** integrated directly with DataMend's real-time Automatic Weather Station (AWS) telemetry stream, 5-Tier ML Quality-Control engine, and Tier 3.5 Spatial Consensus network.
 
 ---
 

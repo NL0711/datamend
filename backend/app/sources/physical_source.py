@@ -1,6 +1,6 @@
 """
 backend/app/sources/physical_source.py
-SkyGuard AI — Physical AWS Telemetry Data Source Adapter (ESP32 + BME280 via MQTT).
+DataMend — Physical AWS Telemetry Data Source Adapter (ESP32 + BME280 via MQTT).
 Listens for real physical telemetry and heartbeat topics over MQTT and normalizes into canonical telemetry.
 """
 
@@ -88,7 +88,7 @@ class PhysicalAWSDataSource(BaseDataSource):
                 return
 
             try:
-                client_id = f"skyguard_backend_{int(time.time())}"
+                client_id = f"datamend_backend_{int(time.time())}"
                 # Handle paho-mqtt v1 / v2 callback api compatibility
                 try:
                     self._mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=client_id)

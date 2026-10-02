@@ -1,8 +1,8 @@
-# SkyGuard AI — Live System Architecture & Data Flow Map
+# DataMend — Live System Architecture & Data Flow Map
 
 ## 1. Executive Architecture Summary
 
-SkyGuard AI is a real-time, explainable AI quality-control, fault classification, and sensor health platform for Automatic Weather Stations (AWS). The system ingests primary atmospheric observations:
+DataMend is a real-time, explainable AI quality-control, fault classification, and sensor health platform for Automatic Weather Stations (AWS). The system ingests primary atmospheric observations:
 - **Temperature (°C)**
 - **Atmospheric Pressure (hPa)**
 - **Relative Humidity (%)**
@@ -27,7 +27,7 @@ Along with timestamps and station metadata.
                                           v  (Passes Dict to Pipeline)
 +-----------------------------------------------------------------------------------+
 |                        5-TIER ML PIPELINE ORCHESTRATOR                            |
-|  - Orchestrator: backend/app/ml/pipeline.py (SkyGuardPipeline)                    |
+|  - Orchestrator: backend/app/ml/pipeline.py (DataMendPipeline)                    |
 |                                                                                   |
 |  +-----------------------------------------------------------------------------+  |
 |  | STEP 1: Preprocessing & Buffer (backend/app/ml/preprocessor.py)            |  |

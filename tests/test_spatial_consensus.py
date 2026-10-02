@@ -1,6 +1,6 @@
 """
 tests/test_spatial_consensus.py
-SkyGuard AI — Test Suite for Tier 3.5 Spatial Consensus / AWS Buddy-Check Layer.
+DataMend — Test Suite for Tier 3.5 Spatial Consensus / AWS Buddy-Check Layer.
 """
 
 import pytest

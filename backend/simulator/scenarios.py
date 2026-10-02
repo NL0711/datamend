@@ -1,5 +1,5 @@
 """
-SkyGuard AI — Pre-Configured Benchmark Scenarios for AWS Anomaly Detection.
+DataMend — Pre-Configured Benchmark Scenarios for AWS Anomaly Detection.
 
 Defines standardized, scientifically grounded evaluation scenarios:
 1. Clean 30-day baseline (diurnal physics, zero faults)

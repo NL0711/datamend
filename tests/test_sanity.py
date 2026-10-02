@@ -18,7 +18,7 @@ async def test_health_check_endpoint(async_client):
     assert "active_stations" in data
 
 def test_settings_load():
-    assert settings.PROJECT_NAME == "SkyGuard AI"
+    assert settings.PROJECT_NAME == "DataMend"
     assert settings.INFERENCE_WINDOW_SIZE == 30
     assert settings.HEALTH_ROLLING_WINDOW == 288
     assert settings.HEALTH_EMA_ALPHA == 0.10

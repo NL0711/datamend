@@ -1,11 +1,11 @@
-# SkyGuard AI — MQTT Communication Protocol Specification
+# DataMend — MQTT Communication Protocol Specification
 
 ## 1. Topic Taxonomy
 
-SkyGuard AI uses a hierarchical topic taxonomy for AWS telemetry and device diagnostics:
+DataMend uses a hierarchical topic taxonomy for AWS telemetry and device diagnostics:
 
 ```
-skyguard/
+datamend/
 └── aws/
     └── {station_id}/
         ├── telemetry   (High-frequency sensor observations)
@@ -17,7 +17,7 @@ skyguard/
 ## 2. Topic Specifications
 
 ### A. Telemetry Topic: `skyguard/aws/{station_id}/telemetry`
-- **Direction:** Hardware $\rightarrow$ SkyGuard Backend
+- **Direction:** Hardware $\rightarrow$ DataMend Backend
 - **QoS Level:** 1 (At least once delivery)
 - **Publication Rate:** Every 3 seconds (configurable)
 - **Payload Schema:**
@@ -39,7 +39,7 @@ skyguard/
 ```
 
 ### B. Heartbeat Topic: `skyguard/aws/{station_id}/heartbeat`
-- **Direction:** Hardware $\rightarrow$ SkyGuard Backend
+- **Direction:** Hardware $\rightarrow$ DataMend Backend
 - **QoS Level:** 1
 - **Publication Rate:** Every 30 seconds
 - **Payload Schema:**

@@ -1,6 +1,6 @@
 """
 scripts/stream_telemetry_feed.py
-Real-Time Telemetry Feeder & Interactive Anomaly Testing Tool for DataMend / SkyGuard AI.
+Real-Time Telemetry Feeder & Interactive Anomaly Testing Tool for DataMend.
 Streams telemetry into TimescaleDB and populates:
 1. observations (TimescaleDB Hypertable)
 2. anomaly_events (Faults & Anomaly attributions)

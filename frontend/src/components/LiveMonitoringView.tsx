@@ -9,18 +9,6 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts';
-import {
-  Thermometer,
-  Gauge,
-  Droplets,
-  Radio,
-  Play,
-  Square,
-  Layers,
-  MapPin,
-  Activity,
-  Sliders,
-} from 'lucide-react';
 import { InferenceResult, Station, Observation } from '../types';
 import { fetchObservations, fetchStations } from '../services/api';
 import { StatusBadge } from '../design-system/components/StatusBadge';
@@ -259,30 +247,30 @@ export function LiveMonitoringView({
     if (active && payload && payload.length) {
       const data: TelemetryPoint = payload[0].payload;
       return (
-        <div className="bg-[#10192A] border border-[#263B5E] p-3 rounded-lg shadow-xl text-xs font-mono space-y-1.5 min-w-[200px]">
-          <div className="flex items-center justify-between border-b border-white/[0.08] pb-1">
-            <span className="text-slate-400 font-bold">{label}</span>
+        <div className="bg-[#F4F6FA] border border-[#D3DCE7] p-3 rounded-lg shadow-xl text-xs font-mono space-y-1.5 min-w-[200px]">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+            <span className="text-slate-500 font-bold">{label}</span>
             {data.is_anomaly && (
-              <span className="px-1.5 py-0.5 bg-rose-500/20 text-rose-300 rounded text-[10px] font-bold border border-rose-500/40">
+              <span className="px-1.5 py-0.5 bg-rose-500/20 text-rose-700 rounded text-[10px] font-bold border border-rose-500/40">
                 QC FLAG
               </span>
             )}
           </div>
-          <div className="flex justify-between items-center text-amber-400">
+          <div className="flex justify-between items-center text-amber-600">
             <span className="flex items-center gap-1">
-              <Thermometer className="w-3 h-3" /> Temperature:
+               Temperature:
             </span>
             <span className="font-bold">{data.temp.toFixed(2)} °C</span>
           </div>
-          <div className="flex justify-between items-center text-sky-400">
+          <div className="flex justify-between items-center text-sky-600">
             <span className="flex items-center gap-1">
-              <Gauge className="w-3 h-3" /> Pressure:
+               Pressure:
             </span>
             <span className="font-bold">{data.press.toFixed(1)} hPa</span>
           </div>
           <div className="flex justify-between items-center text-indigo-400">
             <span className="flex items-center gap-1">
-              <Droplets className="w-3 h-3" /> Humidity:
+               Humidity:
             </span>
             <span className="font-bold">{data.hum.toFixed(1)} %</span>
           </div>
@@ -298,16 +286,16 @@ export function LiveMonitoringView({
       <ContextualStatusStrip />
 
       {/* Station Metadata & Operational Control Sub-Bar */}
-      <div className="bg-[#152033] border border-[#263B5E] rounded-xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
         {/* Left: Station Identity & Geographic Location */}
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-[#1B2A44] border border-sky-500/40 rounded-xl text-sky-400">
-            <Radio className="w-5 h-5" />
+          <div className="p-2.5 bg-[#EDF1F7] border border-sky-500/40 rounded-xl text-sky-600">
+            
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-white font-mono">{selectedStationId}</span>
-              <span className="text-xs text-slate-300 font-sans">
+              <span className="text-sm font-bold text-slate-900 font-mono">{selectedStationId}</span>
+              <span className="text-xs text-slate-600 font-sans">
                 ({activeStationObj?.name || 'Selected Meteorological Station'})
               </span>
               <StatusBadge
@@ -317,9 +305,9 @@ export function LiveMonitoringView({
                 pulse={current?.is_anomaly}
               />
             </div>
-            <div className="flex items-center gap-3 text-xs text-slate-400 font-mono mt-0.5">
+            <div className="flex items-center gap-3 text-xs text-slate-500 font-mono mt-0.5">
               <span className="flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-sky-400" />
+                
                 {activeStationObj?.latitude ? activeStationObj.latitude.toFixed(4) : '28.6139'}°N,{' '}
                 {activeStationObj?.longitude ? activeStationObj.longitude.toFixed(4) : '77.2090'}°E
               </span>
@@ -332,11 +320,11 @@ export function LiveMonitoringView({
         {/* Right: Station Selector, Settings Shortcut, & Streaming Pause/Resume */}
         <div className="flex items-center gap-3 font-mono text-xs">
           <div className="flex items-center gap-2">
-            <span className="text-slate-400">Station Node:</span>
+            <span className="text-slate-500">Station Node:</span>
             <select
               value={selectedStationId}
               onChange={(e) => onSelectStation(e.target.value)}
-              className="bg-[#10192A] border border-[#263B5E] text-slate-200 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 font-bold"
+              className="bg-[#F4F6FA] border border-[#D3DCE7] text-slate-700 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 font-bold"
             >
               {stations.map((st) => (
                 <option key={st.station_id} value={st.station_id}>
@@ -348,10 +336,10 @@ export function LiveMonitoringView({
 
           <button
             onClick={openSettings}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#263B5E] bg-[#10192A] hover:bg-[#1B2A44] text-slate-300 hover:text-white font-semibold transition-all"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#D3DCE7] bg-[#F4F6FA] hover:bg-[#EDF1F7] text-slate-600 hover:text-slate-900 font-semibold transition-all"
             title="Configure Data Source & Location"
           >
-            <Sliders className="w-3.5 h-3.5 text-sky-400" />
+            
             <span className="hidden sm:inline">Settings</span>
           </button>
 
@@ -359,17 +347,17 @@ export function LiveMonitoringView({
             onClick={onToggleStreaming}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold border transition-all ${
               isStreaming
-                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                : 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700'
+                : 'bg-amber-500/15 border-amber-500/40 text-amber-700'
             }`}
           >
             {isStreaming ? (
               <>
-                <Square className="w-3 h-3 fill-current" /> Pause Stream
+                 Pause Stream
               </>
             ) : (
               <>
-                <Play className="w-3 h-3 fill-current" /> Resume Stream
+                 Resume Stream
               </>
             )}
           </button>
@@ -379,79 +367,79 @@ export function LiveMonitoringView({
       {/* 3 Core Meteorological Instrument Gauges */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Air Temperature Gauge Card */}
-        <div className="bg-[#152033] border border-[#263B5E] rounded-xl p-5 shadow-lg space-y-3">
+        <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 font-mono">
-              <Thermometer className="w-4 h-4 text-amber-400" /> Air Temperature
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 font-mono">
+               Air Temperature
             </span>
-            <span className="text-[10px] font-mono text-slate-400 bg-[#10192A] px-2 py-0.5 rounded border border-[#263B5E]">
+            <span className="text-[10px] font-mono text-slate-500 bg-[#F4F6FA] px-2 py-0.5 rounded border border-[#D3DCE7]">
               1.5m AGL
             </span>
           </div>
 
           <div className="flex items-baseline justify-between">
-            <span className="text-4xl font-bold font-mono text-white tracking-tight">
+            <span className="text-4xl font-bold font-mono text-slate-900 tracking-tight">
               {currentTemp.toFixed(1)}
-              <span className="text-xl text-slate-400 ml-1 font-sans">°C</span>
+              <span className="text-xl text-slate-500 ml-1 font-sans">°C</span>
             </span>
             <div className="text-right text-xs font-mono">
-              <span className="text-slate-400 block text-[10px]">Dew Point</span>
-              <span className="text-emerald-400 font-bold">{dewPoint.toFixed(1)}°C</span>
+              <span className="text-slate-500 block text-[10px]">Dew Point</span>
+              <span className="text-emerald-600 font-bold">{dewPoint.toFixed(1)}°C</span>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between text-xs font-mono text-slate-400">
+          <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs font-mono text-slate-500">
             <span>Dew Point Depression:</span>
-            <span className="text-slate-200">{dewPointDepression.toFixed(1)}°C</span>
+            <span className="text-slate-700">{dewPointDepression.toFixed(1)}°C</span>
           </div>
         </div>
 
         {/* Atmospheric Barometric Pressure Gauge Card */}
-        <div className="bg-[#152033] border border-[#263B5E] rounded-xl p-5 shadow-lg space-y-3">
+        <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 font-mono">
-              <Gauge className="w-4 h-4 text-sky-400" /> Surface Pressure
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 font-mono">
+               Surface Pressure
             </span>
-            <span className="text-[10px] font-mono text-slate-400 bg-[#10192A] px-2 py-0.5 rounded border border-[#263B5E]">
+            <span className="text-[10px] font-mono text-slate-500 bg-[#F4F6FA] px-2 py-0.5 rounded border border-[#D3DCE7]">
               Barometer
             </span>
           </div>
 
           <div className="flex items-baseline justify-between">
-            <span className="text-4xl font-bold font-mono text-white tracking-tight">
+            <span className="text-4xl font-bold font-mono text-slate-900 tracking-tight">
               {currentPressure.toFixed(1)}
-              <span className="text-base text-slate-400 ml-1 font-sans">hPa</span>
+              <span className="text-base text-slate-500 ml-1 font-sans">hPa</span>
             </span>
             <div className="text-right text-xs font-mono">
-              <span className="text-slate-400 block text-[10px]">Sea-Level MSLP</span>
-              <span className="text-sky-400 font-bold">{(currentPressure + 12.0).toFixed(1)} hPa</span>
+              <span className="text-slate-500 block text-[10px]">Sea-Level MSLP</span>
+              <span className="text-sky-600 font-bold">{(currentPressure + 12.0).toFixed(1)} hPa</span>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between text-xs font-mono text-slate-400">
+          <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs font-mono text-slate-500">
             <span>Hydrostatic Tendency:</span>
-            <span className="text-emerald-400">STABLE (&lt; 0.5 hPa/3h)</span>
+            <span className="text-emerald-600">STABLE (&lt; 0.5 hPa/3h)</span>
           </div>
         </div>
 
         {/* Relative Humidity Gauge Card */}
-        <div className="bg-[#152033] border border-[#263B5E] rounded-xl p-5 shadow-lg space-y-3">
+        <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 font-mono">
-              <Droplets className="w-4 h-4 text-indigo-400" /> Relative Humidity
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 font-mono">
+               Relative Humidity
             </span>
-            <span className="text-[10px] font-mono text-slate-400 bg-[#10192A] px-2 py-0.5 rounded border border-[#263B5E]">
+            <span className="text-[10px] font-mono text-slate-500 bg-[#F4F6FA] px-2 py-0.5 rounded border border-[#D3DCE7]">
               Hygrometer
             </span>
           </div>
 
           <div className="flex items-baseline justify-between">
-            <span className="text-4xl font-bold font-mono text-white tracking-tight">
+            <span className="text-4xl font-bold font-mono text-slate-900 tracking-tight">
               {currentHumidity.toFixed(1)}
-              <span className="text-xl text-slate-400 ml-1 font-sans">%</span>
+              <span className="text-xl text-slate-500 ml-1 font-sans">%</span>
             </span>
             <div className="text-right text-xs font-mono">
-              <span className="text-slate-400 block text-[10px]">Vapor Pressure</span>
+              <span className="text-slate-500 block text-[10px]">Vapor Pressure</span>
               <span className="text-indigo-300 font-bold">
                 {(
                   (currentHumidity / 100) *
@@ -463,9 +451,9 @@ export function LiveMonitoringView({
             </div>
           </div>
 
-          <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between text-xs font-mono text-slate-400">
+          <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs font-mono text-slate-500">
             <span>Saturation Envelope:</span>
-            <span className="text-slate-200">
+            <span className="text-slate-700">
               {currentHumidity > 85 ? 'High Moisture' : 'Nominal Ambient'}
             </span>
           </div>
@@ -473,21 +461,21 @@ export function LiveMonitoringView({
       </div>
 
       {/* 5-Tier Algorithmic Inference Verdict Banner */}
-      <div className="bg-[#152033] border border-[#263B5E] rounded-xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-sky-500/15 border border-sky-500/35 rounded-lg text-sky-400">
-            <Layers className="w-5 h-5" />
+          <div className="p-2 bg-sky-500/15 border border-sky-500/35 rounded-lg text-sky-600">
+            
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-white uppercase font-mono">5-Tier Inference Verdict:</span>
+              <span className="text-xs font-bold text-slate-900 uppercase font-mono">5-Tier Inference Verdict:</span>
               <StatusBadge
                 label={current?.is_anomaly ? current.classification.replace(/_/g, ' ') : 'ALL CHANNELS NOMINAL'}
                 variant={current?.is_anomaly ? getSeverityVariant(current.severity) : 'nominal'}
                 size="sm"
               />
             </div>
-            <p className="text-xs text-slate-300 mt-0.5">
+            <p className="text-xs text-slate-600 mt-0.5">
               {current?.reason ||
                 'All transducer signals conform to WMO-No. 8 physical and Clausius-Clapeyron thermodynamic consistency boundaries.'}
             </p>
@@ -496,14 +484,14 @@ export function LiveMonitoringView({
 
         <div className="flex items-center gap-4 text-xs font-mono">
           <div className="text-right">
-            <span className="text-[10px] text-slate-400 uppercase block">Anomaly Score</span>
-            <span className="text-sm font-bold text-sky-400">
+            <span className="text-[10px] text-slate-500 uppercase block">Anomaly Score</span>
+            <span className="text-sm font-bold text-sky-600">
               {current?.anomaly_score ? (current.anomaly_score * 100).toFixed(1) : '0.0'}%
             </span>
           </div>
           <div className="text-right">
-            <span className="text-[10px] text-slate-400 uppercase block">Confidence</span>
-            <span className="text-sm font-bold text-emerald-400">
+            <span className="text-[10px] text-slate-500 uppercase block">Confidence</span>
+            <span className="text-sm font-bold text-emerald-600">
               {current?.confidence ? (current.confidence * 100).toFixed(1) : '99.4'}%
             </span>
           </div>
@@ -511,57 +499,57 @@ export function LiveMonitoringView({
       </div>
 
       {/* Synchronized Multi-Channel Time-Series Dynamic Plots */}
-      <div className="bg-[#152033] border border-[#263B5E] rounded-xl p-5 shadow-lg space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-3">
+      <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
           <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-sky-400" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white font-mono">
+            
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">
               Continuous Real-Time Telemetry Stream & Anomaly Envelope
             </h3>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 font-semibold">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 border border-emerald-500/30 flex items-center gap-1 font-semibold">
               <span className={`w-1.5 h-1.5 rounded-full ${isLoadingHistory ? 'bg-amber-400 animate-spin' : 'bg-emerald-400 animate-pulse'}`} />
               {isLoadingHistory ? 'HYDRATING...' : `${timelineData.length} FRAMES`}
             </span>
           </div>
 
           {/* Channel Selector */}
-          <div className="flex items-center gap-1.5 bg-[#10192A] p-1 rounded-lg border border-[#263B5E] text-xs font-mono">
+          <div className="flex items-center gap-1.5 bg-[#FFFFFF] p-1.5 rounded-xl border border-[#D3DCE7] text-xs font-mono shadow-sm">
             <button
               onClick={() => setActiveChannelView('all')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeChannelView === 'all'
-                  ? 'bg-sky-500 text-slate-950 font-bold'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-sky-500 text-slate-950 font-bold shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-[#E2E8F0]'
               }`}
             >
               All Signals (Multi-Axis)
             </button>
             <button
               onClick={() => setActiveChannelView('temperature')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeChannelView === 'temperature'
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-amber-500/20 text-amber-800 border border-amber-500/40 font-bold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-[#E2E8F0]'
               }`}
             >
               Temp ({statsSummary.temp.min.toFixed(1)}–{statsSummary.temp.max.toFixed(1)}°C)
             </button>
             <button
               onClick={() => setActiveChannelView('pressure')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeChannelView === 'pressure'
-                  ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-sky-500/20 text-sky-800 border border-sky-500/40 font-bold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-[#E2E8F0]'
               }`}
             >
               Press ({statsSummary.press.min.toFixed(1)}–{statsSummary.press.max.toFixed(1)} hPa)
             </button>
             <button
               onClick={() => setActiveChannelView('humidity')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeChannelView === 'humidity'
-                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-bold'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-indigo-500/20 text-indigo-800 border border-indigo-500/40 font-bold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-[#E2E8F0]'
               }`}
             >
               Hum ({statsSummary.hum.min.toFixed(0)}–{statsSummary.hum.max.toFixed(0)}%)
@@ -588,11 +576,11 @@ export function LiveMonitoringView({
                     <stop offset="95%" stopColor="#818CF8" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#263B5E" opacity={0.5} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#D3DCE7" opacity={0.5} />
                 <XAxis
                   dataKey="time"
                   stroke="#94A3B8"
-                  tick={{ fontSize: 10, fill: '#94A3B8' }}
+                  tick={{ fontSize: 10, fill: '#64748B' }}
                   interval="preserveStartEnd"
                 />
 
@@ -686,11 +674,11 @@ export function LiveMonitoringView({
                     <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#263B5E" opacity={0.6} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#D3DCE7" opacity={0.6} />
                 <XAxis
                   dataKey="time"
                   stroke="#94A3B8"
-                  tick={{ fontSize: 10, fill: '#94A3B8' }}
+                  tick={{ fontSize: 10, fill: '#64748B' }}
                   interval="preserveStartEnd"
                 />
                 <YAxis
@@ -723,11 +711,11 @@ export function LiveMonitoringView({
                     <stop offset="95%" stopColor="#38BDF8" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#263B5E" opacity={0.6} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#D3DCE7" opacity={0.6} />
                 <XAxis
                   dataKey="time"
                   stroke="#94A3B8"
-                  tick={{ fontSize: 10, fill: '#94A3B8' }}
+                  tick={{ fontSize: 10, fill: '#64748B' }}
                   interval="preserveStartEnd"
                 />
                 <YAxis
@@ -760,11 +748,11 @@ export function LiveMonitoringView({
                     <stop offset="95%" stopColor="#818CF8" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#263B5E" opacity={0.6} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#D3DCE7" opacity={0.6} />
                 <XAxis
                   dataKey="time"
                   stroke="#94A3B8"
-                  tick={{ fontSize: 10, fill: '#94A3B8' }}
+                  tick={{ fontSize: 10, fill: '#64748B' }}
                   interval="preserveStartEnd"
                 />
                 <YAxis

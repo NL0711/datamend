@@ -1,6 +1,6 @@
 """
 scripts/benchmark_noaa.py
-SkyGuard AI — NOAA ISD Real-World Observational Anomaly Benchmarking Pipeline.
+DataMend — NOAA ISD Real-World Observational Anomaly Benchmarking Pipeline.
 
 Evaluates the existing, unchanged 5-Tier ML Quality Control & Anomaly Detection Pipeline
 against real-world NOAA observational data.
@@ -19,7 +19,7 @@ from typing import Any, Dict, List
 import numpy as np
 import pandas as pd
 
-from backend.app.ml.pipeline import SkyGuardPipeline
+from backend.app.ml.pipeline import DataMendPipeline
 from scripts.import_noaa_data import import_noaa_dataset
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -31,7 +31,7 @@ def run_noaa_benchmark(
     reports_dir: Path = Path("reports"),
 ) -> Dict[str, Any]:
     """
-    Executes full offline benchmarking of SkyGuard's 5-Tier ML Pipeline against NOAA data.
+    Executes full offline benchmarking of DataMend's 5-Tier ML Pipeline against NOAA data.
     """
     reports_dir.mkdir(parents=True, exist_ok=True)
 
@@ -47,7 +47,7 @@ def run_noaa_benchmark(
         raise ValueError("NOAA benchmark dataset is empty.")
 
     # 2. Instantiate master pipeline loading existing production model artifacts
-    pipeline = SkyGuardPipeline(model_dir=Path("models"), auto_load=True)
+    pipeline = DataMendPipeline(model_dir=Path("models"), auto_load=True)
 
     # 3. Process observations sequentially
     logger.info("Executing 5-Tier ML pipeline batch inference across %d records...", len(df))
@@ -133,7 +133,7 @@ def run_noaa_benchmark(
     # Save Markdown report
     md_path = reports_dir / "noaa_benchmark.md"
     with open(md_path, "w", encoding="utf-8") as f:
-        f.write(f"""# SkyGuard AI — NOAA ISD Observational Benchmark Report
+        f.write(f"""# DataMend — NOAA ISD Observational Benchmark Report
 
 **Benchmark Date:** {report_data['benchmark_timestamp']}  
 **Dataset Source:** `{report_data['dataset']['path']}`  

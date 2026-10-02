@@ -1,6 +1,6 @@
 /**
  * frontend/src/context/SystemConfigurationContext.tsx
- * SkyGuard AI — Single Authoritative System Configuration State Context.
+ * DataMend — Single Authoritative System Configuration State Context.
  * Manages active telemetry source, synoptic city presets, operator preferences, and system diagnostics.
  */
 
@@ -20,7 +20,7 @@ import {
   fetchHealth,
 } from '../services/api';
 
-const PREFERENCES_STORAGE_KEY = 'skyguard_operator_preferences_v1';
+const PREFERENCES_STORAGE_KEY = 'datamend_operator_preferences_v1';
 
 const DEFAULT_PREFERENCES: OperatorPreferences = {
   displayDensity: 'comfortable',

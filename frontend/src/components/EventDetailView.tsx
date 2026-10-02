@@ -1,20 +1,4 @@
 import { useEffect, useState, useMemo } from 'react';
-import {
-  Cpu,
-  Layers,
-  CheckCircle2,
-  Info,
-  Thermometer,
-  Gauge,
-  Droplets,
-  MapPin,
-  Search,
-  Filter,
-  Radio,
-  Clock,
-  RotateCcw,
-  Sparkles,
-} from 'lucide-react';
 import { fetchAnomalies, fetchStations } from '../services/api';
 import { AnomalyEvent, Station } from '../types';
 import { TriageActions } from './TriageActions';
@@ -206,37 +190,37 @@ export function EventDetailView({
   return (
     <div className="space-y-6">
       {/* Top Header & Operational Multi-Station Control Bar */}
-      <div className="bg-[#152033] border border-[#263B5E] p-4 rounded-xl shadow-lg space-y-3">
+      <div className="bg-[#FFFFFF] border border-[#D3DCE7] p-4 rounded-xl shadow-lg space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-sky-500/15 border border-sky-500/35 rounded-lg text-sky-400">
-              <Cpu className="w-5 h-5" />
+            <div className="p-2 bg-sky-500/15 border border-sky-500/35 rounded-lg text-sky-600">
+              
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white uppercase font-mono tracking-wide flex items-center gap-2">
+              <h2 className="text-sm font-bold text-slate-900 uppercase font-mono tracking-wide flex items-center gap-2">
                 Forensic Incident Dossier & Signal Decomposition
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 font-semibold">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/15 text-sky-700 border border-sky-500/30 font-semibold">
                   FLEET-WIDE
                 </span>
               </h2>
-              <p className="text-xs text-slate-300">
+              <p className="text-xs text-slate-600">
                 5-Tier mathematical decomposition across physics boundaries, isolation density, temporal autoencoders, and TreeSHAP forces
               </p>
             </div>
           </div>
 
           {/* Quick Stats Pill */}
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-300">
-            <span className="px-2.5 py-1 rounded bg-[#10192A] border border-[#263B5E] text-slate-300">
-              Loaded: <strong className="text-sky-400">{filteredEvents.length}</strong> Incidents
+          <div className="flex items-center gap-2 text-xs font-mono text-slate-600">
+            <span className="px-2.5 py-1 rounded bg-[#F4F6FA] border border-[#D3DCE7] text-slate-600">
+              Loaded: <strong className="text-sky-600">{filteredEvents.length}</strong> Incidents
             </span>
             {(filterStation || filterSeverity || filterClassification || searchQuery) && (
               <button
                 onClick={resetFilters}
-                className="flex items-center gap-1 px-2 py-1 rounded bg-[#1B2A44] hover:bg-[#233656] text-slate-300 hover:text-white border border-[#263B5E] transition-colors"
+                className="flex items-center gap-1 px-2 py-1 rounded bg-[#EDF1F7] hover:bg-[#E2E8F2] text-slate-600 hover:text-slate-900 border border-[#D3DCE7] transition-colors"
                 title="Reset all filters"
               >
-                <RotateCcw className="w-3 h-3" />
+                
                 <span>Reset</span>
               </button>
             )}
@@ -244,20 +228,20 @@ export function EventDetailView({
         </div>
 
         {/* Operational Filter Controls */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-white/[0.06] text-xs font-mono">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-slate-200 text-xs font-mono">
           {/* Station Filter */}
-          <div className="flex items-center gap-1.5 bg-[#10192A] border border-[#263B5E] rounded-lg px-2.5 py-1.5">
-            <MapPin className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+          <div className="flex items-center gap-1.5 bg-[#F4F6FA] border border-[#D3DCE7] rounded-lg px-2.5 py-1.5">
+            
             <select
               value={filterStation}
               onChange={(e) => setFilterStation(e.target.value)}
-              className="bg-transparent text-slate-200 w-full focus:outline-none font-semibold cursor-pointer"
+              className="bg-transparent text-slate-700 w-full focus:outline-none font-semibold cursor-pointer"
             >
-              <option value="" className="bg-[#10192A]">
+              <option value="" className="bg-[#F4F6FA]">
                 All Stations (Fleet-Wide)
               </option>
               {stations.map((st) => (
-                <option key={st.station_id} value={st.station_id} className="bg-[#10192A]">
+                <option key={st.station_id} value={st.station_id} className="bg-[#F4F6FA]">
                   {st.name} [{st.station_id}]
                 </option>
               ))}
@@ -265,66 +249,66 @@ export function EventDetailView({
           </div>
 
           {/* Severity Filter */}
-          <div className="flex items-center gap-1.5 bg-[#10192A] border border-[#263B5E] rounded-lg px-2.5 py-1.5">
-            <Filter className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <div className="flex items-center gap-1.5 bg-[#F4F6FA] border border-[#D3DCE7] rounded-lg px-2.5 py-1.5">
+            
             <select
               value={filterSeverity}
               onChange={(e) => setFilterSeverity(e.target.value)}
-              className="bg-transparent text-slate-200 w-full focus:outline-none font-semibold cursor-pointer"
+              className="bg-transparent text-slate-700 w-full focus:outline-none font-semibold cursor-pointer"
             >
-              <option value="" className="bg-[#10192A]">All Severities</option>
-              <option value="CRITICAL" className="bg-[#10192A]">CRITICAL</option>
-              <option value="HIGH" className="bg-[#10192A]">HIGH</option>
-              <option value="MEDIUM" className="bg-[#10192A]">MEDIUM</option>
-              <option value="LOW" className="bg-[#10192A]">LOW</option>
+              <option value="" className="bg-[#F4F6FA]">All Severities</option>
+              <option value="CRITICAL" className="bg-[#F4F6FA]">CRITICAL</option>
+              <option value="HIGH" className="bg-[#F4F6FA]">HIGH</option>
+              <option value="MEDIUM" className="bg-[#F4F6FA]">MEDIUM</option>
+              <option value="LOW" className="bg-[#F4F6FA]">LOW</option>
             </select>
           </div>
 
           {/* Classification Filter */}
-          <div className="flex items-center gap-1.5 bg-[#10192A] border border-[#263B5E] rounded-lg px-2.5 py-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <div className="flex items-center gap-1.5 bg-[#F4F6FA] border border-[#D3DCE7] rounded-lg px-2.5 py-1.5">
+            
             <select
               value={filterClassification}
               onChange={(e) => setFilterClassification(e.target.value)}
-              className="bg-transparent text-slate-200 w-full focus:outline-none font-semibold cursor-pointer"
+              className="bg-transparent text-slate-700 w-full focus:outline-none font-semibold cursor-pointer"
             >
-              <option value="" className="bg-[#10192A]">All Anomaly Types</option>
-              <option value="SPIKE" className="bg-[#10192A]">Spike</option>
-              <option value="DRIFT" className="bg-[#10192A]">Drift</option>
-              <option value="FROZEN" className="bg-[#10192A]">Frozen Sensor</option>
-              <option value="DROPOUT" className="bg-[#10192A]">Dropout</option>
-              <option value="MULTIVARIATE_INCONSISTENCY" className="bg-[#10192A]">Multivariate Inconsistency</option>
-              <option value="METEOROLOGICAL_EXTREME" className="bg-[#10192A]">Meteorological Extreme</option>
+              <option value="" className="bg-[#F4F6FA]">All Anomaly Types</option>
+              <option value="SPIKE" className="bg-[#F4F6FA]">Spike</option>
+              <option value="DRIFT" className="bg-[#F4F6FA]">Drift</option>
+              <option value="FROZEN" className="bg-[#F4F6FA]">Frozen Sensor</option>
+              <option value="DROPOUT" className="bg-[#F4F6FA]">Dropout</option>
+              <option value="MULTIVARIATE_INCONSISTENCY" className="bg-[#F4F6FA]">Multivariate Inconsistency</option>
+              <option value="METEOROLOGICAL_EXTREME" className="bg-[#F4F6FA]">Meteorological Extreme</option>
             </select>
           </div>
 
           {/* Search Query */}
-          <div className="flex items-center gap-1.5 bg-[#10192A] border border-[#263B5E] rounded-lg px-2.5 py-1.5">
-            <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <div className="flex items-center gap-1.5 bg-[#F4F6FA] border border-[#D3DCE7] rounded-lg px-2.5 py-1.5">
+            
             <input
               type="text"
               placeholder="Search ID, station, fault..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent text-slate-200 w-full focus:outline-none placeholder:text-slate-500 font-medium"
+              className="bg-transparent text-slate-700 w-full focus:outline-none placeholder:text-slate-500 font-medium"
             />
           </div>
         </div>
 
         {/* Master Incident Picker Dropdown */}
         {filteredEvents.length > 0 && (
-          <div className="pt-2 border-t border-white/[0.06] flex flex-wrap items-center gap-3">
-            <span className="text-xs text-sky-300 font-mono font-bold shrink-0 flex items-center gap-1.5">
-              <Radio className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
+          <div className="pt-2 border-t border-slate-200 flex flex-wrap items-center gap-3">
+            <span className="text-xs text-sky-700 font-mono font-bold shrink-0 flex items-center gap-1.5">
+              
               Active Incident Dossier:
             </span>
             <select
               value={selectedEventId || ''}
               onChange={(e) => handleIncidentSelect(Number(e.target.value))}
-              className="bg-[#0C1320] border border-[#38BDF8]/40 hover:border-sky-400 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500 font-mono font-bold flex-1 min-w-[280px] shadow-inner"
+              className="bg-[#E8EDF4] border border-[#38BDF8]/40 hover:border-sky-400 text-slate-900 text-xs rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500 font-mono font-bold flex-1 min-w-[280px] shadow-inner"
             >
               {filteredEvents.map((ev) => (
-                <option key={ev.id} value={ev.id} className="bg-[#0C1320] text-slate-200 py-1">
+                <option key={ev.id} value={ev.id} className="bg-[#E8EDF4] text-slate-700 py-1">
                   #{ev.id} · {formatTime(ev.timestamp)} · {getCityNameOnly(ev.station_id)} [{ev.station_id}] · {formatClassification(ev.classification)} ({(ev.anomaly_score * 100).toFixed(0)}% · {ev.severity})
                 </option>
               ))}
@@ -347,8 +331,8 @@ export function EventDetailView({
           {/* Left 2 Cols: Comprehensive Forensic Breakdown */}
           <div className="lg:col-span-2 space-y-6">
             {/* Header Verdict Card */}
-            <div className="bg-[#152033] border border-[#263B5E] rounded-xl p-5 shadow-lg">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-4 mb-4">
+            <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 mb-4">
                 <div>
                   <div className="flex items-center gap-2">
                     <StatusBadge
@@ -356,19 +340,19 @@ export function EventDetailView({
                       variant={getSeverityVariant(current.severity)}
                       size="sm"
                     />
-                    <span className="font-mono text-xs font-bold text-sky-400">
+                    <span className="font-mono text-xs font-bold text-sky-600">
                       {current.station_id}
                     </span>
-                    <span className="text-xs text-slate-300 font-medium">
+                    <span className="text-xs text-slate-600 font-medium">
                       ({getCityNameOnly(current.station_id)})
                     </span>
                   </div>
-                  <h3 className="text-lg font-bold text-white mt-1 font-mono">
+                  <h3 className="text-lg font-bold text-slate-900 mt-1 font-mono">
                     {current.classification.replace(/_/g, ' ')}
                   </h3>
-                  <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-1 font-mono">
+                  <div className="flex items-center gap-3 text-[11px] text-slate-500 mt-1 font-mono">
                     <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-sky-400" />
+                      
                       {getStationLabel(current.station_id)}
                     </span>
                     {currentStationMeta && (
@@ -381,14 +365,14 @@ export function EventDetailView({
                 </div>
 
                 <div className="text-right font-mono text-xs space-y-1">
-                  <div className="flex items-center gap-1 justify-end text-slate-400 text-[10px] uppercase">
-                    <Clock className="w-3 h-3 text-slate-400" /> Recorded Timestamp
+                  <div className="flex items-center gap-1 justify-end text-slate-500 text-[10px] uppercase">
+                     Recorded Timestamp
                   </div>
-                  <div className="text-slate-200 font-bold">
+                  <div className="text-slate-700 font-bold">
                     {new Date(current.timestamp).toLocaleString()}
                   </div>
-                  <div className="text-[10px] text-slate-400">
-                    Incident ID: <strong className="text-sky-300">#{current.id}</strong>
+                  <div className="text-[10px] text-slate-500">
+                    Incident ID: <strong className="text-sky-700">#{current.id}</strong>
                   </div>
                 </div>
               </div>
@@ -402,33 +386,33 @@ export function EventDetailView({
 
               {/* Observed Channel Telemetry */}
               <div className="grid grid-cols-3 gap-3 font-mono text-center">
-                <div className="bg-[#10192A] p-3 rounded-lg border border-[#263B5E]/60">
-                  <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 mb-1">
-                    <Thermometer className="w-3.5 h-3.5 text-amber-400" /> Temperature
+                <div className="bg-[#F4F6FA] p-3 rounded-lg border border-[#D3DCE7]/60">
+                  <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 mb-1">
+                     Temperature
                   </div>
-                  <span className="text-base font-bold text-white">
+                  <span className="text-base font-bold text-slate-900">
                     {current.raw_values?.temperature !== undefined
                       ? `${Number(current.raw_values.temperature).toFixed(2)}°C`
                       : '--'}
                   </span>
                 </div>
 
-                <div className="bg-[#10192A] p-3 rounded-lg border border-[#263B5E]/60">
-                  <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 mb-1">
-                    <Gauge className="w-3.5 h-3.5 text-sky-400" /> Pressure
+                <div className="bg-[#F4F6FA] p-3 rounded-lg border border-[#D3DCE7]/60">
+                  <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 mb-1">
+                     Pressure
                   </div>
-                  <span className="text-base font-bold text-white">
+                  <span className="text-base font-bold text-slate-900">
                     {current.raw_values?.pressure !== undefined
                       ? `${Number(current.raw_values.pressure).toFixed(1)} hPa`
                       : '--'}
                   </span>
                 </div>
 
-                <div className="bg-[#10192A] p-3 rounded-lg border border-[#263B5E]/60">
-                  <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 mb-1">
-                    <Droplets className="w-3.5 h-3.5 text-indigo-400" /> Humidity
+                <div className="bg-[#F4F6FA] p-3 rounded-lg border border-[#D3DCE7]/60">
+                  <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 mb-1">
+                     Humidity
                   </div>
-                  <span className="text-base font-bold text-white">
+                  <span className="text-base font-bold text-slate-900">
                     {current.raw_values?.humidity !== undefined
                       ? `${Number(current.raw_values.humidity).toFixed(1)}%`
                       : '--'}
@@ -438,20 +422,20 @@ export function EventDetailView({
             </div>
 
             {/* 5-Tier Score Attribution Breakdown */}
-            <div className="bg-[#152033] border border-[#263B5E] rounded-xl p-5 shadow-lg space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2 font-mono">
-                <Layers className="w-4 h-4 text-sky-400" />
+            <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 font-mono">
+                
                 5-Tier Multi-Signal Algorithmic Decomposition
               </h4>
 
               <div className="space-y-3 font-mono text-xs">
                 {/* Tier 1 */}
-                <div className="bg-[#10192A] p-3.5 rounded-lg border border-[#263B5E]/60 flex items-center justify-between">
+                <div className="bg-[#F4F6FA] p-3.5 rounded-lg border border-[#D3DCE7]/60 flex items-center justify-between">
                   <div>
-                    <span className="font-sans font-semibold text-slate-200 block text-xs">
+                    <span className="font-sans font-semibold text-slate-700 block text-xs">
                       Tier 1: Deterministic Physics Quality Control
                     </span>
-                    <span className="text-[11px] text-slate-400 font-sans">
+                    <span className="text-[11px] text-slate-500 font-sans">
                       Physical range limits, rate-of-change & persistent freeze checks
                     </span>
                   </div>
@@ -463,17 +447,17 @@ export function EventDetailView({
                 </div>
 
                 {/* Tier 2 Point */}
-                <div className="bg-[#10192A] p-3.5 rounded-lg border border-[#263B5E]/60 flex items-center justify-between">
+                <div className="bg-[#F4F6FA] p-3.5 rounded-lg border border-[#D3DCE7]/60 flex items-center justify-between">
                   <div>
-                    <span className="font-sans font-semibold text-slate-200 block text-xs">
+                    <span className="font-sans font-semibold text-slate-700 block text-xs">
                       Tier 2A: Isolation Forest Outlier Detector
                     </span>
-                    <span className="text-[11px] text-slate-400 font-sans">
+                    <span className="text-[11px] text-slate-500 font-sans">
                       Multivariate density & spatial outlier isolation score
                     </span>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-bold text-sky-400">
+                    <span className="text-sm font-bold text-sky-600">
                       {current.tier_scores?.tier2_point_score !== undefined
                         ? (current.tier_scores.tier2_point_score * 100).toFixed(1)
                         : '--'}
@@ -483,12 +467,12 @@ export function EventDetailView({
                 </div>
 
                 {/* Tier 2 Temporal */}
-                <div className="bg-[#10192A] p-3.5 rounded-lg border border-[#263B5E]/60 flex items-center justify-between">
+                <div className="bg-[#F4F6FA] p-3.5 rounded-lg border border-[#D3DCE7]/60 flex items-center justify-between">
                   <div>
-                    <span className="font-sans font-semibold text-slate-200 block text-xs">
+                    <span className="font-sans font-semibold text-slate-700 block text-xs">
                       Tier 2B: PyTorch GRU Temporal Autoencoder
                     </span>
-                    <span className="text-[11px] text-slate-400 font-sans">
+                    <span className="text-[11px] text-slate-500 font-sans">
                       30-step sliding sequence reconstruction residual error
                     </span>
                   </div>
@@ -503,17 +487,17 @@ export function EventDetailView({
                 </div>
 
                 {/* Tier 3 Multivariate */}
-                <div className="bg-[#10192A] p-3.5 rounded-lg border border-[#263B5E]/60 flex items-center justify-between">
+                <div className="bg-[#F4F6FA] p-3.5 rounded-lg border border-[#D3DCE7]/60 flex items-center justify-between">
                   <div>
-                    <span className="font-sans font-semibold text-slate-200 block text-xs">
+                    <span className="font-sans font-semibold text-slate-700 block text-xs">
                       Tier 3: Thermodynamic & Mahalanobis Consistency
                     </span>
-                    <span className="text-[11px] text-slate-400 font-sans">
+                    <span className="text-[11px] text-slate-500 font-sans">
                       Clausius-Clapeyron saturation vapor relationship consistency
                     </span>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-bold text-amber-400">
+                    <span className="text-sm font-bold text-amber-600">
                       {current.tier_scores?.tier3_multivariate_score !== undefined
                         ? (current.tier_scores.tier3_multivariate_score * 100).toFixed(1)
                         : '--'}
@@ -527,13 +511,13 @@ export function EventDetailView({
 
           {/* Right Col: Explainability & Action Guidance */}
           <div className="space-y-6">
-            <div className="bg-[#152033] border border-[#263B5E] rounded-xl p-5 shadow-lg space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2 font-mono">
-                <Info className="w-4 h-4 text-sky-400" />
+            <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 font-mono">
+                
                 Root Cause Synthesis
               </h4>
 
-              <div className="bg-[#10192A] p-3.5 rounded-lg border border-[#263B5E]/60 text-xs text-slate-200 leading-relaxed font-sans">
+              <div className="bg-[#F4F6FA] p-3.5 rounded-lg border border-[#D3DCE7]/60 text-xs text-slate-700 leading-relaxed font-sans">
                 {current.explanation?.summary ||
                   current.reason ||
                   'Multi-tier anomaly fusion generated high anomaly probability.'}
@@ -541,8 +525,8 @@ export function EventDetailView({
 
               {/* Recommended Action */}
               <div className="bg-amber-500/15 p-3.5 rounded-lg border border-amber-500/35 text-xs">
-                <div className="flex items-center gap-1.5 text-amber-300 font-semibold mb-1 font-mono">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
+                <div className="flex items-center gap-1.5 text-amber-700 font-semibold mb-1 font-mono">
+                  
                   Recommended Operational Action
                 </div>
                 <p className="text-amber-200/90 leading-relaxed font-sans text-[11px]">
@@ -558,23 +542,23 @@ export function EventDetailView({
                 if (feats.length === 0) return null;
                 return (
                   <div>
-                    <h5 className="text-[10px] font-semibold uppercase text-slate-400 font-mono mb-2">
+                    <h5 className="text-[10px] font-semibold uppercase text-slate-500 font-mono mb-2">
                       Key Contributing Factors (TreeSHAP)
                     </h5>
                     <div className="space-y-2">
                       {feats.map((feat: any, i: number) => (
                         <div
                           key={i}
-                          className="bg-[#10192A] p-2.5 rounded border border-[#263B5E]/60 text-xs font-mono"
+                          className="bg-[#F4F6FA] p-2.5 rounded border border-[#D3DCE7]/60 text-xs font-mono"
                         >
                           <div className="flex justify-between items-center">
-                            <span className="text-slate-200 font-medium">{feat.feature || 'Factor'}</span>
-                            <span className="text-sky-400 font-bold">
+                            <span className="text-slate-700 font-medium">{feat.feature || 'Factor'}</span>
+                            <span className="text-sky-600 font-bold">
                               {typeof feat.attribution === 'number' ? `${(feat.attribution * 100).toFixed(0)}%` : '--'}
                             </span>
                           </div>
                           {feat.description && (
-                            <p className="text-[10px] text-slate-400 mt-0.5 font-sans">
+                            <p className="text-[10px] text-slate-500 mt-0.5 font-sans">
                               {feat.description}
                             </p>
                           )}
@@ -587,10 +571,10 @@ export function EventDetailView({
 
               {/* Navigation Shortcuts */}
               {onNavigateToLive && (
-                <div className="pt-2 border-t border-white/[0.06]">
+                <div className="pt-2 border-t border-slate-200">
                   <button
                     onClick={() => onNavigateToLive(current.station_id)}
-                    className="w-full py-2 bg-[#1B2A44] hover:bg-[#243757] border border-sky-500/40 text-sky-300 hover:text-white rounded-lg text-xs font-mono font-bold transition-all text-center"
+                    className="w-full py-2 bg-[#EDF1F7] hover:bg-[#E2E8F2] border border-sky-500/40 text-sky-700 hover:text-slate-900 rounded-lg text-xs font-mono font-bold transition-all text-center"
                   >
                     View Live Monitoring for {getCityNameOnly(current.station_id)} →
                   </button>

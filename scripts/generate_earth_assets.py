@@ -1,7 +1,7 @@
 """
 Script: generate_earth_assets.py
 Generates high-resolution authentic Earth equirectangular raster map textures
-and bump relief maps for SkyGuard AI's 3D Geospatial Digital Twin.
+and bump relief maps for DataMend's 3D Geospatial Digital Twin.
 """
 
 import os
@@ -21,7 +21,7 @@ def lon_lat_to_xy(lon, lat):
     return x, y
 
 def generate_earth_textures():
-    print(f"[SkyGuard Earth] Generating {WIDTH}x{HEIGHT} High-Resolution Real Earth Texture...")
+    print(f"[DataMend Earth] Generating {WIDTH}x{HEIGHT} High-Resolution Real Earth Texture...")
     
     # 1. Base Ocean Layer (Deep Bathymetric Gradient)
     img = Image.new("RGB", (WIDTH, HEIGHT), "#0B1528")
@@ -262,10 +262,10 @@ def generate_earth_textures():
     # Save Real Earth High-Res Equirectangular Map
     map_path = os.path.join(OUTPUT_DIR, "earth_map.jpg")
     img.save(map_path, quality=95)
-    print(f"[SkyGuard Earth] Saved high-resolution Earth Map Texture: {map_path}")
+    print(f"[DataMend Earth] Saved high-resolution Earth Map Texture: {map_path}")
     
     # 6. Generate Bump/Elevation Relief Map
-    print(f"[SkyGuard Earth] Generating {WIDTH}x{HEIGHT} Earth Elevation Relief Bump Map...")
+    print(f"[DataMend Earth] Generating {WIDTH}x{HEIGHT} Earth Elevation Relief Bump Map...")
     bump_img = Image.new("L", (WIDTH, HEIGHT), 25) # Deep ocean
     bump_draw = ImageDraw.Draw(bump_img)
     
@@ -283,7 +283,7 @@ def generate_earth_textures():
     bump_smoothed = bump_img.filter(ImageFilter.GaussianBlur(radius=3))
     bump_path = os.path.join(OUTPUT_DIR, "earth_bump.jpg")
     bump_smoothed.save(bump_path, quality=90)
-    print(f"[SkyGuard Earth] Saved Earth Elevation Bump Map: {bump_path}")
+    print(f"[DataMend Earth] Saved Earth Elevation Bump Map: {bump_path}")
 
 if __name__ == "__main__":
     generate_earth_textures()

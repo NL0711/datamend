@@ -1,6 +1,6 @@
 """
 backend/app/sources/manager.py
-SkyGuard AI — Master Data Source Manager.
+DataMend — Master Data Source Manager.
 Orchestrates interchangeable telemetry sources (Simulator, Open-Meteo REST API, Physical ESP32 MQTT)
 and routes canonical telemetry packets into the 5-Tier ML Quality Control and Persistence Engine.
 """
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 class DataSourceManager:
     """
-    Master coordinator for all SkyGuard AI telemetry sources.
+    Master coordinator for all DataMend telemetry sources.
     Maintains registered adapters, enforces single-active or multi-stream policies,
     and forwards canonical telemetry into the existing ingestion service.
     """

@@ -1,6 +1,6 @@
 """
 scripts/audit_tool.py
-Empirical Audit Collector for SkyGuard AI.
+Empirical Audit Collector for DataMend.
 Collects runtime evidence, database stats, model execution traces, API responses, and WebSocket frames.
 """
 
@@ -70,10 +70,10 @@ def audit_models():
     for f in files:
         print(f"  - {f.name:<28}: {f.stat().st_size:>8,} bytes")
 
-    from backend.app.ml.pipeline import SkyGuardPipeline
-    print("\nInitializing master SkyGuardPipeline...")
+    from backend.app.ml.pipeline import DataMendPipeline
+    print("\nInitializing master DataMendPipeline...")
     t0 = time.perf_counter()
-    pipeline = SkyGuardPipeline(model_dir=models_dir)
+    pipeline = DataMendPipeline(model_dir=models_dir)
     init_ms = (time.perf_counter() - t0) * 1000.0
     print(f"Pipeline initialized in {init_ms:.2f} ms")
 

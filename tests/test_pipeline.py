@@ -1,6 +1,6 @@
 """
 tests/test_pipeline.py
-Comprehensive End-to-End Master Pipeline Tests for SkyGuard AI 5-Tier ML Engine.
+Comprehensive End-to-End Master Pipeline Tests for DataMend 5-Tier ML Engine.
 """
 
 from pathlib import Path
@@ -8,16 +8,16 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from backend.app.ml.pipeline import InferenceResult, SkyGuardPipeline
+from backend.app.ml.pipeline import InferenceResult, DataMendPipeline
 
 
 @pytest.fixture
-def pipeline() -> SkyGuardPipeline:
+def pipeline() -> DataMendPipeline:
     # Initialize pipeline with auto-load from models/ if present
-    return SkyGuardPipeline(model_dir="models", auto_load=True)
+    return DataMendPipeline(model_dir="models", auto_load=True)
 
 
-def test_pipeline_initialization(pipeline: SkyGuardPipeline) -> None:
+def test_pipeline_initialization(pipeline: DataMendPipeline) -> None:
     assert pipeline.preprocessor is not None
     assert pipeline.tier1 is not None
     assert pipeline.tier2_point is not None
@@ -29,7 +29,7 @@ def test_pipeline_initialization(pipeline: SkyGuardPipeline) -> None:
     assert pipeline.tier5_explain is not None
 
 
-def test_pipeline_single_nominal_observation(pipeline: SkyGuardPipeline) -> None:
+def test_pipeline_single_nominal_observation(pipeline: DataMendPipeline) -> None:
     obs = {
         "timestamp": "2026-08-24T12:00:00Z",
         "station_id": "AWS-001",
@@ -53,7 +53,7 @@ def test_pipeline_single_nominal_observation(pipeline: SkyGuardPipeline) -> None
     assert len(res.reason) > 0
 
 
-def test_pipeline_detects_transient_spike(pipeline: SkyGuardPipeline) -> None:
+def test_pipeline_detects_transient_spike(pipeline: DataMendPipeline) -> None:
     pipeline.reset_station("AWS-001")
     # Feed 5 baseline steps
     for i in range(5):
@@ -82,7 +82,7 @@ def test_pipeline_detects_transient_spike(pipeline: SkyGuardPipeline) -> None:
     assert res.severity in ["HIGH", "CRITICAL"]
 
 
-def test_pipeline_detects_convective_squall_front(pipeline: SkyGuardPipeline) -> None:
+def test_pipeline_detects_convective_squall_front(pipeline: DataMendPipeline) -> None:
     pipeline.reset_station("AWS-FRONT")
     # Feed baseline
     pipeline.process_observation({"station_id": "AWS-FRONT", "timestamp": "t1", "temperature": 28.0, "pressure": 1008.0, "humidity": 60.0})
@@ -104,7 +104,7 @@ def test_pipeline_detects_convective_squall_front(pipeline: SkyGuardPipeline) ->
     assert res.sensor_health >= 90.0
 
 
-def test_pipeline_detects_tier1_range_violation(pipeline: SkyGuardPipeline) -> None:
+def test_pipeline_detects_tier1_range_violation(pipeline: DataMendPipeline) -> None:
     pipeline.reset_station("AWS-002")
     bad_obs = {
         "timestamp": "2026-08-24T12:00:00Z",
@@ -122,7 +122,7 @@ def test_pipeline_detects_tier1_range_violation(pipeline: SkyGuardPipeline) -> N
     assert res.classification == "DATA_CORRUPTION"
 
 
-def test_pipeline_detects_frozen_sensor(pipeline: SkyGuardPipeline) -> None:
+def test_pipeline_detects_frozen_sensor(pipeline: DataMendPipeline) -> None:
     pipeline.reset_station("AWS-FREEZE")
     # Stream 8 consecutive identical observations
     res = None
@@ -141,7 +141,7 @@ def test_pipeline_detects_frozen_sensor(pipeline: SkyGuardPipeline) -> None:
     assert res.is_fault is True
 
 
-def test_pipeline_batch_processing(pipeline: SkyGuardPipeline) -> None:
+def test_pipeline_batch_processing(pipeline: DataMendPipeline) -> None:
     pipeline.reset_station("AWS-BATCH")
     df = pd.DataFrame({
         "timestamp": [f"2026-08-24 12:{i*5:02d}:00" for i in range(15)],

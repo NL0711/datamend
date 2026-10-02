@@ -1,8 +1,8 @@
-# SKYGUARD AI — SYSTEM ARCHITECTURE
+# DATAMEND AI — SYSTEM ARCHITECTURE
 
 ## 1. SYSTEM OBJECTIVE
 
-SkyGuard AI is an intelligent AWS data quality and sensor health platform.
+DataMend is an intelligent AWS data quality and sensor health platform.
 
 It receives Temperature, Atmospheric Pressure and Relative Humidity observations and determines whether observations are:
 

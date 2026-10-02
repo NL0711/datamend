@@ -1,6 +1,6 @@
 """
 backend/app/ml/stage4_classifier.py
-SkyGuard AI / DataMend — Stage 4: Calibrated Evidence Fusion & 8-Class Fault Classifier.
+DataMend — Stage 4: Calibrated Evidence Fusion & 8-Class Fault Classifier.
 
 Fuses multi-tier diagnostic evidence into an auditable 8-class meteorological fault taxonomy:
 1. SPIKE: High rate-of-change transient or impulse surge confirmed isolated by spatial check.

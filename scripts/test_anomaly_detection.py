@@ -1,5 +1,5 @@
 """
-SkyGuard AI — Milestone M5 / Comprehensive Anomaly Detection Benchmark.
+DataMend — Milestone M5 / Comprehensive Anomaly Detection Benchmark.
 
 Evaluates the full 5-tier pipeline against holdout test datasets (data/test_anomalies.csv)
 measuring:
@@ -22,12 +22,12 @@ root_dir = Path(__file__).resolve().parent.parent
 if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
-from backend.app.ml.pipeline import SkyGuardPipeline
+from backend.app.ml.pipeline import DataMendPipeline
 
 
 def evaluate_dataset(test_csv_path: Path) -> Dict[str, Any]:
     print("=" * 80)
-    print("  SkyGuard AI — Formal Model Evaluation & Benchmark Suite")
+    print("  DataMend — Formal Model Evaluation & Benchmark Suite")
     print("=" * 80)
     print(f"Loading holdout test dataset: {test_csv_path}")
 
@@ -38,7 +38,7 @@ def evaluate_dataset(test_csv_path: Path) -> Dict[str, Any]:
     print(f"Loaded {len(df):,} test records across stations: {df['station_id'].unique().tolist()}")
 
     # Initialize master 5-tier orchestrator
-    pipeline = SkyGuardPipeline(model_dir=root_dir / "models")
+    pipeline = DataMendPipeline(model_dir=root_dir / "models")
     pipeline.reset()
 
     latencies_ms: List[float] = []
@@ -144,10 +144,10 @@ def evaluate_dataset(test_csv_path: Path) -> Dict[str, Any]:
     print("=" * 80)
 
     # Save to docs/evaluation_report.md
-    report_md = f"""# SkyGuard AI — Formal Model Evaluation & Benchmark Report
+    report_md = f"""# DataMend — Formal Model Evaluation & Benchmark Report
 
 ## 1. Executive Summary & Benchmark Metrics
-This report documents the empirical evaluation of the **SkyGuard AI 5-Tier Anomaly Detection & Sensor Health Pipeline** on holdout test partitions (`data/test_anomalies.csv`, 1,440 temporal steps).
+This report documents the empirical evaluation of the **DataMend 5-Tier Anomaly Detection & Sensor Health Pipeline** on holdout test partitions (`data/test_anomalies.csv`, 1,440 temporal steps).
 
 | Metric | Measured Value | Operational Target | Status |
 | :--- | :--- | :--- | :--- |
@@ -200,7 +200,7 @@ This report documents the empirical evaluation of the **SkyGuard AI 5-Tier Anoma
 ---
 
 ## 5. Summary Conclusion
-SkyGuard AI achieves an overall **F1 score of {f1*100:.1f}%** with **< {p95_lat:.1f}ms latency**, surpassing all acceptance thresholds defined in `GOAL.md` and `TODO.md`.
+DataMend achieves an overall **F1 score of {f1*100:.1f}%** with **< {p95_lat:.1f}ms latency**, surpassing all acceptance thresholds defined in `GOAL.md` and `TODO.md`.
 """
 
     report_file = root_dir / "docs" / "evaluation_report.md"

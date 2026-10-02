@@ -1,6 +1,6 @@
-# SkyGuard AI — Physical ESP32 + BME280 Hardware Setup Guide
+# DataMend — Physical ESP32 + BME280 Hardware Setup Guide
 
-This guide describes how to assemble, flash, and connect a physical **Automatic Weather Station (AWS)** microstation running on an **ESP32** microcontroller and **Bosch BME280** sensor to SkyGuard AI via MQTT.
+This guide describes how to assemble, flash, and connect a physical **Automatic Weather Station (AWS)** microstation running on an **ESP32** microcontroller and **Bosch BME280** sensor to DataMend via MQTT.
 
 ---
 
@@ -48,7 +48,7 @@ Connect the **BME280** module to the **ESP32** using standard I2C pins:
 
 1. Copy `config.example.h` to `config.h`:
    ```bash
-   cp hardware/esp32/skyguard_aws/config.example.h hardware/esp32/skyguard_aws/config.h
+   cp hardware/esp32/datamend_aws/config.example.h hardware/esp32/datamend_aws/config.h
    ```
 2. Open `config.h` in Arduino IDE or VS Code:
    ```cpp
@@ -102,8 +102,8 @@ Published every **30 seconds**:
 
 ---
 
-## 6. SkyGuard Backend Integration
+## 6. DataMend Backend Integration
 
-Once powered and connected to the MQTT broker, SkyGuard's `PhysicalAWSDataSource` automatically ingests, validates, and routes the telemetry into the 5-Tier ML Quality Control pipeline, displaying:
+Once powered and connected to the MQTT broker, DataMend's `PhysicalAWSDataSource` automatically ingests, validates, and routes the telemetry into the 5-Tier ML Quality Control pipeline, displaying:
 - 🟢 **PHYSICAL AWS — CONNECTED (ESP32-BME280)**
 - Live calibrated charts with sub-30ms processing latency.

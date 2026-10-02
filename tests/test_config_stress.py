@@ -11,7 +11,7 @@ from backend.app.main import app
 def test_default_settings():
     """Validate default configuration parameters according to project specifications."""
     cfg = Settings()
-    assert cfg.PROJECT_NAME == "SkyGuard AI"
+    assert cfg.PROJECT_NAME == "DataMend"
     assert cfg.VERSION == "0.1.0"
     assert cfg.API_PREFIX == "/api"
     assert cfg.DEBUG is True
@@ -28,7 +28,7 @@ def test_default_settings():
 def test_settings_direct_overrides():
     """Validate direct constructor overrides for all parameters."""
     cfg = Settings(
-        PROJECT_NAME="Custom SkyGuard",
+        PROJECT_NAME="Custom DataMend",
         VERSION="1.0.0",
         API_PREFIX="/api/v1",
         DEBUG=False,
@@ -41,7 +41,7 @@ def test_settings_direct_overrides():
         HEALTH_EMA_ALPHA=0.05,
         ANOMALY_THRESHOLD=0.75,
     )
-    assert cfg.PROJECT_NAME == "Custom SkyGuard"
+    assert cfg.PROJECT_NAME == "Custom DataMend"
     assert cfg.VERSION == "1.0.0"
     assert cfg.API_PREFIX == "/api/v1"
     assert cfg.DEBUG is False
@@ -57,7 +57,7 @@ def test_settings_direct_overrides():
 
 def test_env_var_overriding(monkeypatch):
     """Validate full environment variable overriding via OS environment."""
-    monkeypatch.setenv("PROJECT_NAME", "SkyGuard Overridden")
+    monkeypatch.setenv("PROJECT_NAME", "DataMend Overridden")
     monkeypatch.setenv("VERSION", "2.0.0-beta")
     monkeypatch.setenv("API_PREFIX", "/api/v2")
     monkeypatch.setenv("DEBUG", "false")
@@ -71,7 +71,7 @@ def test_env_var_overriding(monkeypatch):
     monkeypatch.setenv("CORS_ORIGINS", json.dumps(["http://station-alpha:8080", "http://station-beta:8080"]))
 
     cfg = Settings()
-    assert cfg.PROJECT_NAME == "SkyGuard Overridden"
+    assert cfg.PROJECT_NAME == "DataMend Overridden"
     assert cfg.VERSION == "2.0.0-beta"
     assert cfg.API_PREFIX == "/api/v2"
     assert cfg.DEBUG is False
@@ -127,9 +127,9 @@ def test_cors_origins_json_env(monkeypatch):
 
 def test_extra_env_ignored(monkeypatch):
     """Ensure undefined extra environment variables are safely ignored without error."""
-    monkeypatch.setenv("UNRECOGNIZED_SKYGUARD_VARIABLE", "some_value")
+    monkeypatch.setenv("UNRECOGNIZED_DATAMEND_VARIABLE", "some_value")
     cfg = Settings()
-    assert not hasattr(cfg, "UNRECOGNIZED_SKYGUARD_VARIABLE")
+    assert not hasattr(cfg, "UNRECOGNIZED_DATAMEND_VARIABLE")
 
 
 @pytest.mark.asyncio

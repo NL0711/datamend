@@ -1,12 +1,12 @@
-# SKYGUARD AI — DESIGN RESEARCH & ARCHITECTURAL SPECIFICATION REPORT
+# DATAMEND AI — DESIGN RESEARCH & ARCHITECTURAL SPECIFICATION REPORT
 
-**Target Platform:** SkyGuard AI — Scientific Quality-Control & Sensor Health Operations Platform  
+**Target Platform:** DataMend — Scientific Quality-Control & Sensor Health Operations Platform  
 **Target Domain:** Meteorological Operations, Automatic Weather Stations (AWS), Real-Time Quality Control (WMO-No. 8 / CIMO)  
 **Document Status:** Approved Master Design Specification (v2.0)
 
 ---
 
-## 1. Relevant SkyGuard References & Genesis
+## 1. Relevant DataMend References & Genesis
 
 ### Smart India Hackathon (SIH) 2026 Mandate
 * **Sponsor:** Ministry of Earth Sciences (MoES), Government of India (Disaster Management Track).
@@ -18,10 +18,10 @@
 * **Explainability (XAI):** Calibrated confidence scoring with TreeSHAP feature attributions and 5-tier mathematical signal decomposition.
 
 ### Homonymous Products Identified (Out of Scope)
-* **AccuWeather SkyGuard®:** Commercial severe weather warning service.
-* **SkyGuard UAV / Airport Defense:** Drone detection / bird-strike radar.
+* **AccuWeather DataMend®:** Commercial severe weather warning service.
+* **DataMend UAV / Airport Defense:** Drone detection / bird-strike radar.
 * **Rheinmetall Oerlikon Skyguard:** Air defense radar.
-* **NASA Space Apps SkyGuard:** Satellite air quality prototype.
+* **NASA Space Apps DataMend:** Satellite air quality prototype.
 
 ---
 
@@ -57,7 +57,7 @@
 
 ---
 
-## 4. SkyGuard Visual Identity & Design Tokens
+## 4. DataMend Visual Identity & Design Tokens
 
 ### Color Palette Architecture
 * **Canvas Void:** `#080C14` (Deep Space Navy)

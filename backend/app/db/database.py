@@ -1,6 +1,6 @@
 """
 backend/app/db/database.py
-SkyGuard AI — Async Database Engine, Sessionmaker, and Lifecycle Management.
+DataMend — Async Database Engine, Sessionmaker, and Lifecycle Management.
 """
 
 from __future__ import annotations

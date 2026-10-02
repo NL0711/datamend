@@ -1,6 +1,6 @@
 """
 backend/app/sources/external_source.py
-SkyGuard AI — Real External Weather API Data Source Adapter (Open-Meteo).
+DataMend — Real External Weather API Data Source Adapter (Open-Meteo).
 Fetches actual live meteorological observations via Open-Meteo REST API and normalizes into canonical telemetry.
 """
 

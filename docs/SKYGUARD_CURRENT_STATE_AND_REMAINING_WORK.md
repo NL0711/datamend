@@ -1,4 +1,4 @@
-# SkyGuard AI v0.2.0 PRO — Master Forensic State & Remaining Work Audit
+# DataMend v0.2.0 PRO — Master Forensic State & Remaining Work Audit
 
 **Document Version:** 1.0.0 (Master Authoritative Source of Truth)  
 **Audit Date:** August 25, 2026  
@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary & Project Baseline
 
-SkyGuard AI is an intelligent real-time quality control, anomaly detection, and sensor health monitoring platform specifically engineered for Automatic Weather Stations (AWS). It monitors the WMO primary triad:
+DataMend is an intelligent real-time quality control, anomaly detection, and sensor health monitoring platform specifically engineered for Automatic Weather Stations (AWS). It monitors the WMO primary triad:
 - **Temperature ($T$)** in degrees Celsius (°C)
 - **Atmospheric Pressure ($P$)** in hectopascals (hPa)
 - **Relative Humidity ($RH$)** in percentage (%)
@@ -18,7 +18,7 @@ SkyGuard AI is an intelligent real-time quality control, anomaly detection, and 
 The system unifies three interchangeable telemetry feeds through a **Canonical Telemetry Contract** into an unchanged **5-Tier ML Pipeline**:
 
 ```
-                    SKYGUARD AI (v0.2.0 PRO)
+                    DATAMEND AI (v0.2.0 PRO)
                                │
                      DATA SOURCE MANAGER
                                │
@@ -70,7 +70,7 @@ The system unifies three interchangeable telemetry feeds through a **Canonical T
 | **Simulated Source** | `backend/app/sources/simulated_source.py` | Diurnal solar curve generation & anomaly injection | **COMPLETE** | `test_simulated_data_source_lifecycle` PASSED |
 | **Open-Meteo Source** | `backend/app/sources/external_source.py` | Async HTTPS polling of real-time surface assimilation | **COMPLETE** | `test_external_weather_live_api_integration` PASSED |
 | **Physical AWS Adapter**| `backend/app/sources/physical_source.py` | MQTT ingestion (`skyguard/aws/+/telemetry`), 30s stale timer | **COMPLETE (Software)**| Virtual packet ingestion & heartbeat parsing verified |
-| **ESP32 Firmware** | `hardware/esp32/skyguard_aws/skyguard_aws.ino` | BME280 I2C sampling (SDA=21, SCL=22), Wi-Fi, NTP UTC sync | **COMPLETE (Firmware)**| Arduino C++ compiles; pending live physical power-on |
+| **ESP32 Firmware** | `hardware/esp32/datamend_aws/datamend_aws.ino` | BME280 I2C sampling (SDA=21, SCL=22), Wi-Fi, NTP UTC sync | **COMPLETE (Firmware)**| Arduino C++ compiles; pending live physical power-on |
 | **Source Manager** | `backend/app/sources/manager.py` | Single-active hot switching without pipeline restart | **COMPLETE** | `test_data_source_manager_switching` PASSED |
 | **Canonical Contract** | `backend/app/schemas/canonical.py` | Strict Pydantic schema normalizing $(T, P, RH)$ and metadata | **COMPLETE** | `test_canonical_telemetry_valid` PASSED |
 | **QC Engine (Tier 1)** | `backend/app/qc/tier1_rules.py` | WMO physical range, rate-of-change, stuck sensor checks | **COMPLETE** | `test_tier1_qc.py` (12 test cases) PASSED |
@@ -122,7 +122,7 @@ The system unifies three interchangeable telemetry feeds through a **Canonical T
 ## 5. Physical AWS Hardware Strategy (Deferred)
 
 Per user direction, physical hardware deployment is intentionally deferred until physical hardware assembly:
-- **Firmware Status:** Complete Arduino C++ sketch `hardware/esp32/skyguard_aws/skyguard_aws.ino` with auto-reconnecting Wi-Fi, NTP UTC sync, BME280 register validation, and MQTT heartbeat.
+- **Firmware Status:** Complete Arduino C++ sketch `hardware/esp32/datamend_aws/datamend_aws.ino` with auto-reconnecting Wi-Fi, NTP UTC sync, BME280 register validation, and MQTT heartbeat.
 - **Backend Adapter Status:** `PhysicalAWSDataSource` is complete and tested via virtual packet injection (`POST /api/data-sources/physical/virtual-packet`).
 - **Hardware Status:** **IMPLEMENTED / VIRTUALLY TESTED / PHYSICAL VALIDATION PENDING**.
 
@@ -215,7 +215,7 @@ Per user direction, physical hardware deployment is intentionally deferred until
 ## 11. Edge AI & Microstation Clarification
 
 > **Architectural Clarification:**  
-> SkyGuard AI's **ML inference does NOT run on the ESP32 microcontroller**.  
+> DataMend's **ML inference does NOT run on the ESP32 microcontroller**.  
 > - **ESP32 Microstation Role:** High-precision environmental sensing, I2C register reading, NTP UTC timestamping, and MQTT publishing.  
 > - **Backend Server Role:** Full 5-Tier ML Quality Control, PyTorch GRU Autoencoder temporal reconstruction, TreeSHAP attributions, SQLite persistence, and WebSocket broadcasting.
 

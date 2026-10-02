@@ -1,4 +1,4 @@
-"""SkyGuard AI Weather Simulator Package."""
+"""DataMend Weather Simulator Package."""
 
 from backend.simulator.anomaly_injector import (
     AnomalyInjector,

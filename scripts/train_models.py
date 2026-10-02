@@ -1,6 +1,6 @@
 """
 scripts/train_models.py
-SkyGuard AI — Automated 5-Tier ML Model Training and Artifact Persistence Pipeline.
+DataMend — Automated 5-Tier ML Model Training and Artifact Persistence Pipeline.
 
 Trains and persists production artifacts in models/:
 - preprocessor.joblib & scaler.joblib
@@ -61,7 +61,7 @@ def train_all_models(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info("================================================================================")
-    logger.info("  SkyGuard AI — 5-Tier ML Model Training & Artifact Generation Pipeline")
+    logger.info("  DataMend — 5-Tier ML Model Training & Artifact Generation Pipeline")
     logger.info("================================================================================")
     logger.info("Training Data:    %s", train_path)
     logger.info("Validation Data:  %s", val_path)
@@ -246,7 +246,7 @@ def train_all_models(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="SkyGuard AI Model Training Pipeline")
+    parser = argparse.ArgumentParser(description="DataMend Model Training Pipeline")
     parser.add_argument("--train", type=str, default="data/train_clean.csv")
     parser.add_argument("--val", type=str, default="data/val_mixed.csv")
     parser.add_argument("--output-dir", type=str, default="models")

@@ -1,8 +1,8 @@
-# SkyGuard AI — Three-Source Telemetry Architecture & Implementation Plan
+# DataMend — Three-Source Telemetry Architecture & Implementation Plan
 
 ## 1. Executive Summary
 
-SkyGuard AI is being extended from a single synthetic simulator into a **multi-source real-time quality-control platform** that supports three interchangeable, production-grade telemetry sources:
+DataMend is being extended from a single synthetic simulator into a **multi-source real-time quality-control platform** that supports three interchangeable, production-grade telemetry sources:
 1. **SIMULATED AWS TELEMETRY** (Diurnal sinusoidal solar cycle + programmatic anomaly injector)
 2. **REAL EXTERNAL WEATHER DATA FEED** (Live real-time meteorological feed via Open-Meteo REST API)
 3. **REAL PHYSICAL AWS / ESP32 SENSOR DATA** (Physical ESP32 microcontroller with BME280 sensor communicating over MQTT)
@@ -15,7 +15,7 @@ All incoming data sources pass through a unified **DataSource Adapter** that nor
 
 ```
                                 +-----------------------------+
-                                |         SKYGUARD AI         |
+                                |         DATAMEND AI         |
                                 +--------------+--------------+
                                                |
                                      DATA SOURCE MANAGER
@@ -78,7 +78,7 @@ class CanonicalTelemetry(BaseModel):
     humidity: float                       # Mandatory: Relative Humidity (%)
     source_type: DataSourceType           # SIMULATED | EXTERNAL_API | PHYSICAL_AWS
     source_id: str                        # e.g., "diurnal_generator", "open_meteo", "esp32_bme280"
-    provider: Optional[str] = None        # e.g., "Open-Meteo", "SkyGuard-Hardware"
+    provider: Optional[str] = None        # e.g., "Open-Meteo", "DataMend-Hardware"
     latitude: Optional[float] = None      # Decimal degrees
     longitude: Optional[float] = None     # Decimal degrees
     elevation: Optional[float] = None     # Meters above sea level
@@ -112,8 +112,8 @@ class CanonicalTelemetry(BaseModel):
 * 30-second heartbeat timeout: marks station `DISCONNECTED` if hardware goes offline.
 
 ### Phase 4: ESP32 Firmware Package
-* `hardware/esp32/skyguard_aws/`:
-  - `skyguard_aws.ino`: Arduino/ESP32 C++ firmware with Wi-Fi reconnection, Adafruit BME280 I2C sensor polling, JSON serialization, and MQTT publishing.
+* `hardware/esp32/datamend_aws/`:
+  - `datamend_aws.ino`: Arduino/ESP32 C++ firmware with Wi-Fi reconnection, Adafruit BME280 I2C sensor polling, JSON serialization, and MQTT publishing.
   - `config.example.h`: Wi-Fi and MQTT credentials template.
   - `README.md`: Hardware wiring schematics, pinout guide (SDA=21, SCL=22), and deployment guide.
 

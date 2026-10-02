@@ -1,8 +1,8 @@
-# SkyGuard AI — NOAA ISD Observational Benchmarking Methodology & Report
+# DataMend — NOAA ISD Observational Benchmarking Methodology & Report
 
 ## 1. Overview & Research Objective
 
-To validate the real-world operational generalization of SkyGuard AI's 5-Tier ML Quality Control Engine, we benchmarked the system against real-world observational surface weather records from the **NOAA Integrated Surface Database (ISD)** / **ISD-Lite**.
+To validate the real-world operational generalization of DataMend's 5-Tier ML Quality Control Engine, we benchmarked the system against real-world observational surface weather records from the **NOAA Integrated Surface Database (ISD)** / **ISD-Lite**.
 
 This benchmark answers two fundamental scientific questions:
 1. **False Alarm Rate on Nominal Weather:** Does the unsupervised/multi-tier ML architecture maintain low false alarm rates ($< 5\%$) across genuine diurnal cycles, convective rain events, and radiative cooling without producing spurious alerts?
@@ -27,7 +27,7 @@ The NOAA ISD Importer (`scripts/import_noaa_data.py`) handles:
 
 ## 3. Benchmarking Pipeline (`scripts/benchmark_noaa.py`)
 
-The offline benchmarking pipeline executes batch inference using `SkyGuardPipeline.process_batch()` with the **existing, unmodified production models**:
+The offline benchmarking pipeline executes batch inference using `DataMendPipeline.process_batch()` with the **existing, unmodified production models**:
 - `models/preprocessor.joblib` (Feature scaler)
 - `models/isolation_forest.joblib` (Tier 2 Point ML)
 - `models/temporal_autoencoder.pt` (Tier 2 GRU Autoencoder)

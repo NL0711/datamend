@@ -1,6 +1,6 @@
 """
 tests/test_api.py
-SkyGuard AI — Comprehensive Unit and Integration Test Suite for REST Endpoints.
+DataMend — Comprehensive Unit and Integration Test Suite for REST Endpoints.
 """
 
 from datetime import datetime, timezone
@@ -15,7 +15,7 @@ async def test_root_endpoint(async_client: AsyncClient):
     assert res.status_code == 200
     data = res.json()
     assert data["status"] == "online"
-    assert "SkyGuard AI" in data["project"]
+    assert "DataMend" in data["project"]
     assert data["docs_url"] == "/docs"
 
 

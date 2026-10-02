@@ -1,6 +1,6 @@
 """
 tests/test_noaa_importer.py
-SkyGuard AI — Unit Test Suite for NOAA ISD Observational Data Importer.
+DataMend — Unit Test Suite for NOAA ISD Observational Data Importer.
 """
 
 from pathlib import Path

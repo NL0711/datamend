@@ -1,18 +1,18 @@
 """
 tests/test_alert_xai.py
-SkyGuard AI — Unit & Integration Test Suite for Interactive Alert Center XAI & TreeSHAP Attributions.
+DataMend — Unit & Integration Test Suite for Interactive Alert Center XAI & TreeSHAP Attributions.
 """
 
 from datetime import datetime, timezone
 import pytest
 from httpx import AsyncClient
 
-from backend.app.ml.pipeline import SkyGuardPipeline
+from backend.app.ml.pipeline import DataMendPipeline
 
 
 def test_pipeline_treeshap_feature_attributions():
     """Verifies that the 5-Tier ML Pipeline computes genuine TreeSHAP feature rankings."""
-    pipeline = SkyGuardPipeline()
+    pipeline = DataMendPipeline()
     obs = {
         "station_id": "TEST-XAI-01",
         "timestamp": datetime.now(timezone.utc).isoformat(),

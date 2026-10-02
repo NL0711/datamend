@@ -1,17 +1,17 @@
-# SKYGUARD AI — GLOBAL SETTINGS & CONFIGURATION CENTER
+# DATAMEND AI — GLOBAL SETTINGS & CONFIGURATION CENTER
 ## Production Architecture & UI/UX Implementation Report
 
-**Document ID:** `SKYGUARD-DOC-SETTINGS-003`  
+**Document ID:** `DATAMEND-DOC-SETTINGS-003`  
 **Revision:** `1.0.0 (Production Release)`  
 **Status:** `VERIFIED & OPERATIONAL`  
-**Author:** SkyGuard AI Core Architecture & Frontend Engineering  
+**Author:** DataMend Core Architecture & Frontend Engineering  
 **Scope:** Telemetry Ingestion Architecture, Authoritative Global State Management, UI/UX Drawer Refactor, Contextual Telemetry Strip, and Geospatial Digital Twin Synchronization.
 
 ---
 
 ## 1. Executive Summary
 
-In previous iterations of the SkyGuard AI operations platform, the `DataSourceControl` HUD (a 240px tall telemetry control card) was rendered repetitively across operational views, creating visual clutter, excessive vertical displacement, and redundant state declarations.
+In previous iterations of the DataMend operations platform, the `DataSourceControl` HUD (a 240px tall telemetry control card) was rendered repetitively across operational views, creating visual clutter, excessive vertical displacement, and redundant state declarations.
 
 This implementation successfully refactors the entire telemetry and environment configuration architecture into a centralized **Global Settings & Operations Configuration Center** accessible from a dedicated `⚙ Settings` header trigger. Concurrently, views now feature an ultra-clean **1-Line Contextual Telemetry Status Strip** (`36px` tall), recovering over `200px` of vertical viewport space for operational telemetry, digital twin geospatial visualization, and time-series charts.
 
@@ -21,7 +21,7 @@ This implementation successfully refactors the entire telemetry and environment 
 3. **Contextual Telemetry Status Strip (`ContextualStatusStrip.tsx`):** A single-line operational HUD on `Overview` and `LiveMonitoring` displaying live provenance, latency, coordinates, and instant configuration shortcuts.
 4. **End-to-End Live Open-Meteo Ingestion Verification:** Zero mock/fake data. Selecting a city preset (Pune, New Delhi, London, Tokyo, Death Valley) dynamically configures the backend `DataSourceManager`, queries the Open-Meteo API, routes raw telemetry through the 5-Tier ML Quality Control engine, stores records in SQLite WAL, and broadcasts live canonical frames over `/ws/live`.
 5. **3D Geospatial Digital Twin Synchronization:** Integrated Three.js globe camera tweening to smoothly re-center and highlight active weather stations upon preset selection.
-6. **Operator Preference Persistence:** Synchronizes display density modes (`Comfortable`, `Compact`, `Operator`) and reduced motion preferences to browser `localStorage` under `skyguard_operator_preferences_v1`.
+6. **Operator Preference Persistence:** Synchronizes display density modes (`Comfortable`, `Compact`, `Operator`) and reduced motion preferences to browser `localStorage` under `datamend_operator_preferences_v1`.
 
 ---
 
@@ -116,7 +116,7 @@ The new Global Settings Center is built as a high-density, accessible drawer (`z
 | **Vertical Space Displaced** | `~240px` permanent displacement | `36px` compact status strip (`+204px` viewport gain) |
 | **City Selection Flow** | Disconnected local state dropdowns | Global authoritative state triggering live backend reconfig |
 | **Display Density** | Fixed rigid CSS spacing | Operator-selectable (`Comfortable` / `Compact` / `Operator`) |
-| **Preference Persistence** | None (reset on refresh) | Browser `localStorage` (`skyguard_operator_preferences_v1`) |
+| **Preference Persistence** | None (reset on refresh) | Browser `localStorage` (`datamend_operator_preferences_v1`) |
 | **3D Geospatial Orbit** | Manual rotation only | Smooth camera tweening to active station coordinates |
 
 ---
@@ -152,4 +152,4 @@ The new Global Settings Center is built as a high-density, accessible drawer (`z
 
 ## 6. Conclusion & Sign-Off
 
-The SkyGuard AI platform now features an enterprise-grade operational architecture. Redundant telemetry controls have been eliminated, viewport space is optimized for scientific monitoring, and the data pipeline provides verifiable live meteorological quality control with 100% data integrity.
+The DataMend platform now features an enterprise-grade operational architecture. Redundant telemetry controls have been eliminated, viewport space is optimized for scientific monitoring, and the data pipeline provides verifiable live meteorological quality control with 100% data integrity.

@@ -1,5 +1,5 @@
 """
-SkyGuard AI — Unit & Integration Test Suite for Milestone M1 Simulator Engine.
+DataMend — Unit & Integration Test Suite for Milestone M1 Simulator Engine.
 
 Validates:
 1. Diurnal atmospheric physics, Magnus-Tetens thermodynamic coupling, and tidal pressure cycles.

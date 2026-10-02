@@ -1,6 +1,6 @@
 """
 tests/test_live_city_switch_integration.py
-SkyGuard AI — End-to-End Live City Switching and Data Integrity Integration Test.
+DataMend — End-to-End Live City Switching and Data Integrity Integration Test.
 Tests Open-Meteo live fetching, coordinate updating, canonical telemetry translation,
 and 5-Tier ML inference for Pune, New Delhi, London, Tokyo, and Death Valley.
 """

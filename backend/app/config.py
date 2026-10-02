@@ -15,7 +15,7 @@ except ImportError:
             super().__init__(**values)
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "SkyGuard AI"
+    PROJECT_NAME: str = "DataMend"
     VERSION: str = "0.2.0"
     API_PREFIX: str = "/api"
     DEBUG: bool = True

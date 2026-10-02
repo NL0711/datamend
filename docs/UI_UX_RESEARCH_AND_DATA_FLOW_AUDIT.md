@@ -1,7 +1,7 @@
-# SKYGUARD AI — UI/UX RESEARCH & DATA-FLOW AUDIT REPORT
+# DATAMEND AI — UI/UX RESEARCH & DATA-FLOW AUDIT REPORT
 
 **Author:** Senior Product Designer & Full-Stack Systems Architect  
-**Project:** SkyGuard AI — Intelligent WMO-No. 8 AWS Quality Control & Sensor Health System  
+**Project:** DataMend — Intelligent WMO-No. 8 AWS Quality Control & Sensor Health System  
 **Date:** August 2026  
 **Status:** Audit Complete • Root Causes Identified • Execution Plan Defined
 

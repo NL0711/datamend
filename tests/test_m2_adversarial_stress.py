@@ -27,7 +27,7 @@ import pandas as pd
 import pytest
 
 from backend.app.ml.fusion import AnomalyFusionEngine, FusionResult, Severity, TierScores
-from backend.app.ml.pipeline import InferenceResult, SkyGuardPipeline
+from backend.app.ml.pipeline import InferenceResult, DataMendPipeline
 from backend.app.ml.preprocessor import DataPreprocessor, FEATURE_NAMES, calculate_magnus_dew_point
 from backend.app.ml.tier1_qc import Tier1QC, Tier1QCConfig, Tier1QCResult
 from backend.app.ml.tier2_point_ml import IsolationForestPointDetector
@@ -134,8 +134,8 @@ class TestAutomatedTrainingPipelineStress:
             assert meta["temporal_threshold"] > 0.0
             assert len(meta["features"]) == 9
 
-            # Instantiate a SkyGuardPipeline from these newly generated artifacts
-            pipeline = SkyGuardPipeline(model_dir=output_models, auto_load=True)
+            # Instantiate a DataMendPipeline from these newly generated artifacts
+            pipeline = DataMendPipeline(model_dir=output_models, auto_load=True)
             assert pipeline.preprocessor.is_fitted is True
             assert pipeline.tier2_point.is_fitted is True
             assert pipeline.tier2_temporal.is_loaded is True
@@ -160,11 +160,11 @@ class TestAutomatedTrainingPipelineStress:
 # ============================================================================
 
 class TestLargeBatchProcessingStress:
-    """Stress test SkyGuardPipeline.process_batch on large datasets."""
+    """Stress test DataMendPipeline.process_batch on large datasets."""
 
     def test_large_batch_5000_rows_memory_and_stability(self):
         """Process 5,000 continuous rows; verify execution, bounded memory, and score stability."""
-        pipeline = SkyGuardPipeline(model_dir="models", auto_load=True)
+        pipeline = DataMendPipeline(model_dir="models", auto_load=True)
         df = generate_clean_diurnal_series(n_rows=5000)
 
         # Track memory allocations
@@ -214,7 +214,7 @@ class TestLargeBatchProcessingStress:
 
     def test_batch_ordering_and_non_monotonic_timestamps(self):
         """Batch processor should sort out-of-order timestamps without crashing."""
-        pipeline = SkyGuardPipeline(model_dir="models", auto_load=True)
+        pipeline = DataMendPipeline(model_dir="models", auto_load=True)
         df = generate_clean_diurnal_series(n_rows=50)
         # Shuffle rows randomly
         df_shuffled = df.sample(frac=1.0, random_state=42).reset_index(drop=True)
@@ -247,7 +247,7 @@ class TestExtremeEdgeCases:
         (25.0, 1013.25, 120.0, True, "DATA_CORRUPTION"),   # Humidity above 104%
     ])
     def test_wmo_physical_bounds_enforcement(self, temp, press, rh, expected_override, expected_class):
-        pipeline = SkyGuardPipeline(model_dir="models", auto_load=True)
+        pipeline = DataMendPipeline(model_dir="models", auto_load=True)
         res = pipeline.process_observation({
             "station_id": "AWS-BOUNDS",
             "timestamp": "2026-01-01T12:00:00Z",
@@ -306,7 +306,7 @@ class TestNullMissingMalformedStreams:
         {"station_id": "AWS-CORRUPT", "timestamp": "2026-01-01T00:35:00Z", "temperature": 20.0, "pressure": 1013.25, "humidity": "NAN%"},
     ])
     def test_corrupt_and_missing_telemetry_handling(self, obs):
-        pipeline = SkyGuardPipeline(model_dir="models", auto_load=True)
+        pipeline = DataMendPipeline(model_dir="models", auto_load=True)
         res = pipeline.process_observation(obs)
 
         # Must flag hard anomaly override and appropriate fault classification
@@ -319,7 +319,7 @@ class TestNullMissingMalformedStreams:
 
     def test_empty_dataframe_batch_processing(self):
         """Batch processing an empty dataframe should return an empty list without error."""
-        pipeline = SkyGuardPipeline(model_dir="models", auto_load=True)
+        pipeline = DataMendPipeline(model_dir="models", auto_load=True)
         res = pipeline.process_batch(pd.DataFrame())
         assert res == []
 
@@ -332,7 +332,7 @@ class TestFrozenSensorStream:
     """Empirical test for stuck/frozen sensor values and Sensor Health Index degradation."""
 
     def test_frozen_temperature_stream_detection_and_health_decay(self):
-        pipeline = SkyGuardPipeline(model_dir="models", auto_load=True)
+        pipeline = DataMendPipeline(model_dir="models", auto_load=True)
         station_id = "AWS-FROZEN-TEST"
         pipeline.reset_station(station_id)
 
@@ -389,7 +389,7 @@ class TestOscillationAndSquallDisambiguation:
 
     def test_rapid_square_wave_temperature_oscillation(self):
         """Square wave oscillating 20°C <-> 35°C every 5 minutes (ΔT = ±15°C)."""
-        pipeline = SkyGuardPipeline(model_dir="models", auto_load=True)
+        pipeline = DataMendPipeline(model_dir="models", auto_load=True)
         station_id = "AWS-SQUARE-WAVE"
         pipeline.reset_station(station_id)
 
@@ -423,7 +423,7 @@ class TestOscillationAndSquallDisambiguation:
         Obeying Clausius-Clapeyron thermodynamics (Td <= T + 0.5°C).
         Must be classified as METEOROLOGICAL_EXTREME with is_fault=False.
         """
-        pipeline = SkyGuardPipeline(model_dir="models", auto_load=True)
+        pipeline = DataMendPipeline(model_dir="models", auto_load=True)
         station_id = "AWS-SQUALL-FRONT"
         pipeline.reset_station(station_id)
 
@@ -460,7 +460,7 @@ class TestMultiStationIsolation:
     """Verify that multiple AWS stations operating concurrently remain strictly isolated."""
 
     def test_interleaved_multi_station_isolation(self):
-        pipeline = SkyGuardPipeline(model_dir="models", auto_load=True)
+        pipeline = DataMendPipeline(model_dir="models", auto_load=True)
         station_a = "AWS-CLEAN-STATION"
         station_b = "AWS-FAULTY-STATION"
 

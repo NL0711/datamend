@@ -1,4 +1,4 @@
-# SkyGuard AI v0.2.0 PRO — Master Forensic Current-State Verification & Remaining Work Audit
+# DataMend v0.2.0 PRO — Master Forensic Current-State Verification & Remaining Work Audit
 
 **Document Release:** v1.0.0 — Authoritative Single Source of Truth  
 **Audit Date:** August 25, 2026  
@@ -9,17 +9,17 @@
 
 ## 1. Document Metadata
 
-- **Project:** SkyGuard AI (Intelligent Real-Time Anomaly Detection & Sensor Health System for Automatic Weather Stations)
+- **Project:** DataMend (Intelligent Real-Time Anomaly Detection & Sensor Health System for Automatic Weather Stations)
 - **Version:** v0.2.0 PRO
 - **Target Parameters:** Temperature ($T$, °C), Atmospheric Pressure ($P$, hPa), Relative Humidity ($RH$, %)
 - **Operating Environment:** Python 3.14 (Backend), Node.js v20 / Vite (Frontend), SQLite 3 in WAL Mode (Persistence), Arduino C++ (ESP32 Firmware)
-- **Authoritative Status:** This document is the single, binding architectural reference for SkyGuard AI v0.2.0 PRO.
+- **Authoritative Status:** This document is the single, binding architectural reference for DataMend v0.2.0 PRO.
 
 ---
 
 ## 2. Executive Summary
 
-SkyGuard AI v0.2.0 PRO is a functional, real-time meteorological quality control, anomaly detection, and sensor health monitoring platform. It unifies three interchangeable telemetry streams (**Simulated AWS**, **Open-Meteo Live API**, and **Physical AWS ESP32+BME280**) into a standardized **Canonical Telemetry Contract**, which passes through an unchanged **5-Tier ML Pipeline** to SQLite persistence and a React operational dashboard over WebSockets.
+DataMend v0.2.0 PRO is a functional, real-time meteorological quality control, anomaly detection, and sensor health monitoring platform. It unifies three interchangeable telemetry streams (**Simulated AWS**, **Open-Meteo Live API**, and **Physical AWS ESP32+BME280**) into a standardized **Canonical Telemetry Contract**, which passes through an unchanged **5-Tier ML Pipeline** to SQLite persistence and a React operational dashboard over WebSockets.
 
 Zero fake dashboard data and zero silent fallbacks are strictly maintained. Physical hardware power-on is intentionally deferred without blocking software completeness.
 
@@ -47,7 +47,7 @@ The repository structure is organized into decoupled service layers:
 - `backend/app/db/`: SQLite WAL models, connection manager, and repositories.
 - `backend/app/api/`: FastAPI REST endpoints and `/ws/live` WebSocket broadcaster.
 - `frontend/src/`: React + TypeScript + Tailwind operations dashboard.
-- `hardware/esp32/skyguard_aws/`: ESP32 Arduino C++ firmware and wiring specifications.
+- `hardware/esp32/datamend_aws/`: ESP32 Arduino C++ firmware and wiring specifications.
 
 ---
 
@@ -136,7 +136,7 @@ React Operations Dashboard (Live telemetry charts, connection badges, data age t
 | **Simulated Source** | `backend/app/sources/simulated_source.py` | Diurnal solar curve generation & anomaly injection | **COMPLETE** | `test_simulated_data_source_lifecycle` PASSED |
 | **Open-Meteo Source** | `backend/app/sources/external_source.py` | Async HTTPS polling of real-time surface assimilation | **COMPLETE** | `test_external_weather_live_api_integration` PASSED |
 | **Physical AWS Adapter**| `backend/app/sources/physical_source.py` | MQTT ingestion (`skyguard/aws/+/telemetry`), 30s stale timer | **COMPLETE (Software)**| Virtual packet ingestion & heartbeat parsing verified |
-| **ESP32 Firmware** | `hardware/esp32/skyguard_aws/skyguard_aws.ino` | BME280 I2C sampling (SDA=21, SCL=22), Wi-Fi, NTP UTC sync | **COMPLETE (Firmware)**| Arduino C++ compiles; pending live physical power-on |
+| **ESP32 Firmware** | `hardware/esp32/datamend_aws/datamend_aws.ino` | BME280 I2C sampling (SDA=21, SCL=22), Wi-Fi, NTP UTC sync | **COMPLETE (Firmware)**| Arduino C++ compiles; pending live physical power-on |
 | **Source Manager** | `backend/app/sources/manager.py` | Single-active hot switching without pipeline restart | **COMPLETE** | `test_data_source_manager_switching` PASSED |
 | **Canonical Contract** | `backend/app/schemas/canonical.py` | Strict Pydantic schema normalizing $(T, P, RH)$ and metadata | **COMPLETE** | `test_canonical_telemetry_valid` PASSED |
 | **QC Engine (Tier 1)** | `backend/app/qc/tier1_rules.py` | WMO physical range, rate-of-change, stuck sensor checks | **COMPLETE** | `test_tier1_qc.py` (12 test cases) PASSED |
@@ -175,7 +175,7 @@ The data source layer (`backend/app/sources/`) enforces strict separation of con
 
 ## 12. Physical AWS Software Audit
 
-- **Firmware:** `hardware/esp32/skyguard_aws/skyguard_aws.ino` reads Bosch BME280 registers over I2C (`SDA=21`, `SCL=22`), synchronizes UTC over NTP, and publishes JSON to MQTT.
+- **Firmware:** `hardware/esp32/datamend_aws/datamend_aws.ino` reads Bosch BME280 registers over I2C (`SDA=21`, `SCL=22`), synchronizes UTC over NTP, and publishes JSON to MQTT.
 - **Backend Adapter:** `PhysicalAWSDataSource` subscribes to `skyguard/aws/+/telemetry` and `skyguard/aws/+/heartbeat`.
 - **Stale Detection:** Flags `⚠ STALE DATA` if no packet is received for 30 seconds.
 - **Virtual Ingestion:** `POST /api/data-sources/physical/virtual-packet` validates physical normalization in software.
@@ -382,7 +382,7 @@ The current models are trained on physics-informed synthetic baselines. The syst
 
 ## 36. Documentation Audit
 
-This document (`docs/SKYGUARD_FINAL_CURRENT_STATE_AND_REMAINING_WORK.md`) is the definitive, authoritative reference.
+This document (`docs/DATAMEND_FINAL_CURRENT_STATE_AND_REMAINING_WORK.md`) is the definitive, authoritative reference.
 
 ---
 
@@ -531,7 +531,7 @@ npm run dev
 
 ## 49. Judge / Reviewer Executive Summary
 
-> **SkyGuard AI v0.2.0 PRO** is an operational, real-time meteorological quality control and sensor health platform for Automatic Weather Stations.
+> **DataMend v0.2.0 PRO** is an operational, real-time meteorological quality control and sensor health platform for Automatic Weather Stations.
 > 
 > ### Key Achievements:
 > 1. **Three Unified Telemetry Feeds:** Ingests Simulated AWS, real Open-Meteo live surface weather over HTTPS, and Physical ESP32+BME280 MQTT streams through a standardized Canonical Telemetry Contract.

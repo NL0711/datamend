@@ -1,8 +1,8 @@
-# SkyGuard AI — External Weather Feed Setup Guide (Open-Meteo)
+# DataMend — External Weather Feed Setup Guide (Open-Meteo)
 
 ## 1. Overview
 
-SkyGuard AI integrates with **Open-Meteo**, a high-resolution, open-source global numerical weather API that provides real-time meteorological station observations and surface assimilation without requiring proprietary API keys.
+DataMend integrates with **Open-Meteo**, a high-resolution, open-source global numerical weather API that provides real-time meteorological station observations and surface assimilation without requiring proprietary API keys.
 
 ---
 

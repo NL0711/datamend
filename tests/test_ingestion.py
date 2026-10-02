@@ -1,6 +1,6 @@
 """
 tests/test_ingestion.py
-SkyGuard AI — Ingestion Pipeline, Batch Upload, CSV Normalization & Streaming Tests.
+DataMend — Ingestion Pipeline, Batch Upload, CSV Normalization & Streaming Tests.
 """
 
 import asyncio

@@ -1,6 +1,6 @@
 """
 scripts/verify_current_state.py
-SkyGuard AI — Master Current-State Verification Script.
+DataMend — Master Current-State Verification Script.
 Empirically tests and verifies:
 1. Database connectivity & schema provenance columns
 2. 5-Tier ML model loading & inference integrity
@@ -30,13 +30,13 @@ from backend.app.sources.manager import data_source_manager
 from backend.app.sources.simulated_source import SimulatedDataSource
 from backend.app.sources.external_source import ExternalWeatherDataSource
 from backend.app.sources.physical_source import PhysicalAWSDataSource
-from backend.app.ml.pipeline import SkyGuardPipeline
+from backend.app.ml.pipeline import DataMendPipeline
 from backend.app.services.ingestion_service import ingestion_service
 
 
 async def verify_all():
     print("=" * 70)
-    print("SkyGuard AI v0.2.0 PRO — Master System Verification Suite")
+    print("DataMend v0.2.0 PRO — Master System Verification Suite")
     print("=" * 70)
 
     # 1. Database Initialization
@@ -51,7 +51,7 @@ async def verify_all():
 
     # 2. ML Models & Pipeline
     print("\n[2/8] Verifying 5-Tier ML Pipeline & Model Artifacts...")
-    pipeline = SkyGuardPipeline()
+    pipeline = DataMendPipeline()
     test_obs = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "station_id": "VERIFY-001",

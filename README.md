@@ -1,6 +1,6 @@
-# SkyGuard AI — Intelligent Real-Time Anomaly Detection & Sensor Health for AWS
+# DataMend — Intelligent Real-Time Anomaly Detection & Sensor Health for AWS
 
-**SkyGuard AI (v0.2.0 PRO)** is an intelligent real-time meteorological quality control, anomaly detection, fault classification, explainability, and sensor health monitoring platform for Automatic Weather Stations (AWS).
+**DataMend (v0.2.0 PRO)** is an intelligent real-time meteorological quality control, anomaly detection, fault classification, explainability, and sensor health monitoring platform for Automatic Weather Stations (AWS).
 
 ---
 
@@ -65,7 +65,7 @@ npm run build
    - `SDA` $\rightarrow$ `GPIO 21`
    - `SCL` $\rightarrow$ `GPIO 22`
 2. **Firmware Flashing**:
-   - Open `hardware/esp32/skyguard_aws/skyguard_aws.ino` in Arduino IDE.
+   - Open `hardware/esp32/datamend_aws/datamend_aws.ino` in Arduino IDE.
    - Copy `config.example.h` to `config.h` and configure Wi-Fi SSID and MQTT broker.
    - Flash to DOIT ESP32 DevKit V1.
 3. **MQTT Topics**:

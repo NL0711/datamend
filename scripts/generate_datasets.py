@@ -1,5 +1,5 @@
 """
-SkyGuard AI — Dataset Generation Script.
+DataMend — Dataset Generation Script.
 
 Generates standard synthetic training, validation, and test datasets in data/
 with strict temporal boundary partitions and deterministic reproducibility:
@@ -23,7 +23,7 @@ from backend.simulator.cli import generate_temporal_splits
 def run() -> None:
     data_dir = root_dir / "data"
     print("=" * 75)
-    print("  SkyGuard AI — Standard Dataset Generation Workflow (Milestone M1)")
+    print("  DataMend — Standard Dataset Generation Workflow (Milestone M1)")
     print("=" * 75)
     print(f"Target Output Directory: {data_dir}")
     print("Generating standardized temporal train/val/test splits (30 Days, 5-min interval)...")

@@ -1,25 +1,4 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import {
-  Search,
-  ShieldAlert,
-  Activity,
-  AlertTriangle,
-  CloudLightning,
-  Thermometer,
-  Gauge,
-  Droplets,
-  Wrench,
-  Layers,
-  Globe,
-  Copy,
-  Check,
-  ChevronDown,
-  ChevronUp,
-  Cpu,
-  BarChart2,
-  Clock,
-  Radio,
-} from 'lucide-react';
 import { fetchAnomalies, fetchAnomalyDetail, fetchAnomalyStats, fetchStations } from '../services/api';
 import { AnomalyEvent, AnomalyEventDetail, AnomalyStats, Station } from '../types';
 import { TriageActions } from './TriageActions';
@@ -238,9 +217,8 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
           value={stats?.total_anomalies ?? 0}
           unit="total"
           delta={{ value: '24h Window', isNeutral: true }}
-          icon={<AlertTriangle className="w-4 h-4 text-amber-400" />}
           footerLeft={<span>WMO Physical QC Flags</span>}
-          footerRight={<span className="text-amber-400 font-semibold">Audited</span>}
+          footerRight={<span className="text-amber-600 font-semibold">Audited</span>}
         />
 
         <MetricCard
@@ -248,9 +226,8 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
           value={stats?.sensor_faults ?? 0}
           unit="faults"
           delta={{ value: 'Physical Transducer', isPositive: false }}
-          icon={<ShieldAlert className="w-4 h-4 text-rose-400" />}
           footerLeft={<span>Spikes & Dropouts</span>}
-          footerRight={<span className="text-rose-400 font-semibold">Immediate Action</span>}
+          footerRight={<span className="text-rose-600 font-semibold">Immediate Action</span>}
         />
 
         <MetricCard
@@ -258,7 +235,6 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
           value={stats?.meteorological_extremes ?? 0}
           unit="events"
           delta={{ value: 'Atmospheric Dynamics', isPositive: true }}
-          icon={<CloudLightning className="w-4 h-4 text-cyan-400" />}
           footerLeft={<span>Frontal Passages</span>}
           footerRight={<span className="text-cyan-400 font-semibold">Preserved Raw</span>}
         />
@@ -268,24 +244,23 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
           value="98.2"
           unit="/ 100"
           delta={{ value: 'Fleet Calibrated', isPositive: true }}
-          icon={<Activity className="w-4 h-4 text-emerald-400" />}
           footerLeft={<span>{stations.length} Active Stations</span>}
-          footerRight={<span className="text-emerald-400 font-semibold">Optimal</span>}
+          footerRight={<span className="text-emerald-600 font-semibold">Optimal</span>}
         />
       </div>
 
       {/* Filter & Search Toolbar */}
-      <div className="bg-[#152033] border border-[#263B5E] rounded-xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+      <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
         <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
           {/* Search Input */}
           <div className="relative flex-1 min-w-[200px]">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+            
             <input
               type="text"
               placeholder="Search incident #, station, classification, or reason..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#10192A] border border-[#263B5E] rounded-lg pl-9 pr-3 py-1.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+              className="w-full bg-[#F4F6FA] border border-[#D3DCE7] rounded-lg pl-9 pr-3 py-1.5 text-slate-700 placeholder-slate-500 focus:outline-none focus:border-sky-500"
             />
           </div>
 
@@ -293,7 +268,7 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
           <select
             value={selectedStation}
             onChange={(e) => setSelectedStation(e.target.value)}
-            className="bg-[#10192A] border border-[#263B5E] text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 font-bold"
+            className="bg-[#F4F6FA] border border-[#D3DCE7] text-slate-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 font-bold"
           >
             <option value="">All Stations (Fleet-Wide)</option>
             {stations.map((st) => (
@@ -307,7 +282,7 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
           <select
             value={selectedSeverity}
             onChange={(e) => setSelectedSeverity(e.target.value)}
-            className="bg-[#10192A] border border-[#263B5E] text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 font-bold"
+            className="bg-[#F4F6FA] border border-[#D3DCE7] text-slate-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 font-bold"
           >
             <option value="">All Severities</option>
             <option value="CRITICAL">Critical</option>
@@ -320,7 +295,7 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
           <select
             value={selectedClassification}
             onChange={(e) => setSelectedClassification(e.target.value)}
-            className="bg-[#10192A] border border-[#263B5E] text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 font-bold"
+            className="bg-[#F4F6FA] border border-[#D3DCE7] text-slate-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 font-bold"
           >
             <option value="">All Classifications</option>
             <option value="SPIKE">Spike (Thermal / Baro)</option>
@@ -335,29 +310,29 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
 
         <button
           onClick={loadData}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#10192A] hover:bg-[#1B2A44] text-slate-200 rounded-lg border border-[#263B5E] transition-all"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F6FA] hover:bg-[#EDF1F7] text-slate-700 rounded-lg border border-[#D3DCE7] transition-all"
         >
-          <Activity className="w-3.5 h-3.5 text-sky-400" /> Refresh Stream
+           Refresh Stream
         </button>
       </div>
 
       {/* Main Grid: Incident Table & Forensic Investigation Drawer */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left 5 Cols: Incident Audit Log Table */}
-        <div className="lg:col-span-5 bg-[#152033] border border-[#263B5E] rounded-xl p-5 shadow-lg flex flex-col justify-between">
+        <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-white font-mono flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono flex items-center gap-2">
+                
                 Flagged Incidents Audit Log ({filtered.length})
               </h3>
-              <span className="text-[11px] font-mono text-slate-400">Click row for deep forensics</span>
+              <span className="text-[11px] font-mono text-slate-500">Click row for deep forensics</span>
             </div>
 
             <div className="overflow-x-auto max-h-[700px] overflow-y-auto pr-1">
               <table className="w-full text-left text-xs font-mono">
-                <thead className="sticky top-0 bg-[#152033] z-10">
-                  <tr className="border-b border-white/[0.08] text-slate-400 font-sans font-semibold uppercase text-[11px] tracking-wider">
+                <thead className="sticky top-0 bg-[#FFFFFF] z-10">
+                  <tr className="border-b border-slate-200 text-slate-500 font-sans font-semibold uppercase text-[11px] tracking-wider">
                     <th className="pb-3">Incident</th>
                     <th className="pb-3">Timestamp (UTC)</th>
                     <th className="pb-3">Station</th>
@@ -366,7 +341,7 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
                     <th className="pb-3 text-right">Score</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/[0.04]">
+                <tbody className="divide-y divide-slate-200">
                   {isLoading ? (
                     <tr>
                       <td colSpan={6} className="py-6">
@@ -375,7 +350,7 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
                     </tr>
                   ) : filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-12 text-center text-slate-400 font-sans">
+                      <td colSpan={6} className="py-12 text-center text-slate-500 font-sans">
                         No flagged incidents matching current filter criteria.
                       </td>
                     </tr>
@@ -386,16 +361,16 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
                         <tr
                           key={item.id}
                           onClick={() => handleRowClick(item.id)}
-                          className={`hover:bg-[#1B2A44] transition-colors cursor-pointer ${
+                          className={`hover:bg-[#EDF1F7] transition-colors cursor-pointer ${
                             isSelected
-                              ? 'bg-sky-500/15 border-l-4 border-sky-400 text-white font-semibold'
-                              : 'text-slate-300'
+                              ? 'bg-sky-500/15 border-l-4 border-sky-400 text-slate-900 font-semibold'
+                              : 'text-slate-600'
                           }`}
                         >
-                          <td className="py-3 text-slate-400 font-bold">
-                            <span className={isSelected ? 'text-sky-300' : ''}>#{item.id}</span>
+                          <td className="py-3 text-slate-500 font-bold">
+                            <span className={isSelected ? 'text-sky-700' : ''}>#{item.id}</span>
                           </td>
-                          <td className="py-3 text-slate-300">
+                          <td className="py-3 text-slate-600">
                             {new Date(item.timestamp).toLocaleTimeString([], {
                               hour: '2-digit',
                               minute: '2-digit',
@@ -403,9 +378,9 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
                               hour12: false,
                             })}
                           </td>
-                          <td className="py-3 font-bold text-white">
+                          <td className="py-3 font-bold text-slate-900">
                             <span>{item.station_id}</span>
-                            <span className="text-[10px] text-slate-400 block font-normal">
+                            <span className="text-[10px] text-slate-500 block font-normal">
                               {getCityOnly(item.station_id)}
                             </span>
                           </td>
@@ -416,10 +391,10 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
                               size="sm"
                             />
                           </td>
-                          <td className="py-3 text-slate-200">
+                          <td className="py-3 text-slate-700">
                             {item.classification.replace(/_/g, ' ')}
                           </td>
-                          <td className="py-3 text-right font-bold text-sky-400">
+                          <td className="py-3 text-right font-bold text-sky-600">
                             {(item.anomaly_score * 100).toFixed(0)}%
                           </td>
                         </tr>
@@ -433,19 +408,19 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
         </div>
 
         {/* Right 7 Cols: Complete Forensic Investigation Dossier */}
-        <div className="lg:col-span-7 bg-[#152033] border border-[#263B5E] rounded-xl p-5 shadow-lg space-y-5">
+        <div className="lg:col-span-7 bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg space-y-5">
           {/* Dossier Top Navigation Header */}
-          <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
             <div className="flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5 text-sky-400" />
+              
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-white font-mono flex items-center gap-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono flex items-center gap-2">
                   Forensic Incident Dossier
                   {selectedIncidentId && (
-                    <span className="text-sky-400 font-mono">#{selectedIncidentId}</span>
+                    <span className="text-sky-600 font-mono">#{selectedIncidentId}</span>
                   )}
                 </h3>
-                <span className="text-[10px] text-slate-400 font-sans">
+                <span className="text-[10px] text-slate-500 font-sans">
                   Comprehensive mathematical signal decomposition & authentic telemetry audit
                 </span>
               </div>
@@ -458,7 +433,7 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
                   variant={getSeverityVariant(incidentDetail.severity)}
                   size="sm"
                 />
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 font-bold">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/15 text-sky-700 border border-sky-500/30 font-bold">
                   {(incidentDetail.anomaly_score * 100).toFixed(0)}% ANOMALY SCORE
                 </span>
               </div>
@@ -478,25 +453,25 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
           {isDetailLoading ? (
             <div className="py-16 space-y-4 text-center">
               <TableSkeleton rows={5} />
-              <p className="text-xs text-sky-400 font-mono animate-pulse">
+              <p className="text-xs text-sky-600 font-mono animate-pulse">
                 Loading authentic incident #{selectedIncidentId} forensic data...
               </p>
             </div>
           ) : detailError ? (
-            <div className="py-12 text-center text-xs text-rose-400 font-mono space-y-3 bg-rose-500/10 p-6 rounded-xl border border-rose-500/30">
-              <AlertTriangle className="w-8 h-8 mx-auto text-rose-400" />
+            <div className="py-12 text-center text-xs text-rose-600 font-mono space-y-3 bg-rose-500/10 p-6 rounded-xl border border-rose-500/30">
+              
               <p className="font-bold">{detailError}</p>
               <button
                 onClick={() => setSelectedIncidentId(selectedIncidentId)}
-                className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 rounded-lg border border-rose-500/40 text-xs font-mono font-semibold"
+                className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-700 rounded-lg border border-rose-500/40 text-xs font-mono font-semibold"
               >
                 Retry
               </button>
             </div>
           ) : !incidentDetail ? (
-            <div className="py-20 text-center text-xs text-slate-400 font-mono space-y-2">
-              <Radio className="w-8 h-8 mx-auto text-slate-500 animate-pulse" />
-              <p className="text-slate-300 font-semibold">No Incident Selected</p>
+            <div className="py-20 text-center text-xs text-slate-500 font-mono space-y-2">
+              
+              <p className="text-slate-600 font-semibold">No Incident Selected</p>
               <p className="text-slate-500 text-[11px]">
                 Click any row in the Flagged Incidents Audit Log to inspect the complete forensic dossier.
               </p>
@@ -504,27 +479,27 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
           ) : (
             <div className="space-y-5 text-xs font-mono">
               {/* SECTION A & B: Incident & Station Identity Header */}
-              <div className="bg-[#10192A] p-4 rounded-xl border border-[#263B5E]/80 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] pb-2.5">
+              <div className="bg-[#F4F6FA] p-4 rounded-xl border border-[#D3DCE7]/80 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm font-bold text-sky-400">
+                      <span className="font-mono text-sm font-bold text-sky-600">
                         {incidentDetail.station_id}
                       </span>
-                      <span className="text-xs text-slate-200 font-semibold">
+                      <span className="text-xs text-slate-700 font-semibold">
                         • {getStationFriendlyName(incidentDetail.station_id)}
                       </span>
                     </div>
-                    <h4 className="text-base font-bold text-white mt-0.5 font-mono">
+                    <h4 className="text-base font-bold text-slate-900 mt-0.5 font-mono">
                       {incidentDetail.classification.replace(/_/g, ' ')}
                     </h4>
                   </div>
 
                   <div className="text-right font-mono text-xs space-y-0.5">
-                    <div className="text-[10px] text-slate-400 uppercase flex items-center gap-1 justify-end">
-                      <Clock className="w-3 h-3" /> Timestamp
+                    <div className="text-[10px] text-slate-500 uppercase flex items-center gap-1 justify-end">
+                       Timestamp
                     </div>
-                    <div className="text-slate-200 font-bold">
+                    <div className="text-slate-700 font-bold">
                       {new Date(incidentDetail.timestamp).toLocaleString()}
                     </div>
                   </div>
@@ -532,34 +507,34 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
 
                 {/* Station Coordinates & Geospatial Metadata */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-                  <div className="bg-[#152033] p-2 rounded border border-white/[0.04]">
-                    <span className="text-slate-400 block text-[10px]">Location</span>
-                    <span className="text-slate-200 font-bold">
+                  <div className="bg-[#FFFFFF] p-2 rounded border border-slate-200">
+                    <span className="text-slate-500 block text-[10px]">Location</span>
+                    <span className="text-slate-700 font-bold">
                       {incidentDetail.station?.latitude !== undefined
                         ? `${incidentDetail.station.latitude.toFixed(2)}°N, ${incidentDetail.station.longitude.toFixed(2)}°E`
                         : 'WGS84 Synoptic'}
                     </span>
                   </div>
 
-                  <div className="bg-[#152033] p-2 rounded border border-white/[0.04]">
-                    <span className="text-slate-400 block text-[10px]">Elevation MSL</span>
-                    <span className="text-slate-200 font-bold">
+                  <div className="bg-[#FFFFFF] p-2 rounded border border-slate-200">
+                    <span className="text-slate-500 block text-[10px]">Elevation MSL</span>
+                    <span className="text-slate-700 font-bold">
                       {incidentDetail.station?.elevation !== undefined
                         ? `${incidentDetail.station.elevation} m`
                         : '--'}
                     </span>
                   </div>
 
-                  <div className="bg-[#152033] p-2 rounded border border-white/[0.04]">
-                    <span className="text-slate-400 block text-[10px]">Data Source</span>
-                    <span className="text-amber-300 font-bold">
+                  <div className="bg-[#FFFFFF] p-2 rounded border border-slate-200">
+                    <span className="text-slate-500 block text-[10px]">Data Source</span>
+                    <span className="text-amber-700 font-bold">
                       {incidentDetail.source_type || 'SIMULATED AWS'}
                     </span>
                   </div>
 
-                  <div className="bg-[#152033] p-2 rounded border border-white/[0.04]">
-                    <span className="text-slate-400 block text-[10px]">Confidence</span>
-                    <span className="text-sky-300 font-bold">
+                  <div className="bg-[#FFFFFF] p-2 rounded border border-slate-200">
+                    <span className="text-slate-500 block text-[10px]">Confidence</span>
+                    <span className="text-sky-700 font-bold">
                       {(incidentDetail.confidence * 100).toFixed(1)}% Calibrated
                     </span>
                   </div>
@@ -568,15 +543,15 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
 
               {/* SECTION C: Observed Channel Telemetry */}
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 font-mono">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2 font-mono">
                   Observed Physical Channels at Event Timestamp
                 </span>
                 <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="bg-[#10192A] p-3 rounded-lg border border-[#263B5E]/60">
-                    <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 mb-1">
-                      <Thermometer className="w-3.5 h-3.5 text-amber-400" /> Temperature
+                  <div className="bg-[#F4F6FA] p-3 rounded-lg border border-[#D3DCE7]/60">
+                    <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 mb-1">
+                       Temperature
                     </div>
-                    <span className="text-base font-bold text-white">
+                    <span className="text-base font-bold text-slate-900">
                       {incidentDetail.raw_values?.temperature !== undefined
                         ? `${Number(incidentDetail.raw_values.temperature).toFixed(2)}°C`
                         : incidentDetail.observation?.temperature !== undefined
@@ -585,11 +560,11 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
                     </span>
                   </div>
 
-                  <div className="bg-[#10192A] p-3 rounded-lg border border-[#263B5E]/60">
-                    <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 mb-1">
-                      <Gauge className="w-3.5 h-3.5 text-sky-400" /> Pressure
+                  <div className="bg-[#F4F6FA] p-3 rounded-lg border border-[#D3DCE7]/60">
+                    <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 mb-1">
+                       Pressure
                     </div>
-                    <span className="text-base font-bold text-white">
+                    <span className="text-base font-bold text-slate-900">
                       {incidentDetail.raw_values?.pressure !== undefined
                         ? `${Number(incidentDetail.raw_values.pressure).toFixed(1)} hPa`
                         : incidentDetail.observation?.pressure !== undefined
@@ -598,11 +573,11 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
                     </span>
                   </div>
 
-                  <div className="bg-[#10192A] p-3 rounded-lg border border-[#263B5E]/60">
-                    <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 mb-1">
-                      <Droplets className="w-3.5 h-3.5 text-indigo-400" /> Humidity
+                  <div className="bg-[#F4F6FA] p-3 rounded-lg border border-[#D3DCE7]/60">
+                    <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 mb-1">
+                       Humidity
                     </div>
-                    <span className="text-base font-bold text-white">
+                    <span className="text-base font-bold text-slate-900">
                       {incidentDetail.raw_values?.humidity !== undefined
                         ? `${Number(incidentDetail.raw_values.humidity).toFixed(1)}%`
                         : incidentDetail.observation?.humidity !== undefined
@@ -614,20 +589,20 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
               </div>
 
               {/* SECTION D, E, F, G: 5-Tier Algorithmic Decomposition */}
-              <div className="bg-[#10192A] p-4 rounded-xl border border-[#263B5E]/80 space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2 font-mono">
-                  <Layers className="w-4 h-4 text-sky-400" />
+              <div className="bg-[#F4F6FA] p-4 rounded-xl border border-[#D3DCE7]/80 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 font-mono">
+                  
                   5-Tier Mathematical Signal Decomposition
                 </h4>
 
                 <div className="space-y-2.5">
                   {/* Tier 1 */}
-                  <div className="bg-[#152033] p-2.5 rounded-lg border border-white/[0.04] flex items-center justify-between">
+                  <div className="bg-[#FFFFFF] p-2.5 rounded-lg border border-slate-200 flex items-center justify-between">
                     <div>
-                      <span className="font-sans font-semibold text-slate-200 block text-xs">
+                      <span className="font-sans font-semibold text-slate-700 block text-xs">
                         Tier 1: Deterministic Physical Quality Control
                       </span>
-                      <span className="text-[11px] text-slate-400 font-sans">
+                      <span className="text-[11px] text-slate-500 font-sans">
                         Physical range bounds, rate-of-change, persistent sensor freeze checks
                       </span>
                     </div>
@@ -639,17 +614,17 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
                   </div>
 
                   {/* Tier 2A */}
-                  <div className="bg-[#152033] p-2.5 rounded-lg border border-white/[0.04] flex items-center justify-between">
+                  <div className="bg-[#FFFFFF] p-2.5 rounded-lg border border-slate-200 flex items-center justify-between">
                     <div>
-                      <span className="font-sans font-semibold text-slate-200 block text-xs">
+                      <span className="font-sans font-semibold text-slate-700 block text-xs">
                         Tier 2A: Isolation Forest Outlier Detector
                       </span>
-                      <span className="text-[11px] text-slate-400 font-sans">
+                      <span className="text-[11px] text-slate-500 font-sans">
                         Multivariate isolation depth & spatial cluster density score
                       </span>
                     </div>
                     <div className="text-right">
-                      <span className="text-sm font-bold text-sky-400">
+                      <span className="text-sm font-bold text-sky-600">
                         {incidentDetail.tier_scores?.tier2_point_score !== undefined
                           ? (incidentDetail.tier_scores.tier2_point_score * 100).toFixed(1)
                           : '--'}
@@ -659,12 +634,12 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
                   </div>
 
                   {/* Tier 2B */}
-                  <div className="bg-[#152033] p-2.5 rounded-lg border border-white/[0.04] flex items-center justify-between">
+                  <div className="bg-[#FFFFFF] p-2.5 rounded-lg border border-slate-200 flex items-center justify-between">
                     <div>
-                      <span className="font-sans font-semibold text-slate-200 block text-xs">
+                      <span className="font-sans font-semibold text-slate-700 block text-xs">
                         Tier 2B: PyTorch GRU Temporal Autoencoder
                       </span>
-                      <span className="text-[11px] text-slate-400 font-sans">
+                      <span className="text-[11px] text-slate-500 font-sans">
                         30-step sliding sequence reconstruction residual error (MSE)
                       </span>
                     </div>
@@ -679,17 +654,17 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
                   </div>
 
                   {/* Tier 3 */}
-                  <div className="bg-[#152033] p-2.5 rounded-lg border border-white/[0.04] flex items-center justify-between">
+                  <div className="bg-[#FFFFFF] p-2.5 rounded-lg border border-slate-200 flex items-center justify-between">
                     <div>
-                      <span className="font-sans font-semibold text-slate-200 block text-xs">
+                      <span className="font-sans font-semibold text-slate-700 block text-xs">
                         Tier 3: Clausius-Clapeyron Thermodynamic Consistency
                       </span>
-                      <span className="text-[11px] text-slate-400 font-sans">
+                      <span className="text-[11px] text-slate-500 font-sans">
                         Saturation vapor pressure balance against dew point depression
                       </span>
                     </div>
                     <div className="text-right">
-                      <span className="text-sm font-bold text-amber-400">
+                      <span className="text-sm font-bold text-amber-600">
                         {incidentDetail.tier_scores?.tier3_multivariate_score !== undefined
                           ? (incidentDetail.tier_scores.tier3_multivariate_score * 100).toFixed(1)
                           : '--'}
@@ -702,13 +677,13 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
 
               {/* SECTION J: TreeSHAP Feature Attributions */}
               {contributingFeatures.length > 0 && (
-                <div className="bg-[#10192A] p-4 rounded-xl border border-[#263B5E]/80 space-y-3">
+                <div className="bg-[#F4F6FA] p-4 rounded-xl border border-[#D3DCE7]/80 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2 font-mono">
-                      <BarChart2 className="w-4 h-4 text-sky-400" />
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 font-mono">
+                      
                       Key Contributing Factors (TreeSHAP Forces)
                     </h4>
-                    <span className="text-[10px] text-slate-400">Additive Attributions</span>
+                    <span className="text-[10px] text-slate-500">Additive Attributions</span>
                   </div>
 
                   <div className="space-y-2">
@@ -720,26 +695,26 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
                       return (
                         <div
                           key={i}
-                          className="bg-[#152033] p-2.5 rounded border border-white/[0.04] space-y-1"
+                          className="bg-[#FFFFFF] p-2.5 rounded border border-slate-200 space-y-1"
                         >
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-200 font-semibold">
+                            <span className="text-slate-700 font-semibold">
                               {feat.feature || 'Parameter'}
                             </span>
-                            <span className="text-sky-400 font-bold font-mono">
+                            <span className="text-sky-600 font-bold font-mono">
                               {typeof feat.attribution === 'number'
                                 ? `+${(feat.attribution * 100).toFixed(0)}%`
                                 : '--'}
                             </span>
                           </div>
-                          <div className="w-full bg-[#10192A] rounded-full h-1.5 overflow-hidden">
+                          <div className="w-full bg-[#F4F6FA] rounded-full h-1.5 overflow-hidden">
                             <div
                               className="bg-gradient-to-r from-sky-500 to-indigo-500 h-1.5 rounded-full"
                               style={{ width: `${pct}%` }}
                             />
                           </div>
                           {feat.description && (
-                            <p className="text-[10px] text-slate-400 font-sans">{feat.description}</p>
+                            <p className="text-[10px] text-slate-500 font-sans">{feat.description}</p>
                           )}
                         </div>
                       );
@@ -751,11 +726,11 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
               {/* SECTION K & L: Decision Reasoning & SOP Operator Runbook */}
               <div className="space-y-3">
                 {/* Decision Reasoning */}
-                <div className="bg-[#10192A] p-3.5 rounded-lg border border-[#263B5E]/60 space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
+                <div className="bg-[#F4F6FA] p-3.5 rounded-lg border border-[#D3DCE7]/60 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block font-mono">
                     Decision Reasoning & Root Cause Synthesis
                   </span>
-                  <p className="text-slate-300 font-sans leading-relaxed text-xs">
+                  <p className="text-slate-600 font-sans leading-relaxed text-xs">
                     {incidentDetail.explanation?.summary ||
                       incidentDetail.reason ||
                       'Multi-tier anomaly fusion flagged abnormal sensor behavior.'}
@@ -764,8 +739,8 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
 
                 {/* Operator Maintenance Action */}
                 <div className="bg-amber-500/10 p-3.5 rounded-lg border border-amber-500/30 text-xs">
-                  <div className="flex items-center gap-1.5 text-amber-300 font-semibold mb-1 font-mono">
-                    <Wrench className="w-3.5 h-3.5 text-amber-400" />
+                  <div className="flex items-center gap-1.5 text-amber-700 font-semibold mb-1 font-mono">
+                    
                     Recommended Operational Action
                   </div>
                   <p className="text-amber-200/90 font-sans text-[11px] leading-relaxed">
@@ -776,41 +751,41 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
               </div>
 
               {/* SECTION M: Raw Incident JSON Inspector */}
-              <div className="border border-[#263B5E]/60 rounded-xl overflow-hidden bg-[#10192A]">
+              <div className="border border-[#D3DCE7]/60 rounded-xl overflow-hidden bg-[#F4F6FA]">
                 <button
                   onClick={() => setIsRawJsonExpanded((v) => !v)}
-                  className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-mono font-bold text-slate-300 hover:text-white hover:bg-[#152033] transition-colors"
+                  className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-mono font-bold text-slate-600 hover:text-slate-900 hover:bg-sky-50 transition-colors"
                 >
                   <span className="flex items-center gap-2">
-                    <Cpu className="w-3.5 h-3.5 text-sky-400" />
+                    
                     Raw Incident Data Payload (JSON)
                   </span>
                   {isRawJsonExpanded ? (
-                    <ChevronUp className="w-4 h-4 text-slate-400" />
+                    <span className="text-[10px] font-bold text-slate-500">HIDE</span>
                   ) : (
-                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                    <span className="text-[10px] font-bold text-slate-500">SHOW</span>
                   )}
                 </button>
 
                 {isRawJsonExpanded && (
-                  <div className="p-3 border-t border-[#263B5E]/60 space-y-2 bg-[#0C1320]">
+                  <div className="p-3 border-t border-[#D3DCE7]/60 space-y-2 bg-[#E8EDF4]">
                     <div className="flex justify-end">
                       <button
                         onClick={handleCopyJson}
-                        className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 bg-[#1B2A44] hover:bg-[#243757] text-slate-200 rounded border border-[#263B5E] transition-all"
+                        className="flex items-center gap-1 text-[11px] font-mono px-2.5 py-1 bg-[#EDF1F7] hover:bg-[#E2E8F2] text-slate-700 hover:text-slate-900 rounded border border-[#D3DCE7] transition-all font-semibold"
                       >
                         {isCopied ? (
                           <>
-                            <Check className="w-3 h-3 text-emerald-400" /> Copied
+                             Copied
                           </>
                         ) : (
                           <>
-                            <Copy className="w-3 h-3 text-sky-400" /> Copy JSON
+                             Copy JSON
                           </>
                         )}
                       </button>
                     </div>
-                    <pre className="text-[11px] font-mono text-slate-300 overflow-x-auto p-2 bg-[#080D16] rounded border border-white/[0.04] max-h-60 overflow-y-auto">
+                    <pre className="text-[11px] font-mono text-slate-600 overflow-x-auto p-2 bg-[#F1F5F9] rounded border border-slate-200 max-h-60 overflow-y-auto">
                       {JSON.stringify(incidentDetail, null, 2)}
                     </pre>
                   </div>
@@ -822,9 +797,9 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
                 {onLocateOnGlobe && (
                   <button
                     onClick={() => onLocateOnGlobe(incidentDetail.station_id)}
-                    className="py-2.5 px-3 bg-[#1B2A44] hover:bg-[#233656] border border-sky-500/40 hover:border-sky-400 text-sky-300 hover:text-white rounded-lg text-xs font-mono font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                    className="py-2.5 px-3 bg-[#EDF1F7] hover:bg-[#E2E8F2] border border-sky-500/40 hover:border-sky-400 text-sky-700 hover:text-slate-900 rounded-lg text-xs font-mono font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
                   >
-                    <Globe className="w-3.5 h-3.5 text-sky-400" />
+                    
                     <span>Locate {incidentDetail.station_id} on Globe</span>
                   </button>
                 )}

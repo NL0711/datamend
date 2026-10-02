@@ -1,6 +1,6 @@
 """
 backend/app/main.py
-SkyGuard AI — Master FastAPI Application Entrypoint & Lifespan Management.
+DataMend — Master FastAPI Application Entrypoint & Lifespan Management.
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="SkyGuard AI Real-Time Anomaly Detection & Sensor Health System for Automatic Weather Stations",
+    description="DataMend Real-Time Anomaly Detection & Sensor Health System for Automatic Weather Stations",
     lifespan=lifespan,
 )
 

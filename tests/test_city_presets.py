@@ -1,6 +1,6 @@
 """
 tests/test_city_presets.py
-SkyGuard AI — Unit & Integration Test Suite for Multi-City Open-Meteo Presets.
+DataMend — Unit & Integration Test Suite for Multi-City Open-Meteo Presets.
 """
 
 import pytest

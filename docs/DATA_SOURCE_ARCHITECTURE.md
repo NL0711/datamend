@@ -1,8 +1,8 @@
-# SkyGuard AI — Three-Source Telemetry Architecture
+# DataMend — Three-Source Telemetry Architecture
 
 ## 1. System Overview
 
-SkyGuard AI supports three interchangeable real-time telemetry sources:
+DataMend supports three interchangeable real-time telemetry sources:
 1. **Simulated AWS Telemetry** (Diurnal Solar Radiation, Magnus-Tetens Thermodynamics, Barometric Tides)
 2. **Real External Weather Data Feed** (Open-Meteo REST API)
 3. **Real Physical AWS Sensor Data** (ESP32 + Bosch BME280 Sensor via MQTT)
@@ -52,7 +52,7 @@ All three sources normalize into a single **Canonical Telemetry Contract** befor
                                                   v
 +---------------------------------------------------------------------------------------------------+
 |                                 5-TIER MACHINE LEARNING PIPELINE                                  |
-|  - Orchestrator: backend/app/ml/pipeline.py (SkyGuardPipeline)                                    |
+|  - Orchestrator: backend/app/ml/pipeline.py (DataMendPipeline)                                    |
 |  - Tier 1: Deterministic QC Physical Range (-40 to 60°C), Rate-of-Change, Stuck Sensor            |
 |  - Tier 2: Point Outlier Isolation Forest & Temporal PyTorch GRU Sequence Autoencoder             |
 |  - Tier 3: Multivariate Magnus-Tetens Dew Point Consistency & Chi-Square Mahalanobis Distance    |

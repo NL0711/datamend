@@ -1,6 +1,6 @@
 """
 tests/test_alert_drilldown_forensics.py
-SkyGuard AI — Flagged Incident Deep-Drilldown & Forensic Data Synchronization Test Suite.
+DataMend — Flagged Incident Deep-Drilldown & Forensic Data Synchronization Test Suite.
 Verifies that selecting any incident by ID returns the authentic, exact incident dossier
 across all stations without data leakage, stale state, or unassociated telemetry.
 """

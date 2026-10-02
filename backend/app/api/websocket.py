@@ -1,6 +1,6 @@
 """
 backend/app/api/websocket.py
-SkyGuard AI — WebSocket Live Telemetry Streaming & Multi-Client Connection Manager.
+DataMend — WebSocket Live Telemetry Streaming & Multi-Client Connection Manager.
 """
 
 from __future__ import annotations
@@ -178,7 +178,7 @@ async def websocket_live_endpoint(websocket: WebSocket):
         # Send initial connection ack
         await websocket.send_text(json.dumps({
             "type": "connected",
-            "message": "Connected to SkyGuard AI Live Telemetry Stream",
+            "message": "Connected to DataMend Live Telemetry Stream",
             "server_time": datetime.now(timezone.utc).isoformat(),
         }))
 

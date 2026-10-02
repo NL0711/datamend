@@ -1,9 +1,9 @@
 """
 scripts/import_noaa_data.py
-SkyGuard AI — NOAA Integrated Surface Database (ISD) Observational Telemetry Importer.
+DataMend — NOAA Integrated Surface Database (ISD) Observational Telemetry Importer.
 
 Downloads, caches, parses, and normalizes real-world AWS surface observations from NOAA ISD / ISD-Lite archives.
-Transforms raw NOAA records into SkyGuard's Canonical Schema for offline model benchmarking.
+Transforms raw NOAA records into DataMend's Canonical Schema for offline model benchmarking.
 
 Usage:
     python -m scripts.import_noaa_data --station 725650-03017 --year 2023 --output data/noaa_benchmark.csv

@@ -1,6 +1,6 @@
 """
 backend/app/db/repositories.py
-SkyGuard AI — Async Repository Pattern Implementations for Clean Data Access.
+DataMend — Async Repository Pattern Implementations for Clean Data Access.
 """
 
 from __future__ import annotations

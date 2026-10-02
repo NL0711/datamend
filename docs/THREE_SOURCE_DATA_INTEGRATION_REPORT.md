@@ -1,8 +1,8 @@
-# SkyGuard AI — Three-Source Telemetry Integration Report
+# DataMend — Three-Source Telemetry Integration Report
 
 ## 1. Executive Summary
 
-- **Project:** SkyGuard AI — Intelligent AWS Quality-Control & Sensor Health Platform
+- **Project:** DataMend — Intelligent AWS Quality-Control & Sensor Health Platform
 - **Release Version:** v0.2.0 PRO
 - **Integration Status:** **COMPLETE & VERIFIED (PASS ✓)**
 - **Supported Interchangeable Feeds:**
@@ -19,10 +19,10 @@
 | **1** | **Is simulator working?** | **PASS ✓** | `SimulatedDataSource` generates diurnal radiation curves, dew-point physics, and handles anomaly injections. |
 | **2** | **Is external API working?** | **PASS ✓** | `ExternalWeatherDataSource` successfully queried live Open-Meteo REST API (retrieved real Delhi/Pune surface observations). |
 | **3** | **Is physical AWS backend working?** | **PASS ✓** | `PhysicalAWSDataSource` parses incoming MQTT JSON payloads and normalizes into canonical telemetry. |
-| **4** | **Is ESP32 firmware working?** | **PASS ✓** | Complete Arduino C++ firmware package (`hardware/esp32/skyguard_aws/`) with BME280 I2C sampling, Wi-Fi reconnect, and NTP sync. |
+| **4** | **Is ESP32 firmware working?** | **PASS ✓** | Complete Arduino C++ firmware package (`hardware/esp32/datamend_aws/`) with BME280 I2C sampling, Wi-Fi reconnect, and NTP sync. |
 | **5** | **Is MQTT working?** | **PASS ✓** | `paho-mqtt` subscriber listens on `skyguard/aws/+/telemetry` and `skyguard/aws/+/heartbeat`. |
 | **6** | **Is normalization working?** | **PASS ✓** | `CanonicalTelemetry` Pydantic model normalizes all 3 inputs into consistent $(T, P, RH)$ units with source metadata. |
-| **7** | **Is ML receiving all three sources?** | **PASS ✓** | 5-Tier ML pipeline (`SkyGuardPipeline`) executes inference uniformly regardless of incoming source type. |
+| **7** | **Is ML receiving all three sources?** | **PASS ✓** | 5-Tier ML pipeline (`DataMendPipeline`) executes inference uniformly regardless of incoming source type. |
 | **8** | **Is database receiving all three sources?** | **PASS ✓** | SQLite schema stores `source_type`, `source_id`, `provider`, `device_id` in `observations` and `anomaly_events`. |
 | **9** | **Is WebSocket receiving all three sources?** | **PASS ✓** | `/ws/live` broadcasts `InferenceResult` packets with live source provenance attached. |
 | **10** | **Is dashboard displaying all three sources?** | **PASS ✓** | `DataSourceControl.tsx` provides 1-click source selector, live health badges, and latency timers. |

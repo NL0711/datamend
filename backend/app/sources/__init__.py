@@ -1,6 +1,6 @@
 """
 backend/app/sources/__init__.py
-SkyGuard AI — Data Source Abstraction Layer Package.
+DataMend — Data Source Abstraction Layer Package.
 """
 
 from backend.app.sources.base import BaseDataSource

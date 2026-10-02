@@ -1,5 +1,5 @@
 """
-SkyGuard AI — Command Line Interface for Dataset Generation and Benchmarking.
+DataMend — Command Line Interface for Dataset Generation and Benchmarking.
 
 Exports labeled, temporally partitioned CSV, JSON, or Parquet datasets into data/
 with strict temporal boundary enforcement (baseline_clean, train_clean, val_mixed, test_anomalies).
@@ -89,8 +89,8 @@ def generate_temporal_splits(
 def main(args: Optional[list] = None) -> int:
     """Main CLI entrypoint."""
     parser = argparse.ArgumentParser(
-        prog="skyguard-sim",
-        description="SkyGuard AI — Weather Telemetry & Anomaly Benchmark Dataset Generator",
+        prog="datamend-sim",
+        description="DataMend — Weather Telemetry & Anomaly Benchmark Dataset Generator",
     )
     parser.add_argument(
         "--scenario", "-s",
@@ -150,7 +150,7 @@ def main(args: Optional[list] = None) -> int:
 
     if parsed_args.list_scenarios:
         scenarios = ScenarioRegistry.list_scenarios()
-        print("\n=== SkyGuard AI Registered Benchmark Scenarios ===")
+        print("\n=== DataMend Registered Benchmark Scenarios ===")
         print(f"{'Scenario Name':<28} | {'Days':<6} | {'Interval':<8} | {'Anomalies':<9} | {'Description'}")
         print("-" * 90)
         for meta in scenarios:
@@ -160,7 +160,7 @@ def main(args: Optional[list] = None) -> int:
     out_dir = Path(parsed_args.output_dir)
 
     if parsed_args.splits:
-        print(f"[SkyGuard Sim] Generating standardized temporal dataset splits (Seed={parsed_args.seed})...")
+        print(f"[DataMend Sim] Generating standardized temporal dataset splits (Seed={parsed_args.seed})...")
         p_base, p_train, p_val, p_test = generate_temporal_splits(
             output_dir=out_dir,
             total_days=parsed_args.days,
@@ -172,25 +172,25 @@ def main(args: Optional[list] = None) -> int:
         print(f"  [+] Train Clean    : {p_train} ({p_train.stat().st_size / 1024:.1f} KB)")
         print(f"  [+] Val Mixed      : {p_val} ({p_val.stat().st_size / 1024:.1f} KB)")
         print(f"  [+] Test Anomalies : {p_test} ({p_test.stat().st_size / 1024:.1f} KB)")
-        print("[SkyGuard Sim] Temporal split generation complete with zero data leakage.")
+        print("[DataMend Sim] Temporal split generation complete with zero data leakage.")
         return 0
 
     if parsed_args.scenario:
-        print(f"[SkyGuard Sim] Running benchmark scenario '{parsed_args.scenario}'...")
+        print(f"[DataMend Sim] Running benchmark scenario '{parsed_args.scenario}'...")
         scenario = ScenarioRegistry.get(parsed_args.scenario)
         df = scenario.generate(seed=parsed_args.seed)
 
         target_file = Path(parsed_args.output_file) if parsed_args.output_file else out_dir / f"{parsed_args.scenario}.{parsed_args.format}"
         export_dataframe(df, target_file, parsed_args.format)
-        print(f"[SkyGuard Sim] Successfully exported {len(df)} rows to {target_file}")
+        print(f"[DataMend Sim] Successfully exported {len(df)} rows to {target_file}")
         return 0
 
     # Default fallback: generate clean baseline
-    print("[SkyGuard Sim] No scenario specified. Generating default clean baseline...")
+    print("[DataMend Sim] No scenario specified. Generating default clean baseline...")
     df = CleanBaselineScenario(duration_days=parsed_args.days, sampling_interval_min=parsed_args.interval).generate(seed=parsed_args.seed)
     target_file = Path(parsed_args.output_file) if parsed_args.output_file else out_dir / f"baseline_clean.{parsed_args.format}"
     export_dataframe(df, target_file, parsed_args.format)
-    print(f"[SkyGuard Sim] Successfully exported {len(df)} rows to {target_file}")
+    print(f"[DataMend Sim] Successfully exported {len(df)} rows to {target_file}")
     return 0
 
 

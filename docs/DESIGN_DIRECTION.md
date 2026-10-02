@@ -1,7 +1,7 @@
-# SKYGUARD AI — PRODUCT-LEVEL VISUAL REDESIGN SPECIFICATION & DIRECTION
+# DATAMEND AI — PRODUCT-LEVEL VISUAL REDESIGN SPECIFICATION & DIRECTION
 
 **Document Version:** 3.0 (Master Visual Architecture)  
-**Target Platform:** SkyGuard AI — Scientific Quality-Control & Sensor Health Operations Platform  
+**Target Platform:** DataMend — Scientific Quality-Control & Sensor Health Operations Platform  
 **Authority:** Master Product & UI/UX Architecture Specification
 
 ---
@@ -42,7 +42,7 @@ Color communicates **DATA ONLY** — never arbitrary decoration:
 
 ```
 +---------------------------------------------------------------------------------------------------------------+
-| SKYGUARD AI [QC PLATFORM] | STATION: AWS-001 | SOURCE: OPEN-METEO | STREAM: ACTIVE | UTC: 18:42:15Z | LATENCY: 1.4ms |
+| DATAMEND AI [QC PLATFORM] | STATION: AWS-001 | SOURCE: OPEN-METEO | STREAM: ACTIVE | UTC: 18:42:15Z | LATENCY: 1.4ms |
 +----------+----------------------------------------------------------------------------------------------------+
 | [CMD]    | COMMAND CENTER (OVERVIEW)                                                                          |
 | Overview | +-------------------------------------------------------+----------------------------------------+ |

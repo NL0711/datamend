@@ -1,6 +1,6 @@
 """
 backend/app/services/phase2_service.py
-SkyGuard AI / DataMend — Phase 2 Diagnostic Orchestrator Service.
+DataMend — Phase 2 Diagnostic Orchestrator Service.
 
 Orchestrates the entire Phase 2 ML anomaly engine:
 Tier 0 (Ingestion Screener)

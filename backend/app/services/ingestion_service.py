@@ -1,6 +1,6 @@
 """
 backend/app/services/ingestion_service.py
-SkyGuard AI — Real-Time Telemetry Ingestion, 5-Tier ML Inference, Persistence & Batch Upload Service.
+DataMend — Real-Time Telemetry Ingestion, 5-Tier ML Inference, Persistence & Batch Upload Service.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from backend.app.db.repositories import (
     StationRepository,
     parse_datetime,
 )
-from backend.app.ml.pipeline import InferenceResult, SkyGuardPipeline
+from backend.app.ml.pipeline import InferenceResult, DataMendPipeline
 from backend.app.schemas.schemas import (
     ExplanationResultSchema,
     FeatureAttributionSchema,
@@ -44,8 +44,8 @@ logger = logging.getLogger(__name__)
 class IngestionService:
     """Master ingestion service coordinating ML pipeline inference, DB persistence, and live streaming."""
 
-    def __init__(self, pipeline: Optional[SkyGuardPipeline] = None) -> None:
-        self.pipeline = pipeline or SkyGuardPipeline(auto_load=True)
+    def __init__(self, pipeline: Optional[DataMendPipeline] = None) -> None:
+        self.pipeline = pipeline or DataMendPipeline(auto_load=True)
         self._station_locks: Dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
     def _get_station_lock(self, station_id: str) -> asyncio.Lock:
@@ -255,7 +255,7 @@ class IngestionService:
                 broadcast_data["source"] = {
                     "type": data.get("source_type", "SIMULATED"),
                     "id": data.get("source_id", "diurnal_generator"),
-                    "provider": data.get("provider", "SkyGuard-DiurnalEngine"),
+                    "provider": data.get("provider", "DataMend-DiurnalEngine"),
                     "device_id": data.get("device_id"),
                 }
                 await ws_manager.broadcast_observation(station_id, broadcast_data)

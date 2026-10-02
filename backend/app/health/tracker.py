@@ -1,6 +1,6 @@
 """
 backend/app/health/tracker.py
-SkyGuard AI / DataMend — Tier 3.5: Sensor Health & Predictive Maintenance Tracker.
+DataMend — Tier 3.5: Sensor Health & Predictive Maintenance Tracker.
 
 Synthesizes:
 1. akshitbuilds/agent4/degradation_tracker.py:
@@ -12,7 +12,7 @@ Synthesizes:
    - Multi-component penalty formulation: anomaly rate, frozen rate, drift score, dropouts, and severity.
    - Remaining Useful Life (RUL in hours/days) linear projection to failure threshold (SHI < 50).
    - Health status (EXCELLENT, GOOD, DEGRADED, POOR, CRITICAL) and actionable maintenance advisories.
-3. Ashwina-Pal/skyguard/health.py:
+3. Ashwina-Pal/datamend/health.py:
    - Per-sensor channel tracking (Temperature, Pressure, Humidity) alongside station aggregate.
 """
 

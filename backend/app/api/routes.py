@@ -1,6 +1,6 @@
 """
 backend/app/api/routes.py
-SkyGuard AI — REST API Endpoints for Stations, Observations, Anomalies, Health, Simulation & Data Upload.
+DataMend — REST API Endpoints for Stations, Observations, Anomalies, Health, Simulation & Data Upload.
 """
 
 from __future__ import annotations

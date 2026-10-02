@@ -1,16 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  Activity,
-  AlertTriangle,
-  ShieldCheck,
-  Cpu,
-  Eye,
-  Thermometer,
-  Gauge,
-  Droplets,
-  Radio,
-} from 'lucide-react';
-import {
   fetchStations,
   fetchFleetHealth,
   fetchAnomalyStats,
@@ -145,9 +134,8 @@ export function OverviewView({
           value={fleetHealth ? Math.round(fleetHealth.average_health_score) : 98}
           unit="/ 100"
           delta={{ value: 'Calibrated', isPositive: true }}
-          icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />}
           footerLeft={<span>{stations.length} Active AWS Nodes</span>}
-          footerRight={<span className="text-emerald-400 font-semibold">Optimal</span>}
+          footerRight={<span className="text-emerald-600 font-semibold">Optimal</span>}
         />
 
         <MetricCard
@@ -155,7 +143,6 @@ export function OverviewView({
           value={anomalyStats?.total_anomalies ?? 0}
           unit="events"
           delta={{ value: 'Monitored', isNeutral: true }}
-          icon={<AlertTriangle className="w-4 h-4 text-amber-400" />}
           footerLeft={<span>{anomalyStats?.sensor_faults ?? 0} Sensor Faults</span>}
           footerRight={<span>{anomalyStats?.meteorological_extremes ?? 0} Met Extremes</span>}
         />
@@ -165,9 +152,8 @@ export function OverviewView({
           value={metrics ? metrics.average_inference_latency_ms.toFixed(1) : '< 2.0'}
           unit="ms"
           delta={{ value: 'Sub-5ms Target', isPositive: true }}
-          icon={<Cpu className="w-4 h-4 text-sky-400" />}
           footerLeft={<span>P95: {metrics ? metrics.p95_inference_latency_ms.toFixed(1) : '3.2'} ms</span>}
-          footerRight={<span className="text-emerald-400">Real-time</span>}
+          footerRight={<span className="text-emerald-600">Real-time</span>}
         />
 
         <MetricCard
@@ -175,9 +161,8 @@ export function OverviewView({
           value={metrics?.total_observations_ingested ? metrics.total_observations_ingested.toLocaleString() : '1,200+'}
           unit="obs"
           delta={{ value: 'Active WAL', isPositive: true }}
-          icon={<Activity className="w-4 h-4 text-indigo-400" />}
           footerLeft={<span>SQLite / Timescale</span>}
-          footerRight={<span className="text-slate-300">Synchronous Ingest</span>}
+          footerRight={<span className="text-slate-600">Synchronous Ingest</span>}
         />
       </div>
 
@@ -187,32 +172,32 @@ export function OverviewView({
         <div className="lg:col-span-7 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2 font-mono">
-                <Activity className="w-4 h-4 text-sky-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 font-mono">
+                
                 Geospatial Station Topology & Spatial Consensus
               </h3>
-              <p className="text-[11px] text-slate-300">
+              <p className="text-[11px] text-slate-600">
                 Interactive WGS84 Digital Twin with Tier 3.5 spatial buddy-check consensus links
               </p>
             </div>
 
-            <div className="flex items-center gap-1 bg-[#10192A] p-1 rounded-lg border border-[#263B5E] font-mono text-xs">
+            <div className="flex items-center gap-1.5 bg-[#FFFFFF] p-1.5 sm:p-2 rounded-xl border border-[#D3DCE7] font-mono text-xs shadow-sm">
               <button
                 onClick={() => setMapViewMode('3D')}
-                className={`px-3 py-1 rounded font-semibold transition-colors ${
+                className={`px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg font-bold text-xs transition-all ${
                   mapViewMode === '3D'
-                    ? 'bg-sky-500 text-slate-950 shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-sky-500 text-slate-950 shadow-md'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-[#E2E8F0]'
                 }`}
               >
                 3D Globe
               </button>
               <button
                 onClick={() => setMapViewMode('2D')}
-                className={`px-3 py-1 rounded font-semibold transition-colors ${
+                className={`px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg font-bold text-xs transition-all ${
                   mapViewMode === '2D'
-                    ? 'bg-sky-500 text-slate-950 shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-sky-500 text-slate-950 shadow-md'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-[#E2E8F0]'
                 }`}
               >
                 2D Radar
@@ -236,13 +221,13 @@ export function OverviewView({
         </div>
 
         {/* Right 5 Cols: Selected Station Intelligence Dossier & Telemetry Profile */}
-        <div className="lg:col-span-5 bg-[#152033] border border-[#263B5E] rounded-xl p-5 shadow-lg flex flex-col justify-between space-y-4">
+        <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg flex flex-col justify-between space-y-4">
           <div>
             {/* Header with station identity */}
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold text-sky-400">
+                  <span className="font-mono text-xs font-bold text-sky-600">
                     {selectedStation.station_id}
                   </span>
                   <StatusBadge
@@ -257,93 +242,93 @@ export function OverviewView({
                     size="sm"
                   />
                 </div>
-                <h4 className="text-base font-bold text-white mt-1 font-mono">{selectedStation.name}</h4>
+                <h4 className="text-base font-bold text-slate-900 mt-1 font-mono">{selectedStation.name}</h4>
               </div>
 
               <div className="text-right font-mono text-xs">
-                <span className="text-slate-400 block text-[10px] uppercase">Health Index</span>
-                <span className="text-lg font-bold text-emerald-400">{selectedStation.health_score ?? 98}%</span>
+                <span className="text-slate-500 block text-[10px] uppercase">Health Index</span>
+                <span className="text-lg font-bold text-emerald-600">{selectedStation.health_score ?? 98}%</span>
               </div>
             </div>
 
             {/* Geographical Coordinates & Station Altitude */}
-            <div className="grid grid-cols-2 gap-2 mt-3 text-xs font-mono text-slate-300">
-              <div className="bg-[#10192A] p-2.5 rounded-lg border border-[#263B5E]/60">
-                <span className="text-slate-400 block text-[10px]">WGS84 Coordinates</span>
-                <span className="text-white font-semibold">
+            <div className="grid grid-cols-2 gap-2 mt-3 text-xs font-mono text-slate-600">
+              <div className="bg-[#F4F6FA] p-2.5 rounded-lg border border-[#D3DCE7]/60">
+                <span className="text-slate-500 block text-[10px]">WGS84 Coordinates</span>
+                <span className="text-slate-900 font-semibold">
                   {selectedStation.latitude?.toFixed(4)}°N, {selectedStation.longitude?.toFixed(4)}°E
                 </span>
               </div>
-              <div className="bg-[#10192A] p-2.5 rounded-lg border border-[#263B5E]/60">
-                <span className="text-slate-400 block text-[10px]">Station Elevation</span>
-                <span className="text-white font-semibold">{selectedStation.elevation ?? 216} m MSL</span>
+              <div className="bg-[#F4F6FA] p-2.5 rounded-lg border border-[#D3DCE7]/60">
+                <span className="text-slate-500 block text-[10px]">Station Elevation</span>
+                <span className="text-slate-900 font-semibold">{selectedStation.elevation ?? 216} m MSL</span>
               </div>
             </div>
 
             {/* Live Atmospheric Telemetry Readings */}
             <div className="mt-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase font-bold text-slate-400 font-mono tracking-wider">
+                <span className="text-[10px] uppercase font-bold text-slate-500 font-mono tracking-wider">
                   Live Synchronized Telemetry
                 </span>
-                <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
-                  <Radio className="w-3 h-3" /> Live Feed Active
+                <span className="text-[10px] font-mono text-emerald-600 flex items-center gap-1">
+                   Live Feed Active
                 </span>
               </div>
 
               <div className="grid grid-cols-3 gap-2 text-center font-mono">
-                <div className="bg-[#10192A] p-2.5 rounded-lg border border-[#263B5E]/60">
-                  <div className="flex items-center justify-center gap-1 text-[10px] text-slate-400 mb-0.5">
-                    <Thermometer className="w-3.5 h-3.5 text-amber-400" /> Temperature
+                <div className="bg-[#F4F6FA] p-2.5 rounded-lg border border-[#D3DCE7]/60">
+                  <div className="flex items-center justify-center gap-1 text-[10px] text-slate-500 mb-0.5">
+                     Temperature
                   </div>
-                  <span className="text-base font-bold text-white">{currentTemp.toFixed(1)}°C</span>
+                  <span className="text-base font-bold text-slate-900">{currentTemp.toFixed(1)}°C</span>
                 </div>
 
-                <div className="bg-[#10192A] p-2.5 rounded-lg border border-[#263B5E]/60">
-                  <div className="flex items-center justify-center gap-1 text-[10px] text-slate-400 mb-0.5">
-                    <Gauge className="w-3.5 h-3.5 text-sky-400" /> Pressure
+                <div className="bg-[#F4F6FA] p-2.5 rounded-lg border border-[#D3DCE7]/60">
+                  <div className="flex items-center justify-center gap-1 text-[10px] text-slate-500 mb-0.5">
+                     Pressure
                   </div>
-                  <span className="text-base font-bold text-white">{currentPressure.toFixed(1)} hPa</span>
+                  <span className="text-base font-bold text-slate-900">{currentPressure.toFixed(1)} hPa</span>
                 </div>
 
-                <div className="bg-[#10192A] p-2.5 rounded-lg border border-[#263B5E]/60">
-                  <div className="flex items-center justify-center gap-1 text-[10px] text-slate-400 mb-0.5">
-                    <Droplets className="w-3.5 h-3.5 text-indigo-400" /> Humidity
+                <div className="bg-[#F4F6FA] p-2.5 rounded-lg border border-[#D3DCE7]/60">
+                  <div className="flex items-center justify-center gap-1 text-[10px] text-slate-500 mb-0.5">
+                     Humidity
                   </div>
-                  <span className="text-base font-bold text-white">{currentHumidity.toFixed(1)}%</span>
+                  <span className="text-base font-bold text-slate-900">{currentHumidity.toFixed(1)}%</span>
                 </div>
               </div>
 
               {/* Calculated Dew Point & Magnus-Tetens Relation */}
-              <div className="bg-[#10192A] p-2.5 rounded-lg border border-[#263B5E]/60 flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-400">Magnus-Tetens Dew Point:</span>
-                <span className="text-emerald-400 font-bold">{dewPoint.toFixed(1)}°C</span>
+              <div className="bg-[#F4F6FA] p-2.5 rounded-lg border border-[#D3DCE7]/60 flex items-center justify-between text-xs font-mono">
+                <span className="text-slate-500">Magnus-Tetens Dew Point:</span>
+                <span className="text-emerald-600 font-bold">{dewPoint.toFixed(1)}°C</span>
               </div>
             </div>
 
             {/* Spatial Consensus State */}
-            <div className="mt-4 p-3 rounded-lg bg-[#10192A] border border-[#263B5E]/60 text-xs font-mono space-y-1">
+            <div className="mt-4 p-3 rounded-lg bg-[#F4F6FA] border border-[#D3DCE7]/60 text-xs font-mono space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Tier 3.5 Spatial Consensus:</span>
-                <span className="text-emerald-400 font-bold">SUPPORTED (Synchronized)</span>
+                <span className="text-slate-500">Tier 3.5 Spatial Consensus:</span>
+                <span className="text-emerald-600 font-bold">SUPPORTED (Synchronized)</span>
               </div>
-              <p className="text-[11px] text-slate-300 font-sans leading-relaxed">
+              <p className="text-[11px] text-slate-600 font-sans leading-relaxed">
                 Physical consistency verified against neighboring surface synoptic stations within 250km radius.
               </p>
             </div>
           </div>
 
           {/* Action to Jump to Live Telemetry or Settings */}
-          <div className="pt-3 border-t border-white/[0.08] flex items-center gap-2">
+          <div className="pt-3 border-t border-slate-200 flex items-center gap-2">
             <button
               onClick={() => onNavigate('live')}
               className="flex-1 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-mono font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-2 shadow"
             >
-              <Eye className="w-3.5 h-3.5" /> Inspect Live Telemetry Console →
+               Inspect Live Telemetry Console →
             </button>
             <button
               onClick={openSettings}
-              className="py-2.5 px-3 bg-[#10192A] hover:bg-[#1B2A44] border border-[#263B5E] text-slate-300 hover:text-white font-mono font-bold text-xs rounded-lg transition-all shadow"
+              className="py-2.5 px-3 bg-[#F4F6FA] hover:bg-[#EDF1F7] border border-[#D3DCE7] text-slate-600 hover:text-slate-900 font-mono font-bold text-xs rounded-lg transition-all shadow"
               title="Configure Station Site"
             >
               ⚙
@@ -355,19 +340,19 @@ export function OverviewView({
       {/* Bottom Operational Grid: Active Weather Station Registry + Incident Stream */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Active Weather Station Registry Table (7 Cols) */}
-        <div className="lg:col-span-7 bg-[#152033] border border-[#263B5E] rounded-xl p-5 shadow-lg space-y-4">
+        <div className="lg:col-span-7 bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2 font-mono">
-              <Radio className="w-4 h-4 text-sky-400" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 font-mono">
+              
               Active Synoptic Station Registry ({stations.length} Monitored Nodes)
             </h3>
-            <span className="text-[10px] font-mono text-slate-400">Click row to focus node</span>
+            <span className="text-[10px] font-mono text-slate-500">Click row to focus node</span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs font-mono">
               <thead>
-                <tr className="border-b border-white/[0.08] text-slate-400 font-sans font-semibold uppercase text-[11px] tracking-wider">
+                <tr className="border-b border-slate-200 text-slate-500 font-sans font-semibold uppercase text-[11px] tracking-wider">
                   <th className="pb-3">Station Node</th>
                   <th className="pb-3">Coordinates</th>
                   <th className="pb-3">Altitude</th>
@@ -375,7 +360,7 @@ export function OverviewView({
                   <th className="pb-3 text-right">QC Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.04]">
+              <tbody className="divide-y divide-slate-200">
                 {isLoading ? (
                   <tr>
                     <td colSpan={5} className="py-6">
@@ -391,20 +376,20 @@ export function OverviewView({
                         key={st.station_id}
                         onClick={() => onSelectStation(st.station_id)}
                         className={`cursor-pointer transition-colors ${
-                          isSelected ? 'bg-sky-500/15 border-l-2 border-sky-400' : 'hover:bg-[#1B2A44]'
+                          isSelected ? 'bg-sky-500/15 border-l-2 border-sky-400' : 'hover:bg-[#EDF1F7]'
                         }`}
                       >
-                        <td className="py-2.5 text-white font-bold flex items-center gap-2">
-                          <span className="text-sky-400">{st.station_id}</span>
-                          <span className="text-slate-300 font-normal truncate max-w-[140px] font-sans">
+                        <td className="py-2.5 text-slate-900 font-bold flex items-center gap-2">
+                          <span className="text-sky-600">{st.station_id}</span>
+                          <span className="text-slate-600 font-normal truncate max-w-[140px] font-sans">
                             {st.name}
                           </span>
                         </td>
-                        <td className="py-2.5 text-slate-300">
+                        <td className="py-2.5 text-slate-600">
                           {st.latitude?.toFixed(2)}°, {st.longitude?.toFixed(2)}°
                         </td>
-                        <td className="py-2.5 text-slate-400">{st.elevation ?? 216}m</td>
-                        <td className="py-2.5 font-bold text-emerald-400">{health}%</td>
+                        <td className="py-2.5 text-slate-500">{st.elevation ?? 216}m</td>
+                        <td className="py-2.5 font-bold text-emerald-600">{health}%</td>
                         <td className="py-2.5 text-right">
                           <StatusBadge
                             label={st.health_status || 'NOMINAL'}
@@ -422,15 +407,15 @@ export function OverviewView({
         </div>
 
         {/* Live Flagged Incident Stream (5 Cols) */}
-        <div className="lg:col-span-5 bg-[#152033] border border-[#263B5E] rounded-xl p-5 shadow-lg space-y-4">
+        <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2 font-mono">
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 font-mono">
+              
               Real-Time Flagged Incident Stream
             </h3>
             <button
               onClick={() => onNavigate('alerts')}
-              className="text-xs font-mono text-sky-400 hover:underline"
+              className="text-xs font-mono text-sky-600 hover:underline"
             >
               Alert Center →
             </button>
@@ -438,7 +423,7 @@ export function OverviewView({
 
           <div className="space-y-2.5">
             {recentAnomalies.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-400 font-sans border border-dashed border-[#263B5E] rounded-lg">
+              <div className="p-6 text-center text-xs text-slate-500 font-sans border border-dashed border-[#D3DCE7] rounded-lg">
                 No active anomalies flagged in the last 24h. All sensor channels nominal.
               </div>
             ) : (
@@ -446,7 +431,7 @@ export function OverviewView({
                 <div
                   key={ev.id}
                   onClick={() => onNavigate('events')}
-                  className="p-3 bg-[#10192A] hover:bg-[#1B2A44] border border-[#263B5E]/70 rounded-lg cursor-pointer transition-all space-y-1.5 font-mono text-xs"
+                  className="p-3 bg-[#F4F6FA] hover:bg-[#EDF1F7] border border-[#D3DCE7]/70 rounded-lg cursor-pointer transition-all space-y-1.5 font-mono text-xs"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -455,20 +440,20 @@ export function OverviewView({
                         variant={getSeverityVariant(ev.severity)}
                         size="sm"
                       />
-                      <span className="font-bold text-white">{ev.station_id}</span>
+                      <span className="font-bold text-slate-900">{ev.station_id}</span>
                     </div>
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-slate-500">
                       {new Date(ev.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
 
-                  <div className="text-slate-200 font-sans font-semibold text-[11px] truncate">
+                  <div className="text-slate-700 font-sans font-semibold text-[11px] truncate">
                     {ev.classification.replace(/_/g, ' ')}
                   </div>
 
-                  <div className="flex items-center justify-between text-[10px] text-slate-400">
+                  <div className="flex items-center justify-between text-[10px] text-slate-500">
                     <span>Score: {(ev.anomaly_score * 100).toFixed(0)}%</span>
-                    <span className="text-sky-400">Confidence: {(ev.confidence * 100).toFixed(0)}%</span>
+                    <span className="text-sky-600">Confidence: {(ev.confidence * 100).toFixed(0)}%</span>
                   </div>
                 </div>
               ))

@@ -18,7 +18,7 @@ import pandas as pd
 import pytest
 import torch
 
-from backend.app.ml.pipeline import SkyGuardPipeline
+from backend.app.ml.pipeline import DataMendPipeline
 from backend.app.ml.preprocessor import DataPreprocessor
 from backend.app.ml.tier2_temporal_ml import TemporalAutoencoderDetector
 from backend.app.ml.tier4_classifier import FaultClass, FaultClassifier
@@ -28,7 +28,7 @@ from backend.app.ml.tier5_health import DegradationRisk, HealthStatus, SensorHea
 
 @pytest.fixture(scope="module")
 def pipeline():
-    pipe = SkyGuardPipeline(model_dir="models", auto_load=True)
+    pipe = DataMendPipeline(model_dir="models", auto_load=True)
     return pipe
 
 

@@ -1,9 +1,9 @@
 """
 backend/app/ml/stage6_imputer.py
-SkyGuard AI / DataMend — Stage 6: Meteorological Safe Imputation & Self-Healing Engine.
+DataMend — Stage 6: Meteorological Safe Imputation & Self-Healing Engine.
 
 Synthesizes:
-1. Ashwina-Pal/skyguard/tier2/stage5_explain.py: Dual-strategy imputation mapping:
+1. Ashwina-Pal/datamend/tier2/stage5_explain.py: Dual-strategy imputation mapping:
    - STL Seasonal-Trend Reconstruction (trend + diurnal phase) for spikes, drift, and frozen sensors.
    - Spatial Inverse Distance Weighting (IDW) interpolation from clean neighboring stations for dropouts and corruptions.
 2. Safety Gating: Returns None for GENUINE_WEATHER_EVENT and NORMAL observations, strictly protecting genuine atmospheric dynamics.

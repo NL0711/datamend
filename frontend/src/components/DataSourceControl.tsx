@@ -1,18 +1,9 @@
 /**
  * frontend/src/components/DataSourceControl.tsx
- * SkyGuard AI — Three-Source Interchangeable Telemetry Controller & Provenance HUD.
+ * DataMend — Three-Source Interchangeable Telemetry Controller & Provenance HUD.
  */
 
 import React, { useState, useEffect } from 'react';
-import {
-  Globe,
-  Radio,
-  Cpu,
-  RefreshCw,
-  ExternalLink,
-  AlertCircle,
-  MapPin,
-} from 'lucide-react';
 import {
   DataSourceListResponse,
   DataSourceStatus,
@@ -126,51 +117,45 @@ export const DataSourceControl: React.FC<DataSourceControlProps> = ({
   );
 
   const getSourceIcon = (type: DataSourceType) => {
-    switch (type) {
-      case 'SIMULATED':
-        return <Radio className="w-3.5 h-3.5 text-amber-400" />;
-      case 'EXTERNAL_API':
-        return <Globe className="w-3.5 h-3.5 text-sky-400" />;
-      case 'PHYSICAL_AWS':
-        return <Cpu className="w-3.5 h-3.5 text-emerald-400" />;
-    }
+    const code = type === 'SIMULATED' ? 'SIM' : type === 'EXTERNAL_API' ? 'EXT' : 'HW';
+    return <span className="text-[10px] font-bold text-slate-600 font-mono">{code}</span>;
   };
 
   return (
-    <div className="bg-[#152033] border border-[#263B5E] rounded-xl p-4 shadow-lg space-y-3">
+    <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-4 shadow-lg space-y-3">
       {/* Top Header Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-200">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 bg-sky-500/15 border border-sky-500/35 rounded-lg text-sky-400">
-            <Radio className="w-4 h-4" />
+          <div className="p-1.5 bg-sky-500/15 border border-sky-500/35 rounded-lg text-sky-600">
+            
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono">
                 Telemetry Ingest Provenance HUD
               </h2>
-              <span className="text-[10px] font-mono px-2 py-0.5 bg-[#10192A] text-slate-300 rounded border border-[#263B5E] font-semibold">
+              <span className="text-[10px] font-mono px-2 py-0.5 bg-[#F4F6FA] text-slate-600 rounded border border-[#D3DCE7] font-semibold">
                 3 INGEST MODES
               </span>
             </div>
-            <p className="text-[11px] text-slate-300 mt-0.5">
+            <p className="text-[11px] text-slate-600 mt-0.5">
               Active physical or virtual sensor feed feeding the 5-Tier ML Quality Control Engine
             </p>
           </div>
         </div>
 
         {/* Source Selector Buttons */}
-        <div className="flex items-center gap-1.5 bg-[#10192A] p-1 rounded-lg border border-[#263B5E]">
+        <div className="flex items-center gap-1.5 bg-[#F4F6FA] p-1 rounded-lg border border-[#D3DCE7]">
           <button
             onClick={() => handleSelectSource('SIMULATED')}
             disabled={switching}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold font-mono transition-all ${
               sourcesData?.active_source === 'SIMULATED'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-[#1B2A44]'
+                ? 'bg-amber-500/20 text-amber-700 border border-amber-500/40 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-[#EDF1F7]'
             }`}
           >
-            <Radio className="w-3.5 h-3.5 text-amber-400" />
+            
             <span>Simulated AWS</span>
           </button>
 
@@ -179,11 +164,11 @@ export const DataSourceControl: React.FC<DataSourceControlProps> = ({
             disabled={switching}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold font-mono transition-all ${
               sourcesData?.active_source === 'EXTERNAL_API'
-                ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-[#1B2A44]'
+                ? 'bg-sky-500/20 text-sky-700 border border-sky-500/40 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-[#EDF1F7]'
             }`}
           >
-            <Globe className="w-3.5 h-3.5 text-sky-400" />
+            
             <span>Open-Meteo Feed</span>
           </button>
 
@@ -192,11 +177,11 @@ export const DataSourceControl: React.FC<DataSourceControlProps> = ({
             disabled={switching}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold font-mono transition-all ${
               sourcesData?.active_source === 'PHYSICAL_AWS'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-[#1B2A44]'
+                ? 'bg-emerald-500/20 text-emerald-700 border border-emerald-500/40 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-[#EDF1F7]'
             }`}
           >
-            <Cpu className="w-3.5 h-3.5 text-emerald-400" />
+            
             <span>Physical ESP32</span>
           </button>
         </div>
@@ -205,13 +190,13 @@ export const DataSourceControl: React.FC<DataSourceControlProps> = ({
       {/* Global Open-Meteo Climate Zone Presets */}
       <div className="pt-1">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] uppercase font-bold text-slate-400 font-mono tracking-wider flex items-center gap-1.5">
-            <MapPin className="w-3 h-3 text-sky-400" />
+          <span className="text-[10px] uppercase font-bold text-slate-500 font-mono tracking-wider flex items-center gap-1.5">
+            
             Select Climate Observation Site (Live Open-Meteo Surface Synoptic Station)
           </span>
           {switchingCity && (
-            <span className="text-[11px] text-sky-400 font-mono flex items-center gap-1">
-              <RefreshCw className="w-3 h-3 animate-spin" /> Fetching Live Coordinates...
+            <span className="text-[11px] text-sky-600 font-mono flex items-center gap-1">
+               Fetching Live Coordinates...
             </span>
           )}
         </div>
@@ -226,18 +211,18 @@ export const DataSourceControl: React.FC<DataSourceControlProps> = ({
                 disabled={switchingCity}
                 className={`p-2 rounded-lg text-left border transition-all ${
                   isSelected
-                    ? 'bg-sky-500/20 border-sky-400 text-white shadow-md ring-1 ring-sky-400/40'
-                    : 'bg-[#10192A] border-[#263B5E] text-slate-300 hover:bg-[#1B2A44] hover:text-white'
+                    ? 'bg-sky-500/20 border-sky-400 text-slate-900 shadow-md ring-1 ring-sky-400/40'
+                    : 'bg-[#F4F6FA] border-[#D3DCE7] text-slate-600 hover:bg-[#EDF1F7] hover:text-slate-900'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs font-mono">{city.name}</span>
-                  <span className="text-[9px] font-mono text-slate-400">{city.country}</span>
+                  <span className="text-[9px] font-mono text-slate-500">{city.country}</span>
                 </div>
-                <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+                <div className="text-[10px] font-mono text-slate-500 mt-0.5">
                   {city.latitude.toFixed(2)}°, {city.longitude.toFixed(2)}°
                 </div>
-                <div className="text-[9px] text-slate-400 truncate mt-0.5" title={city.description}>
+                <div className="text-[9px] text-slate-500 truncate mt-0.5" title={city.description}>
                   {city.description}
                 </div>
               </button>
@@ -250,20 +235,20 @@ export const DataSourceControl: React.FC<DataSourceControlProps> = ({
       {activeStatus && (
         <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs font-mono">
           {/* Active Provider Card */}
-          <div className="bg-[#10192A] border border-[#263B5E]/60 rounded-lg p-2.5">
-            <div className="text-[10px] text-slate-400 uppercase mb-0.5">Active Ingest Source</div>
-            <div className="flex items-center gap-1.5 font-bold text-white">
+          <div className="bg-[#F4F6FA] border border-[#D3DCE7]/60 rounded-lg p-2.5">
+            <div className="text-[10px] text-slate-500 uppercase mb-0.5">Active Ingest Source</div>
+            <div className="flex items-center gap-1.5 font-bold text-slate-900">
               {getSourceIcon(activeStatus.source_type)}
               <span className="truncate">{activeStatus.name}</span>
             </div>
-            <div className="text-[11px] text-slate-300 mt-0.5">
-              Provider: <span className="text-sky-400 font-medium">{activeStatus.provider || 'Internal'}</span>
+            <div className="text-[11px] text-slate-600 mt-0.5">
+              Provider: <span className="text-sky-600 font-medium">{activeStatus.provider || 'Internal'}</span>
             </div>
           </div>
 
           {/* Connection Status Card */}
-          <div className="bg-[#10192A] border border-[#263B5E]/60 rounded-lg p-2.5">
-            <div className="text-[10px] text-slate-400 uppercase mb-0.5">Telemetry Link Status</div>
+          <div className="bg-[#F4F6FA] border border-[#D3DCE7]/60 rounded-lg p-2.5">
+            <div className="text-[10px] text-slate-500 uppercase mb-0.5">Telemetry Link Status</div>
             <div className="flex items-center gap-2">
               <StatusBadge
                 label={activeStatus.is_stale ? 'STALE DATA' : activeStatus.status || 'CONNECTED'}
@@ -278,23 +263,23 @@ export const DataSourceControl: React.FC<DataSourceControlProps> = ({
                 pulse={activeStatus.status === 'RUNNING'}
               />
             </div>
-            <div className="text-[11px] text-slate-300 mt-0.5">
-              Data Freshness: <span className="text-emerald-400 font-bold">{activeStatus.data_age_seconds ?? 1}s ago</span>
+            <div className="text-[11px] text-slate-600 mt-0.5">
+              Data Freshness: <span className="text-emerald-600 font-bold">{activeStatus.data_age_seconds ?? 1}s ago</span>
             </div>
           </div>
 
           {/* Target Station Identity */}
-          <div className="bg-[#10192A] border border-[#263B5E]/60 rounded-lg p-2.5">
-            <div className="text-[10px] text-slate-400 uppercase mb-0.5">Target Station Node</div>
-            <div className="font-bold text-white truncate">{activeStatus.station_id || 'AWS-001'}</div>
-            <div className="text-[11px] text-slate-300 mt-0.5 truncate">
-              Packets Ingested: <span className="text-sky-400 font-bold">{activeStatus.packet_count ?? 120}</span>
+          <div className="bg-[#F4F6FA] border border-[#D3DCE7]/60 rounded-lg p-2.5">
+            <div className="text-[10px] text-slate-500 uppercase mb-0.5">Target Station Node</div>
+            <div className="font-bold text-slate-900 truncate">{activeStatus.station_id || 'AWS-001'}</div>
+            <div className="text-[11px] text-slate-600 mt-0.5 truncate">
+              Packets Ingested: <span className="text-sky-600 font-bold">{activeStatus.packet_count ?? 120}</span>
             </div>
           </div>
 
           {/* Mode-Specific Actions */}
-          <div className="bg-[#10192A] border border-[#263B5E]/60 rounded-lg p-2.5 flex flex-col justify-between">
-            <div className="text-[10px] text-slate-400 uppercase mb-0.5">Action Console</div>
+          <div className="bg-[#F4F6FA] border border-[#D3DCE7]/60 rounded-lg p-2.5 flex flex-col justify-between">
+            <div className="text-[10px] text-slate-500 uppercase mb-0.5">Action Console</div>
             {sourcesData?.active_source === 'EXTERNAL_API' ? (
               <button
                 onClick={handlePreviewExternal}
@@ -303,21 +288,21 @@ export const DataSourceControl: React.FC<DataSourceControlProps> = ({
               >
                 {loadingPreview ? (
                   <>
-                    <RefreshCw className="w-3 h-3 animate-spin" /> Fetching...
+                     Fetching...
                   </>
                 ) : (
                   <>
-                    <ExternalLink className="w-3 h-3" /> Inspect Raw Payload
+                     Inspect Raw Payload
                   </>
                 )}
               </button>
             ) : sourcesData?.active_source === 'PHYSICAL_AWS' ? (
-              <div className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+              <div className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                 Listening port 8899
               </div>
             ) : (
-              <div className="text-[11px] text-amber-300 font-medium">
+              <div className="text-[11px] text-amber-700 font-medium">
                 Simulator cycle (1.5s interval)
               </div>
             )}
@@ -328,7 +313,7 @@ export const DataSourceControl: React.FC<DataSourceControlProps> = ({
       {/* Error Notification Banner */}
       {error && (
         <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-200 text-xs flex items-center gap-2 font-mono">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          
           <span>{error}</span>
         </div>
       )}
@@ -336,40 +321,40 @@ export const DataSourceControl: React.FC<DataSourceControlProps> = ({
       {/* External Feed Live Preview Modal */}
       {showPreviewModal && previewData && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#152033] border border-[#263B5E] rounded-xl max-w-lg w-full p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-              <div className="flex items-center gap-2 text-sky-400 font-bold text-xs font-mono">
-                <Globe className="w-4 h-4" />
+          <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl max-w-lg w-full p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2 text-sky-600 font-bold text-xs font-mono">
+                
                 <span>Open-Meteo Synchronous Payload</span>
               </div>
               <button
                 onClick={() => setShowPreviewModal(false)}
-                className="text-slate-300 hover:text-white text-xs px-2.5 py-1 bg-[#10192A] rounded border border-[#263B5E]"
+                className="text-slate-600 hover:text-slate-900 text-xs px-2.5 py-1 bg-[#F4F6FA] rounded border border-[#D3DCE7]"
               >
                 Close
               </button>
             </div>
 
             <div className="grid grid-cols-3 gap-2 font-mono text-center">
-              <div className="bg-[#10192A] p-2.5 rounded border border-[#263B5E]/60">
-                <span className="text-[10px] text-slate-400 block">Temperature</span>
-                <span className="text-sm font-bold text-amber-400">{previewData.telemetry.temperature}°C</span>
+              <div className="bg-[#F4F6FA] p-2.5 rounded border border-[#D3DCE7]/60">
+                <span className="text-[10px] text-slate-500 block">Temperature</span>
+                <span className="text-sm font-bold text-amber-600">{previewData.telemetry.temperature}°C</span>
               </div>
-              <div className="bg-[#10192A] p-2.5 rounded border border-[#263B5E]/60">
-                <span className="text-[10px] text-slate-400 block">Pressure</span>
-                <span className="text-sm font-bold text-sky-400">{previewData.telemetry.pressure} hPa</span>
+              <div className="bg-[#F4F6FA] p-2.5 rounded border border-[#D3DCE7]/60">
+                <span className="text-[10px] text-slate-500 block">Pressure</span>
+                <span className="text-sm font-bold text-sky-600">{previewData.telemetry.pressure} hPa</span>
               </div>
-              <div className="bg-[#10192A] p-2.5 rounded border border-[#263B5E]/60">
-                <span className="text-[10px] text-slate-400 block">Humidity</span>
+              <div className="bg-[#F4F6FA] p-2.5 rounded border border-[#D3DCE7]/60">
+                <span className="text-[10px] text-slate-500 block">Humidity</span>
                 <span className="text-sm font-bold text-indigo-400">{previewData.telemetry.humidity}%</span>
               </div>
             </div>
 
-            <div className="bg-[#10192A] p-3 rounded border border-[#263B5E]/60 text-[11px] font-mono text-slate-300 space-y-1">
-              <div>Station: <span className="text-sky-400">{previewData.telemetry.station_id}</span></div>
-              <div>Timestamp: <span className="text-slate-300">{previewData.telemetry.timestamp}</span></div>
+            <div className="bg-[#F4F6FA] p-3 rounded border border-[#D3DCE7]/60 text-[11px] font-mono text-slate-600 space-y-1">
+              <div>Station: <span className="text-sky-600">{previewData.telemetry.station_id}</span></div>
+              <div>Timestamp: <span className="text-slate-600">{previewData.telemetry.timestamp}</span></div>
               <div>Coordinates: {previewData.telemetry.latitude}°N, {previewData.telemetry.longitude}°E (Elev: {previewData.telemetry.elevation}m)</div>
-              <div>QC Validation: <span className="text-emerald-400 font-bold">PHYSICS PASS</span></div>
+              <div>QC Validation: <span className="text-emerald-600 font-bold">PHYSICS PASS</span></div>
             </div>
           </div>
         </div>

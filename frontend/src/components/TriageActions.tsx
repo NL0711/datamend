@@ -1,5 +1,4 @@
 import { useState, type MouseEvent as ReactMouseEvent } from 'react';
-import { CheckCircle2, X, ShieldCheck, ClipboardCheck } from 'lucide-react';
 import { submitOperatorFeedback } from '../services/api';
 
 export type TriageStatus = 'CONFIRMED_FAULT' | 'FALSE_POSITIVE' | 'IMPUTATION_APPROVED';
@@ -12,7 +11,7 @@ interface TriageActionsProps {
   compact?: boolean;
 }
 
-const OPERATOR_KEY = 'skyguard.operator_id';
+const OPERATOR_KEY = 'datamend.operator_id';
 
 const ACTIONS: Array<{ status: TriageStatus; label: string; title: string }> = [
   { status: 'CONFIRMED_FAULT', label: 'Confirm Fault', title: 'Mark this event as a verified sensor fault' },
@@ -70,9 +69,9 @@ export function TriageActions({ eventId, stationId, hasImputation = true, compac
   const visible = ACTIONS.filter((a) => a.status !== 'IMPUTATION_APPROVED' || hasImputation);
 
   return (
-    <div className="rounded-xl border border-[#263B5E] bg-[#101A2E] p-3 space-y-2" onClick={(e) => e.stopPropagation()}>
-      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
-        <ClipboardCheck className="w-3.5 h-3.5 text-sky-400" />
+    <div className="rounded-xl border border-[#D3DCE7] bg-[#FFFFFF] p-3 space-y-2" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">
+        
         Operator Triage
         {stationId && <span className="text-slate-500 normal-case">· {stationId} · event #{eventId}</span>}
       </div>
@@ -83,7 +82,7 @@ export function TriageActions({ eventId, stationId, hasImputation = true, compac
           onClick={(e) => e.stopPropagation()}
           placeholder="Operator ID"
           aria-label="Operator ID"
-          className="px-2 py-1.5 text-xs font-mono bg-[#0B1424] border border-[#263B5E] rounded-lg text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-sky-500/60 w-36"
+          className="px-2 py-1.5 text-xs font-mono bg-[#FFFFFF] border border-[#D3DCE7] rounded-lg text-slate-700 placeholder:text-slate-600 focus:outline-none focus:border-sky-500/60 w-36"
         />
         {visible.map((a) => (
           <button
@@ -94,25 +93,18 @@ export function TriageActions({ eventId, stationId, hasImputation = true, compac
             onClick={(e) => submit(a.status, e)}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-semibold transition-colors disabled:opacity-50 ${
               a.status === 'CONFIRMED_FAULT'
-                ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border-rose-500/40'
+                ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-700 border-rose-500/40'
                 : a.status === 'FALSE_POSITIVE'
-                  ? 'bg-slate-500/15 hover:bg-slate-500/25 text-slate-300 border-slate-500/40'
-                  : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/40'
+                  ? 'bg-slate-500/15 hover:bg-slate-500/25 text-slate-600 border-slate-500/40'
+                  : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 border-emerald-500/40'
             } ${compact ? 'text-[11px] px-2 py-1' : ''}`}
           >
-            {a.status === 'CONFIRMED_FAULT' ? (
-              <CheckCircle2 className="w-3.5 h-3.5" />
-            ) : a.status === 'FALSE_POSITIVE' ? (
-              <X className="w-3.5 h-3.5" />
-            ) : (
-              <ShieldCheck className="w-3.5 h-3.5" />
-            )}
             {pending === a.status ? 'Sending…' : a.label}
           </button>
         ))}
       </div>
       {notice && (
-        <p className={`text-[11px] font-mono ${notice.ok ? 'text-emerald-300' : 'text-rose-300'}`}>{notice.text}</p>
+        <p className={`text-[11px] font-mono ${notice.ok ? 'text-emerald-700' : 'text-rose-700'}`}>{notice.text}</p>
       )}
     </div>
   );

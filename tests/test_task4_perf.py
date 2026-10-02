@@ -5,7 +5,7 @@ OpenSpec task4-parity-closeout, capability perf-evidence (tasks 2.2, 2.4).
 - 2.2 delivery budgets are strictly asserted (in-process ingest-to-receipt).
 - 2.1 concurrency numbers live in reports/api_concurrency_probe*.json (see
   scripts/probe_api_concurrency.py); the strict P99<20ms assert runs only
-  under SKYGUARD_PERF_STRICT=1 because the full-ML ingest path currently
+  under DATAMEND_PERF_STRICT=1 because the full-ML ingest path currently
   misses it (tracked gap in docs/evaluation_report.md).
 """
 
@@ -19,7 +19,7 @@ import pytest
 from backend.app.api.websocket import ws_manager
 from backend.app.services.ingestion_service import ingestion_service
 
-STRICT = os.getenv("SKYGUARD_PERF_STRICT") == "1"
+STRICT = os.getenv("DATAMEND_PERF_STRICT") == "1"
 
 
 class _MockWS:
@@ -72,7 +72,7 @@ async def test_ws_ingest_to_receipt_within_50ms():
         # runs — the 50 ms ingest-to-receipt budget does NOT robustly hold
         # (full 5-tier ML + SQLite write per ingest). Filed as tracked gap in
         # docs/evaluation_report.md §7; strict assert only under
-        # SKYGUARD_PERF_STRICT=1. Pure broadcaster fan-out (the delivery
+        # DATAMEND_PERF_STRICT=1. Pure broadcaster fan-out (the delivery
         # layer itself) is asserted strictly below.
         if STRICT:
             assert median <= 50.0, f"median ingest-to-receipt {median:.2f} ms exceeds 50 ms budget"
@@ -119,5 +119,5 @@ def test_concurrency_evidence_recorded():
         if STRICT:
             assert data["budget_met"], (
                 f"{name}: P99 {data['p99_ms']} ms / errors {data['errors']} "
-                f"miss the 20 ms budget (SKYGUARD_PERF_STRICT=1)"
+                f"miss the 20 ms budget (DATAMEND_PERF_STRICT=1)"
             )

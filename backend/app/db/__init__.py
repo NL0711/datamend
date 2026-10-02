@@ -1,1 +1,1 @@
-"""SkyGuard AI Database Package."""
+"""DataMend Database Package."""

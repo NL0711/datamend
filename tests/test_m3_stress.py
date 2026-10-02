@@ -1,6 +1,6 @@
 """
 tests/test_m3_stress.py
-SkyGuard AI — Empirical Stress Test Suite for Milestone 3:
+DataMend — Empirical Stress Test Suite for Milestone 3:
 - High concurrency bursts across multiple AWS stations (detecting deadlocks, race conditions, DB lock errors)
 - High-volume latency profiling over 100+ observations (validating p50, p95 < 500ms)
 - Multi-client WebSocket broadcast stress (subscribers, broadcast isolation, slow client handling)

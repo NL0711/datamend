@@ -1,5 +1,5 @@
 /**
- * SkyGuard AI — Resilient WebSocket Client for Real-Time Telemetry & Anomaly Streams.
+ * DataMend — Resilient WebSocket Client for Real-Time Telemetry & Anomaly Streams.
  */
 
 import { InferenceResult } from '../types';

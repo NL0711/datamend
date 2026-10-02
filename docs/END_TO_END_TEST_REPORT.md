@@ -1,4 +1,4 @@
-# SkyGuard AI — End-to-End System Test Report
+# DataMend — End-to-End System Test Report
 
 ## 1. Executive Summary
 This report documents 15 end-to-end integration tests verifying data flow across ingestion, preprocessing, physical quality control, 5-tier machine learning inference, fault classification, sensor health tracking, explanation generation, database persistence, REST/WebSocket transport, and frontend visualization.

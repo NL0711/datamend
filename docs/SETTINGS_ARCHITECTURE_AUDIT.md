@@ -1,7 +1,7 @@
-# SKYGUARD AI — GLOBAL SETTINGS & CONFIGURATION ARCHITECTURE AUDIT
+# DATAMEND AI — GLOBAL SETTINGS & CONFIGURATION ARCHITECTURE AUDIT
 
 **Author:** Senior Product Designer & Full-Stack Systems Architect  
-**Project:** SkyGuard AI — WMO-No. 8 Automatic Weather Station Quality Control System  
+**Project:** DataMend — WMO-No. 8 Automatic Weather Station Quality Control System  
 **Date:** August 2026  
 **Status:** Audit Complete • Architecture Planned
 

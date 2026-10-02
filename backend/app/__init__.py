@@ -1,1 +1,1 @@
-"""SkyGuard AI Application Package."""
+"""DataMend Application Package."""

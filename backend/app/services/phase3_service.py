@@ -1,6 +1,6 @@
 """
 backend/app/services/phase3_service.py
-SkyGuard AI / DataMend — Phase 3 Diagnostic Orchestrator Service.
+DataMend — Phase 3 Diagnostic Orchestrator Service.
 
 Orchestrates all tiers:
 Tier 0 (Deterministic Screener)

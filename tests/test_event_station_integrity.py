@@ -1,6 +1,6 @@
 """
 tests/test_event_station_integrity.py
-SkyGuard AI — Multi-Station Incident Data Integrity and Routing Test Suite.
+DataMend — Multi-Station Incident Data Integrity and Routing Test Suite.
 Verifies that telemetry, anomaly events, and REST APIs preserve true station identity
 across all registered AWS nodes without station starvation or hardcoded fallbacks.
 """

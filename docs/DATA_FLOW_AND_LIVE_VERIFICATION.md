@@ -1,7 +1,7 @@
-# SKYGUARD AI — DATA-FLOW AND LIVE VERIFICATION REPORT
+# DATAMEND AI — DATA-FLOW AND LIVE VERIFICATION REPORT
 
 **Author:** Senior Product Designer & Full-Stack Systems Architect  
-**Project:** SkyGuard AI — WMO-No. 8 Automatic Weather Station Quality Control System  
+**Project:** DataMend — WMO-No. 8 Automatic Weather Station Quality Control System  
 **Date:** August 2026  
 **Status:** ALL TESTS VERIFIED & PASSING (Production Certified)
 
@@ -26,7 +26,7 @@ Every supported city preset and data source mode was verified live against the r
 ```
 ============================= test session starts =============================
 platform win32 -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0
-rootdir: C:\Users\ARYAN - AYUSH\OneDrive\Desktop\skyguard
+rootdir: C:\Users\ARYAN - AYUSH\OneDrive\Desktop\datamend
 collected 1 item
 
 tests/test_live_city_switch_integration.py::test_live_city_switching_and_open_meteo_data_integrity
@@ -51,7 +51,7 @@ PASSED
 ## 3. Frontend Production Build Verification
 
 ```
-> skyguard-frontend@0.1.0 build
+> datamend-frontend@0.1.0 build
 > tsc && vite build
 
 vite v5.4.21 building for production...

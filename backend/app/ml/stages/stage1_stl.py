@@ -1,6 +1,6 @@
 """
 backend/app/ml/stage1_stl.py
-SkyGuard AI / DataMend — Stage 1: Per-Station Seasonal-Trend Decomposition (STL) & Cold-Start Inheritance.
+DataMend — Stage 1: Per-Station Seasonal-Trend Decomposition (STL) & Cold-Start Inheritance.
 
 Extracts diurnal meteorological cycles using Seasonal-Trend decomposition using LOESS (STL).
 Isolates true sensor hardware and physical anomalies by scoring de-trended, de-seasonalized residuals:

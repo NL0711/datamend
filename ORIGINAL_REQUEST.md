@@ -2,9 +2,9 @@
 
 ## Initial Request — 2026-08-24T00:30:10+05:30
 
-Build **SkyGuard AI**: a production-grade, deploy-ready intelligent real-time anomaly detection, fault classification, and sensor health platform for Automatic Weather Stations (AWS). The system ingests Temperature (°C), Atmospheric Pressure (hPa), and Relative Humidity (%) observations, detects anomalies (spikes, dropouts, frozen sensors, drift, multivariate inconsistencies, data corruption), distinguishes genuine meteorological events from sensor faults using uncertainty-aware explainable AI, scores sensor health (0–100), predicts degradation, and presents everything through a professional operational dashboard with interactive anomaly injection. This is a single self-contained project; keep it small and focused.
+Build **DataMend**: a production-grade, deploy-ready intelligent real-time anomaly detection, fault classification, and sensor health platform for Automatic Weather Stations (AWS). The system ingests Temperature (°C), Atmospheric Pressure (hPa), and Relative Humidity (%) observations, detects anomalies (spikes, dropouts, frozen sensors, drift, multivariate inconsistencies, data corruption), distinguishes genuine meteorological events from sensor faults using uncertainty-aware explainable AI, scores sensor health (0–100), predicts degradation, and presents everything through a professional operational dashboard with interactive anomaly injection. This is a single self-contained project; keep it small and focused.
 
-Working directory: c:\Users\ARYAN - AYUSH\OneDrive\Desktop\skyguard
+Working directory: c:\Users\ARYAN - AYUSH\OneDrive\Desktop\datamend
 Integrity mode: demo
 
 ---
@@ -103,7 +103,8 @@ Build a layered anomaly detection system in ackend/app/ml/:
 - **Anomaly injection framework** for systematic evaluation: inject spikes, dropouts, frozen values, drift, multivariate anomalies into clean baselines
 - **Model evaluation** with temporal train/val/test splits: precision, recall, F1, false-positive rate, detection latency per anomaly type and per model tier
 - **Test suite** (	ests/): unit tests (validation, preprocessing, feature engineering, scoring, health), ML tests (model loading, inference, schema, score ranges), integration tests (upload → processing → inference → database → API), edge cases (missing values, duplicates, extremes, frozen, empty dataset, malformed input)
-- **Reproducibility**: equirements.txt, environment setup instructions, training instructions, sample dataset, demo instructions
+- **Reproducibility**: 
+equirements.txt, environment setup instructions, training instructions, sample dataset, demo instructions
 - **Evaluation report** (docs/evaluation_report.md): models, parameters, dataset versions, per-model metrics, fusion performance, known limitations
 
 ---

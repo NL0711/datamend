@@ -1,6 +1,6 @@
 """
 backend/app/sources/base.py
-SkyGuard AI — Abstract Base Class for Real-Time Telemetry Data Sources.
+DataMend — Abstract Base Class for Real-Time Telemetry Data Sources.
 Defines the standard lifecycle, subscription, and health contract for all adapters.
 """
 
@@ -26,7 +26,7 @@ TelemetryCallback = Callable[[CanonicalTelemetry], Coroutine[Any, Any, None]]
 
 class BaseDataSource(abc.ABC):
     """
-    Abstract Base Class for SkyGuard AI Telemetry Data Sources.
+    Abstract Base Class for DataMend Telemetry Data Sources.
     Subclasses wrap specific telemetry providers (Simulator, Open-Meteo REST API, Physical MQTT/ESP32).
     """
 

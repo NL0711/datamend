@@ -1,8 +1,8 @@
-# SkyGuard AI — Physical AWS Hardware & MQTT Setup Guide
+# DataMend — Physical AWS Hardware & MQTT Setup Guide
 
 ## 1. Overview
 
-SkyGuard AI connects to real **Automatic Weather Stations (AWS)** microstations using the **ESP32** microcontroller and **Bosch BME280** precision environmental sensor over standard **MQTT** message queues.
+DataMend connects to real **Automatic Weather Stations (AWS)** microstations using the **ESP32** microcontroller and **Bosch BME280** precision environmental sensor over standard **MQTT** message queues.
 
 ---
 
@@ -25,7 +25,7 @@ SkyGuard AI connects to real **Automatic Weather Stations (AWS)** microstations 
            | (Topic: skyguard/aws/+/telemetry)
            v
 +---------------------+
-| SkyGuard AI Backend | (PhysicalAWSDataSource Adapter -> 5-Tier ML Pipeline)
+| DataMend Backend | (PhysicalAWSDataSource Adapter -> 5-Tier ML Pipeline)
 +---------------------+
 ```
 
@@ -55,7 +55,7 @@ PHYSICAL_DEFAULT_STATION_ID=AWS-ESP32-001
    - `GND` $\rightarrow$ `GND`
    - `SDA` $\rightarrow$ `GPIO 21`
    - `SCL` $\rightarrow$ `GPIO 22`
-2. Open `hardware/esp32/skyguard_aws/skyguard_aws.ino` in Arduino IDE.
+2. Open `hardware/esp32/datamend_aws/datamend_aws.ino` in Arduino IDE.
 3. Copy `config.example.h` to `config.h` and configure your Wi-Fi SSID and MQTT broker.
 4. Select Board: **DOIT ESP32 DEVKIT V1** and flash to the microcontroller.
 

@@ -1,4 +1,4 @@
-# SkyGuard AI — Spatial Consensus & AWS Buddy-Check Architecture (Tier 3.5)
+# DataMend — Spatial Consensus & AWS Buddy-Check Architecture (Tier 3.5)
 
 ## 1. Executive Summary
 
@@ -6,7 +6,7 @@ Automatic Weather Stations (AWS) operating in isolated point-mode are susceptibl
 1. **Isolated Physical Sensor Faults:** Broken transducer, analog-to-digital converter (ADC) saturation, loose wire, or heater malfunction.
 2. **Regional Meteorological Events:** Coherent passage of cold fronts, convective squalls, sea-breeze boundaries, or downbursts.
 
-SkyGuard AI's **Tier 3.5 Spatial Consensus / AWS Buddy-Check Layer** (`backend/app/spatial/consensus.py`) provides an additive spatial disambiguation engine that cross-references target observations against neighboring stations within a geographic radius.
+DataMend's **Tier 3.5 Spatial Consensus / AWS Buddy-Check Layer** (`backend/app/spatial/consensus.py`) provides an additive spatial disambiguation engine that cross-references target observations against neighboring stations within a geographic radius.
 
 ---
 

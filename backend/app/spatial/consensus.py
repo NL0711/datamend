@@ -1,6 +1,6 @@
 """
 backend/app/spatial/consensus.py
-SkyGuard AI / DataMend — Stage 3B: Spatial Consensus & Genuine-Weather-Event Safety Shield.
+DataMend — Stage 3B: Spatial Consensus & Genuine-Weather-Event Safety Shield.
 
 Provides spatial quality control and weather-front disambiguation:
 1. Calculates Haversine great-circle distances between AWS stations (with KD-Tree indexing).

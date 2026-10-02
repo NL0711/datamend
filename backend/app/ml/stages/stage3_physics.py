@@ -1,6 +1,6 @@
 """
 backend/app/ml/stage3_physics.py
-SkyGuard AI / DataMend — Stage 3A: Thermodynamic Physical Consistency Validator.
+DataMend — Stage 3A: Thermodynamic Physical Consistency Validator.
 
 Enforces meteorological physical invariants across correlated sensor channels:
 1. Magnus-Tetens Clausius-Clapeyron Dew Point Boundary: T_dew <= T_air + 0.1°C

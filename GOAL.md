@@ -1,4 +1,4 @@
-# SKYGUARD AI — PROJECT GOAL
+# DATAMEND AI — PROJECT GOAL
 
 ## 1. THE FINAL GOAL
 
@@ -130,7 +130,7 @@ They must NOT be hardcoded.
 
 # 5. WHAT MAKES THE PROJECT STRONG
 
-SkyGuard should combine:
+DataMend should combine:
 
 ```text
 RULES
@@ -200,7 +200,7 @@ Examples:
 
 **STEP 3**
 
-SkyGuard processes the observation in real time.
+DataMend processes the observation in real time.
 
 **STEP 4**
 
@@ -238,7 +238,7 @@ Inspect temperature sensor.
 
 # 8. SUCCESS CRITERIA
 
-SkyGuard is successful if a new developer can:
+DataMend is successful if a new developer can:
 
 1. Clone the project.
 2. Install dependencies.
@@ -279,7 +279,7 @@ The core problem remains:
                          |
                          v
                 +----------------+
-                |   SKYGUARD AI  |
+                |   DATAMEND AI  |
                 +----------------+
                          |
           +--------------+--------------+
@@ -320,7 +320,7 @@ AWS 005 ─┤
 AWS N ───┘
           |
           v
-      SKYGUARD
+      DATAMEND
           |
    +------+------+
    |             |

@@ -1,5 +1,5 @@
 -- scripts/init_timescaledb.sql
--- SkyGuard AI / DataMend — TimescaleDB Initialization & Hypertables DDL
+-- DataMend — TimescaleDB Initialization & Hypertables DDL
 
 CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
 

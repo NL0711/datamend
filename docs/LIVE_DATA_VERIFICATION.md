@@ -1,4 +1,4 @@
-# SkyGuard AI — Live Data Integration & Verification Document
+# DataMend — Live Data Integration & Verification Document
 
 **System Version:** v0.2.0 PRO  
 **Date:** August 25, 2026  
@@ -17,7 +17,7 @@ To provide verifiable empirical proof of real-time telemetry processing across a
 
 ## 2. Live Data Verification Methodology
 
-Every observation processed by SkyGuard AI is strictly categorized into one of four verified integrity classes:
+Every observation processed by DataMend is strictly categorized into one of four verified integrity classes:
 - **`LIVE_NETWORK`**: Real-time HTTP GET to Open-Meteo REST API endpoint.
 - **`SIMULATED`**: Mathematical Diurnal physics model executing on async timer loop.
 - **`PHYSICAL_HARDWARE`**: Real I2C voltages read by ESP32 firmware and transmitted over MQTT.
@@ -45,7 +45,7 @@ python -c "import httpx, asyncio; res = asyncio.run(httpx.AsyncClient().get('htt
 
 ## 4. Physical AWS Hardware Verification & Virtual Packet Flow
 
-### Firmware Validation (`hardware/esp32/skyguard_aws/`)
+### Firmware Validation (`hardware/esp32/datamend_aws/`)
 - Initializes Wire I2C on `SDA = GPIO 21`, `SCL = GPIO 22`.
 - Reads `bme.readTemperature()`, `bme.readPressure() / 100.0F`, `bme.readHumidity()`.
 - Publishes JSON to `skyguard/aws/{station_id}/telemetry` (rate: 3s).

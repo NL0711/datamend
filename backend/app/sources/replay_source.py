@@ -1,6 +1,6 @@
 """
 backend/app/sources/replay_source.py
-SkyGuard AI / DataMend — Historical Database & Multi-Station Replay Data Source Adapter.
+DataMend — Historical Database & Multi-Station Replay Data Source Adapter.
 
 Simulates real-time multi-station AWS networks from historical CSV files or database archives:
 1. Enforces strict global chronological ordering across all stations (eliminates lookahead bias).

@@ -1,4 +1,4 @@
-# SkyGuard AI — Three-Source Telemetry Integration Audit
+# DataMend — Three-Source Telemetry Integration Audit
 
 **System Version:** v0.2.0 PRO  
 **Audit Date:** August 25, 2026  
@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-SkyGuard AI v0.2.0 PRO unifies three distinct meteorological telemetry streams into a single **Canonical Telemetry Contract** without modifying or retraining the verified 5-Tier ML Quality Control & Anomaly Detection Pipeline:
+DataMend v0.2.0 PRO unifies three distinct meteorological telemetry streams into a single **Canonical Telemetry Contract** without modifying or retraining the verified 5-Tier ML Quality Control & Anomaly Detection Pipeline:
 1. **Simulated AWS Telemetry:** Continuous physics-based diurnal cycle generator with interactive anomaly injection.
 2. **Real External Weather Data Feed:** Open-Meteo REST API live surface observations.
 3. **Real Physical AWS Sensor Data:** ESP32 + Bosch BME280 precision sensor over MQTT with 30s stale detection.
@@ -69,7 +69,7 @@ Every observation and anomaly event is tracked with complete data lineage. Zero 
 
 ## 5. Source 3 — Physical AWS (ESP32 + BME280 + MQTT)
 - **Status:** **🟢 IMPLEMENTED / 🟡 HARDWARE TEST PENDING**
-- **Evidence:** Full ESP32 Arduino C++ firmware package in `hardware/esp32/skyguard_aws/skyguard_aws.ino` reading BME280 I2C registers (SDA=21, SCL=22). `PhysicalAWSDataSource` listens on MQTT topics `skyguard/aws/+/telemetry` and `skyguard/aws/+/heartbeat`.
+- **Evidence:** Full ESP32 Arduino C++ firmware package in `hardware/esp32/datamend_aws/datamend_aws.ino` reading BME280 I2C registers (SDA=21, SCL=22). `PhysicalAWSDataSource` listens on MQTT topics `skyguard/aws/+/telemetry` and `skyguard/aws/+/heartbeat`.
 - **Virtual Testing:** `POST /api/data-sources/physical/virtual-packet` explicitly validates physical ingestion pipelines without hardware.
 - **Verification Test:** `tests/test_data_sources.py::test_physical_aws_normalization_and_virtual_packet` **PASSED**.
 
@@ -86,7 +86,7 @@ Every observation and anomaly event is tracked with complete data lineage. Zero 
 ---
 
 ## 7. ML Pipeline Connectivity
-- The 5-Tier ML Pipeline (`SkyGuardPipeline`) processes all three sources identically without requiring any model retraining or architecture modification.
+- The 5-Tier ML Pipeline (`DataMendPipeline`) processes all three sources identically without requiring any model retraining or architecture modification.
 - Model components verified:
   1. Tier 1: WMO Physical Range & Rate-of-Change QC
   2. Tier 2: Scikit-Learn `IsolationForest` & PyTorch 2-layer GRU Autoencoder
@@ -174,7 +174,7 @@ Every observation and anomaly event is tracked with complete data lineage. Zero 
 ---
 
 ## 20. Recommended Next Steps
-1. **Deploy Physical Node:** Flash `hardware/esp32/skyguard_aws/skyguard_aws.ino` to an ESP32 with BME280 sensor to stream real physical ambient weather.
+1. **Deploy Physical Node:** Flash `hardware/esp32/datamend_aws/datamend_aws.ino` to an ESP32 with BME280 sensor to stream real physical ambient weather.
 2. **Observe Real Weather Drift:** Set active feed to `EXTERNAL_API` to monitor genuine diurnal weather patterns across different global coordinates.
 
 ---

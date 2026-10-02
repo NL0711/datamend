@@ -1,4 +1,4 @@
-# SkyGuard AI — OPTIONAL production stack (TimescaleDB + backend + frontend).
+# DataMend — OPTIONAL production stack (TimescaleDB + backend + frontend).
 # Default dev/demo/test path needs none of this: the backend runs on local
 # SQLite (DATABASE_URL=sqlite+aiosqlite:///./skyguard.db). Bring this stack
 # up only to operate against PostgreSQL/TimescaleDB (OpenSpec task4-parity-closeout,
@@ -23,7 +23,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - skyguard-net
+      - datamend-net
 
   backend:
     build:
@@ -47,7 +47,7 @@ services:
       timescaledb:
         condition: service_healthy
     networks:
-      - skyguard-net
+      - datamend-net
 
   frontend:
     build:
@@ -60,7 +60,7 @@ services:
     depends_on:
       - backend
     networks:
-      - skyguard-net
+      - datamend-net
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -79,12 +79,12 @@ services:
       timescaledb:
         condition: service_healthy
     networks:
-      - skyguard-net
+      - datamend-net
 
 volumes:
   timescale_data:
   pgadmin_data:
 
 networks:
-  skyguard-net:
+  datamend-net:
     driver: bridge

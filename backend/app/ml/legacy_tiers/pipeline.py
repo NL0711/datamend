@@ -1,6 +1,6 @@
 """
 backend/app/ml/pipeline.py
-SkyGuard AI — Master 5-Tier ML Pipeline Engine Orchestrator.
+DataMend — Master 5-Tier ML Pipeline Engine Orchestrator.
 
 Integrates:
 - Tier 1: Deterministic Physical QC & Bounds
@@ -67,7 +67,7 @@ class InferenceResult(BaseModel):
     spatial_consensus: Optional[Dict[str, Any]] = Field(default=None, description="Tier 3.5 spatial consensus buddy-check diagnostics")
 
 
-class SkyGuardPipeline:
+class DataMendPipeline:
     """Production master orchestrator executing all 5 tiers of real-time AWS anomaly detection."""
 
     def __init__(
@@ -366,4 +366,4 @@ class SkyGuardPipeline:
         )
 
 
-AnomalyPipelineOrchestrator = SkyGuardPipeline
+AnomalyPipelineOrchestrator = DataMendPipeline

@@ -1,4 +1,4 @@
-# SkyGuard AI — Master System Verification & Final Integration Audit
+# DataMend — Master System Verification & Final Integration Audit
 
 **System Version:** v0.2.0 PRO  
 **Date of Audit:** August 25, 2026  
@@ -9,7 +9,7 @@
 
 ## A. Executive Summary
 
-SkyGuard AI is an intelligent real-time quality control, anomaly detection, and sensor health monitoring platform for Automatic Weather Stations (AWS). The system processes surface observations of **Temperature (°C)**, **Atmospheric Pressure (hPa)**, and **Relative Humidity (%)**.
+DataMend is an intelligent real-time quality control, anomaly detection, and sensor health monitoring platform for Automatic Weather Stations (AWS). The system processes surface observations of **Temperature (°C)**, **Atmospheric Pressure (hPa)**, and **Relative Humidity (%)**.
 
 The v0.2.0 PRO release introduces a non-invasive **Data Source Abstraction Layer** that unifies three interchangeable telemetry streams into a **Canonical Telemetry Contract** feeding into the existing 5-Tier ML Pipeline:
 1. **🟡 Simulated AWS Telemetry:** Multi-station diurnal physics engine with live on-demand anomaly injection.
@@ -89,7 +89,7 @@ flowchart TD
 
 1. **Simulated Source:** `DiurnalGenerator` computes solar elevation angle, Magnus-Tetens vapor pressure, and barometric diurnal tide equations dynamically. Telemetry changes continuously.
 2. **External Weather Source:** `ExternalWeatherDataSource` was tested live against the Open-Meteo API endpoint `https://api.open-meteo.com/v1/forecast`, retrieving real-time Pune/Delhi weather (`test_external_weather_live_api_integration PASSED`).
-3. **Physical AWS Hardware:** ESP32 C++ firmware in `hardware/esp32/skyguard_aws/` reads true I2C sensor voltages from BME280 registers and publishes JSON packets over MQTT.
+3. **Physical AWS Hardware:** ESP32 C++ firmware in `hardware/esp32/datamend_aws/` reads true I2C sensor voltages from BME280 registers and publishes JSON packets over MQTT.
 
 ---
 
@@ -131,7 +131,7 @@ Endpoint `/ws/live` streams `InferenceResult` JSON packets in real time:
 
 ## I. Hardware & ESP32 Firmware Verification
 
-- Complete Arduino C++ firmware package in `hardware/esp32/skyguard_aws/skyguard_aws.ino`.
+- Complete Arduino C++ firmware package in `hardware/esp32/datamend_aws/datamend_aws.ino`.
 - Pinout configuration: `SDA = GPIO 21`, `SCL = GPIO 22`, `VCC = 3.3V`, `GND = GND`.
 - Wi-Fi auto-reconnect with exponential backoff.
 - NTP UTC time synchronization.

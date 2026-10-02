@@ -1,8 +1,8 @@
-# SkyGuard AI — Data Lineage & Provenance Tracking
+# DataMend — Data Lineage & Provenance Tracking
 
 ## 1. Overview
 
-In mission-critical meteorological quality-control platforms, every single observation, anomaly alert, and sensor health calculation must be traceable to its exact origin. SkyGuard AI provides complete **end-to-end data lineage** from raw sensor/provider ingestion to dashboard rendering.
+In mission-critical meteorological quality-control platforms, every single observation, anomaly alert, and sensor health calculation must be traceable to its exact origin. DataMend provides complete **end-to-end data lineage** from raw sensor/provider ingestion to dashboard rendering.
 
 ---
 
@@ -14,7 +14,7 @@ Every record stored in `skyguard.db` and streamed over `/ws/live` contains:
 | :--- | :--- | :--- |
 | `source_type` | Origin classification | `SIMULATED`, `EXTERNAL_API`, `PHYSICAL_AWS` |
 | `source_id` | Specific adapter identifier | `diurnal_generator`, `open_meteo`, `esp32_bme280` |
-| `provider` | External provider or sensor manufacturer | `Open-Meteo`, `SkyGuard-DiurnalEngine`, `Adafruit-BME280` |
+| `provider` | External provider or sensor manufacturer | `Open-Meteo`, `DataMend-DiurnalEngine`, `Adafruit-BME280` |
 | `device_id` | Hardware identifier / MAC address | `ESP32-DEV-BME280-01`, `AWS-ESP32-001` |
 | `received_at` | Backend arrival timestamp (ISO-8601 UTC) | `2026-08-25T12:00:00.124Z` |
 | `data_quality` | Initial ingestion validation | `GOOD`, `SUSPECT`, `QC_FLAGGED`, `INVALID` |

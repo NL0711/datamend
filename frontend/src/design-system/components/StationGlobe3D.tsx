@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { Station } from '../../types';
-import { Globe, ZoomIn, ZoomOut, Compass, Activity, MapPin, RotateCw, CheckCircle2, Radio } from 'lucide-react';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 interface StationGlobe3DProps {
@@ -184,9 +183,9 @@ export const StationGlobe3D: React.FC<StationGlobe3DProps> = ({
             const points = curve.getPoints(24);
             const arcGeo = new THREE.BufferGeometry().setFromPoints(points);
             const arcMat = new THREE.LineBasicMaterial({
-              color: 0x38bdf8,
+              color: 0x0284c7,
               transparent: true,
-              opacity: 0.4,
+              opacity: 0.65,
             });
             const arcLine = new THREE.Line(arcGeo, arcMat);
             arcsGroup.add(arcLine);
@@ -219,7 +218,7 @@ export const StationGlobe3D: React.FC<StationGlobe3DProps> = ({
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x080e1b, 1.0);
+    renderer.setClearColor(0xf1f5f9, 1.0);
     rendererRef.current = renderer;
 
     while (container.firstChild) {
@@ -227,29 +226,29 @@ export const StationGlobe3D: React.FC<StationGlobe3DProps> = ({
     }
     container.appendChild(renderer.domElement);
 
-    // 4. Lighting System
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    // 4. Lighting System tuned for crisp light-mode surface rendering
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
     scene.add(ambientLight);
 
-    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.4);
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.35);
     dirLight1.position.set(5, 3, 5);
     scene.add(dirLight1);
 
-    const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.7);
+    const dirLight2 = new THREE.DirectionalLight(0xe0f2fe, 0.65);
     dirLight2.position.set(-5, -2, -5);
     scene.add(dirLight2);
 
-    // 5. Starfield Particles
+    // 5. Subtle Spatial Coordinate Dust (subtle on light canvas)
     const starGeo = new THREE.BufferGeometry();
-    const starCount = 350;
+    const starCount = 200;
     const starPositions = new Float32Array(starCount * 3);
     for (let i = 0; i < starCount * 3; i += 3) {
-      starPositions[i] = (Math.random() - 0.5) * 20;
-      starPositions[i + 1] = (Math.random() - 0.5) * 20;
-      starPositions[i + 2] = (Math.random() - 0.5) * 20 - 4;
+      starPositions[i] = (Math.random() - 0.5) * 18;
+      starPositions[i + 1] = (Math.random() - 0.5) * 18;
+      starPositions[i + 2] = (Math.random() - 0.5) * 18 - 3;
     }
     starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-    const starMat = new THREE.PointsMaterial({ color: 0x94a3b8, size: 0.04, transparent: true, opacity: 0.6 });
+    const starMat = new THREE.PointsMaterial({ color: 0x94a3b8, size: 0.02, transparent: true, opacity: 0.15 });
     const stars = new THREE.Points(starGeo, starMat);
     scene.add(stars);
 
@@ -258,12 +257,12 @@ export const StationGlobe3D: React.FC<StationGlobe3DProps> = ({
     globeGroupRef.current = globeGroup;
     scene.add(globeGroup);
 
-    // Atmospheric Outer Rim Glow
+    // Atmospheric Outer Rim Glow (crisp horizon on light mode)
     const atmosphereGeo = new THREE.SphereGeometry(1.025, 32, 32);
     const atmosphereMat = new THREE.MeshBasicMaterial({
       color: 0x38bdf8,
       transparent: true,
-      opacity: 0.12,
+      opacity: 0.16,
       side: THREE.BackSide,
     });
     const atmosphereMesh = new THREE.Mesh(atmosphereGeo, atmosphereMat);
@@ -516,59 +515,63 @@ export const StationGlobe3D: React.FC<StationGlobe3DProps> = ({
   };
 
   return (
-    <div className={`relative bg-[#152033] border border-[#263B5E] rounded-xl overflow-hidden shadow-2xl flex flex-col ${className}`}>
+    <div className={`relative bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl overflow-hidden shadow-2xl flex flex-col ${className}`}>
       {/* Top Header Overlay */}
       <div className="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
-        <div className="flex items-center gap-2 bg-[#1B2A44]/95 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/[0.08] pointer-events-auto shadow-md">
-          <Globe className="w-4 h-4 text-sky-400" />
-          <span className="text-xs font-bold font-mono text-white tracking-wide uppercase">
+        <div className="flex items-center gap-2 bg-[#EDF1F7]/95 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-200 pointer-events-auto shadow-md">
+          
+          <span className="text-xs font-bold font-mono text-slate-900 tracking-wide uppercase">
             GEOSPATIAL DIGITAL TWIN (WGS84)
           </span>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 font-semibold">
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/15 text-sky-700 border border-sky-500/30 font-semibold">
             {stations.length} LIVE NODES
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-[#1B2A44]/95 backdrop-blur-md p-1 rounded-lg border border-white/[0.08] pointer-events-auto shadow-md text-xs font-mono">
+        <div className="flex items-center gap-1.5 bg-[#FFFFFF]/95 backdrop-blur-md p-1.5 rounded-xl border border-[#D3DCE7] pointer-events-auto shadow-sm text-xs font-mono">
           <button 
             onClick={() => setShowArcs(!showArcs)} 
-            className={`px-2 py-1 rounded text-[11px] font-medium transition-colors ${showArcs ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30' : 'text-slate-400 hover:text-white'}`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              showArcs ? 'bg-sky-500/20 text-sky-800 border border-sky-500/40 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-[#E2E8F0]'
+            }`}
           >
-            Arcs
+            Arcs {showArcs ? 'ON' : 'OFF'}
           </button>
           <button 
             onClick={() => setIsAutoRotating(!isAutoRotating)} 
-            className={`p-1.5 rounded transition-colors ${isAutoRotating ? 'text-sky-400 bg-sky-500/20' : 'text-slate-400 hover:text-white'}`}
+            className={`p-2 rounded-lg transition-all ${
+              isAutoRotating ? 'text-sky-700 bg-sky-500/20 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-[#E2E8F0]'
+            }`}
             title="Toggle Auto-Rotation"
           >
-            <RotateCw className="w-3.5 h-3.5" />
+            Rotate
           </button>
           <button 
             onClick={() => handleZoom(-0.3)} 
-            className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+            className="px-2.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-[#E2E8F0] transition-colors font-bold"
             title="Zoom In"
           >
-            <ZoomIn className="w-3.5 h-3.5" />
+            +
           </button>
           <button 
             onClick={() => handleZoom(0.3)} 
-            className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+            className="px-2.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-[#E2E8F0] transition-colors font-bold"
             title="Zoom Out"
           >
-            <ZoomOut className="w-3.5 h-3.5" />
+            −
           </button>
           <button 
             onClick={handleResetCamera} 
-            className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+            className="px-3 py-1.5 rounded-lg text-xs font-mono text-slate-600 hover:text-slate-900 hover:bg-[#E2E8F0] transition-colors font-semibold"
             title="Reset Orientation"
           >
-            <Compass className="w-3.5 h-3.5" />
+            Reset
           </button>
         </div>
       </div>
 
-      {/* Main 3D Canvas Viewport */}
-      <div className="relative w-full h-[460px] bg-[#080E1B]">
+      {/* Main 3D Canvas Viewport with Clean Light Background */}
+      <div className="relative w-full h-[460px] bg-gradient-to-b from-[#F8FAFC] via-[#F1F5F9] to-[#E2E8F0] overflow-hidden">
         <div
           ref={mountRef}
           className="w-full h-full cursor-grab active:cursor-grabbing"
@@ -578,56 +581,54 @@ export const StationGlobe3D: React.FC<StationGlobe3DProps> = ({
       {/* Interactive Station Hover Dossier Tooltip */}
       {hoveredStation && (
         <div
-          className="absolute z-40 pointer-events-none bg-[#111A2B]/95 backdrop-blur-md border border-[#38BDF8]/40 rounded-lg p-3 shadow-2xl text-xs font-mono text-white min-w-[240px]"
+          className="absolute z-40 pointer-events-none bg-white/95 backdrop-blur-md border border-slate-300 rounded-xl p-3.5 shadow-2xl text-xs font-mono text-slate-800 min-w-[250px]"
           style={{
             left: Math.min(window.innerWidth - 280, Math.max(10, hoverPos.x + 15)),
             top: Math.min(380, Math.max(10, hoverPos.y - 50)),
           }}
         >
-          <div className="flex items-center justify-between border-b border-white/[0.1] pb-1.5 mb-1.5">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 mb-1.5">
             <div className="flex items-center gap-1.5">
-              <Radio className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-              <span className="font-bold text-sky-300">{hoveredStation.station_id}</span>
+              <span className="font-bold text-sky-700">{hoveredStation.station_id}</span>
             </div>
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${(hoveredStation.health_score ?? 98) >= 75 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : (hoveredStation.health_score ?? 98) >= 50 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'}`}>
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${(hoveredStation.health_score ?? 98) >= 75 ? 'bg-emerald-500/20 text-emerald-700 border border-emerald-500/40' : (hoveredStation.health_score ?? 98) >= 50 ? 'bg-amber-500/20 text-amber-700 border border-amber-500/40' : 'bg-rose-500/20 text-rose-700 border border-rose-500/40'}`}>
               {hoveredStation.health_status || 'NOMINAL'}
             </span>
           </div>
 
-          <div className="text-[11px] text-slate-100 font-semibold mb-2 flex items-center gap-1">
-            <MapPin className="w-3 h-3 text-sky-400" />
+          <div className="text-[11px] text-slate-900 font-semibold mb-2 flex items-center gap-1">
             <span>{hoveredStation.name}</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-1.5 text-[10px] text-slate-300">
+          <div className="grid grid-cols-2 gap-1.5 text-[10px] text-slate-600">
             <div>
-              <span className="text-slate-400 block text-[9px]">Coordinates</span>
-              <span className="text-sky-300">{hoveredStation.latitude?.toFixed(2)}°N, {hoveredStation.longitude?.toFixed(2)}°E</span>
+              <span className="text-slate-500 block text-[9px]">Coordinates</span>
+              <span className="text-sky-700">{hoveredStation.latitude?.toFixed(2)}°N, {hoveredStation.longitude?.toFixed(2)}°E</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[9px]">Elevation</span>
+              <span className="text-slate-500 block text-[9px]">Elevation</span>
               <span>{hoveredStation.elevation ?? 216} m MSL</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[9px]">Health Score</span>
-              <span className="text-emerald-400 font-bold">{hoveredStation.health_score ?? 98}%</span>
+              <span className="text-slate-500 block text-[9px]">Health Score</span>
+              <span className="text-emerald-600 font-bold">{hoveredStation.health_score ?? 98}%</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[9px]">Status</span>
-              <span className="text-sky-300">{hoveredStation.status || 'ACTIVE'}</span>
+              <span className="text-slate-500 block text-[9px]">Status</span>
+              <span className="text-sky-700">{hoveredStation.status || 'ACTIVE'}</span>
             </div>
           </div>
 
-          <div className="mt-2 pt-1.5 border-t border-white/[0.06] text-[9px] text-slate-400 flex items-center justify-between">
-            <span className="text-sky-400">Click node to focus camera</span>
-            <span className="text-emerald-400 font-semibold">Tier 3.5 Consensus</span>
+          <div className="mt-2 pt-1.5 border-t border-slate-200 text-[9px] text-slate-500 flex items-center justify-between">
+            <span className="text-sky-600">Click node to focus camera</span>
+            <span className="text-emerald-600 font-semibold">Tier 3.5 Consensus</span>
           </div>
         </div>
       )}
 
       {/* Bottom Status Footer */}
-      <div className="px-4 py-2.5 bg-[#10192A] border-t border-[#263B5E] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
-        <div className="flex items-center gap-4 text-slate-300">
+      <div className="px-4 py-2.5 bg-[#F4F6FA] border-t border-[#D3DCE7] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+        <div className="flex items-center gap-4 text-slate-600">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />
             <span className="text-[11px]">Nominal (Active)</span>
@@ -646,16 +647,16 @@ export const StationGlobe3D: React.FC<StationGlobe3DProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-[11px] text-slate-400">
-          <Activity className="w-3.5 h-3.5 text-sky-400" />
+        <div className="flex items-center gap-2 text-[11px] text-slate-500">
+          
           <span className="flex items-center gap-1">
             <span>Mesh:</span>
             {modelStatus === 'loaded' ? (
-              <span className="text-emerald-400 font-bold flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> EarthGlobe Atlas (Calibrated WGS84)</span>
+              <span className="text-emerald-600 font-bold flex items-center gap-1"> EarthGlobe Atlas (Calibrated WGS84)</span>
             ) : modelStatus === 'loading' ? (
-              <span className="text-sky-400 font-semibold">Calibrating Projection...</span>
+              <span className="text-sky-600 font-semibold">Calibrating Projection...</span>
             ) : (
-              <span className="text-slate-300">Calibrated Geospatial Surface</span>
+              <span className="text-slate-600">Calibrated Geospatial Surface</span>
             )}
           </span>
         </div>

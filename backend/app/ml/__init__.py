@@ -1,9 +1,9 @@
-"""SkyGuard AI Machine Learning Package.
+"""DataMend Machine Learning Package.
 
 Organized into three modular layers:
 - `backend.app.ml.screening`: Tier 0 Edge and Gateway Ingestion Screener
 - `backend.app.ml.stages`: Production 6-Stage Deep ML Pipeline (STL, Ensemble, Physics, Classifier, Explainability, Imputer)
-- `backend.app.ml.legacy_tiers`: Retained prototype Tier 1-5 engines and legacy SkyGuardPipeline
+- `backend.app.ml.legacy_tiers`: Retained prototype Tier 1-5 engines and legacy DataMendPipeline
 """
 
 import sys

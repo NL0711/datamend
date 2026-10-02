@@ -1,6 +1,6 @@
 """
 backend/app/ml/stages/stage2_ensemble.py
-SkyGuard AI / DataMend — Stage 2: Multivariate Residual Anomaly Ensemble.
+DataMend — Stage 2: Multivariate Residual Anomaly Ensemble.
 
 CANONICAL Phase 4 detector: ResidualIsolationForest on 3-channel Stage-1
 STL residuals ordered [T_resid, P_resid, RH_resid] (m, 3).

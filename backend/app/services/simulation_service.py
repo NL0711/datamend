@@ -1,6 +1,6 @@
 """
 backend/app/services/simulation_service.py
-SkyGuard AI — Multi-Station Background Simulation Service and On-The-Fly Anomaly Injector.
+DataMend — Multi-Station Background Simulation Service and On-The-Fly Anomaly Injector.
 """
 
 from __future__ import annotations

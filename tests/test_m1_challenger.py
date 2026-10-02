@@ -1,5 +1,5 @@
 """
-SkyGuard AI — Milestone M1 Challenger Empirical Verification & Stress Test Suite.
+DataMend — Milestone M1 Challenger Empirical Verification & Stress Test Suite.
 
 Adversarially evaluates:
 1. Thermodynamic validity and diurnal physical cycles (Corr(T, RH) < -0.6, S2(P) tidal harmonics at 10:00 & 22:00 UTC).

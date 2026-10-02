@@ -46,19 +46,19 @@ export const NetworkMap: React.FC<NetworkMapProps> = ({
   };
 
   return (
-    <div className={`relative bg-[#152033] border border-[#263B5E] rounded-xl overflow-hidden shadow-lg ${className}`}>
+    <div className={`relative bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl overflow-hidden shadow-lg ${className}`}>
       {/* Top Map Header & Controls */}
       <div className="absolute top-3 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
         <div className="flex items-center gap-2 pointer-events-auto">
-          <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-slate-300">
+          <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-slate-600">
             Regional AWS Telemetry Radar & Consensus Cluster (2D)
           </span>
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 font-semibold">
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-700 border border-sky-500/30 font-semibold">
             Tier 3.5 Spatial QC
           </span>
         </div>
 
-        <div className="flex items-center gap-3 text-[10px] font-mono text-slate-400 bg-[#10192A]/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-[#263B5E] pointer-events-auto">
+        <div className="flex items-center gap-3 text-[10px] font-mono text-slate-500 bg-[#F4F6FA]/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-[#D3DCE7] pointer-events-auto">
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-emerald-400" /> Nominal
           </span>
@@ -74,10 +74,10 @@ export const NetworkMap: React.FC<NetworkMapProps> = ({
       {/* 2D SVG Canvas Topology */}
       <svg viewBox="0 0 600 240" className="w-full h-56 sm:h-64 select-none">
         {/* Background Radar Grid Circles */}
-        <circle cx="300" cy="120" r="100" fill="none" stroke="#263B5E" strokeDasharray="3 3" opacity="0.5" />
-        <circle cx="300" cy="120" r="60" fill="none" stroke="#263B5E" strokeDasharray="2 2" opacity="0.4" />
-        <line x1="300" y1="20" x2="300" y2="220" stroke="#263B5E" strokeDasharray="2 2" opacity="0.3" />
-        <line x1="100" y1="120" x2="500" y2="120" stroke="#263B5E" strokeDasharray="2 2" opacity="0.3" />
+        <circle cx="300" cy="120" r="100" fill="none" stroke="#D3DCE7" strokeDasharray="3 3" opacity="0.5" />
+        <circle cx="300" cy="120" r="60" fill="none" stroke="#D3DCE7" strokeDasharray="2 2" opacity="0.4" />
+        <line x1="300" y1="20" x2="300" y2="220" stroke="#D3DCE7" strokeDasharray="2 2" opacity="0.3" />
+        <line x1="100" y1="120" x2="500" y2="120" stroke="#D3DCE7" strokeDasharray="2 2" opacity="0.3" />
 
         {/* Consensus Buddy-Check Connection Links */}
         {stations.map((st, i) => {
@@ -142,7 +142,7 @@ export const NetworkMap: React.FC<NetworkMapProps> = ({
                 cy={pos.y}
                 r={isSelected ? 7 : 5}
                 fill={nodeColor}
-                stroke="#152033"
+                stroke="#FFFFFF"
                 strokeWidth={2}
               />
 
@@ -165,19 +165,19 @@ export const NetworkMap: React.FC<NetworkMapProps> = ({
 
       {/* Hover Station Card Tooltip */}
       {hoveredStation && (
-        <div className="absolute bottom-2 left-4 right-4 z-20 bg-[#1B2A44]/95 backdrop-blur-md p-2.5 rounded-lg border border-sky-500/40 shadow-xl flex items-center justify-between text-xs font-mono">
+        <div className="absolute bottom-2 left-4 right-4 z-20 bg-[#EDF1F7]/95 backdrop-blur-md p-2.5 rounded-lg border border-sky-500/40 shadow-xl flex items-center justify-between text-xs font-mono">
           <div>
-            <span className="font-bold text-white">{hoveredStation.station_id}</span>
-            <span className="text-slate-300 ml-2">({hoveredStation.name})</span>
-            <span className="text-slate-400 text-[11px] block mt-0.5">
+            <span className="font-bold text-slate-900">{hoveredStation.station_id}</span>
+            <span className="text-slate-600 ml-2">({hoveredStation.name})</span>
+            <span className="text-slate-500 text-[11px] block mt-0.5">
               Lat: {hoveredStation.latitude?.toFixed(2)}°, Lon: {hoveredStation.longitude?.toFixed(2)}° • Elev: {hoveredStation.elevation}m
             </span>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 uppercase block">Health Index</span>
-              <span className="font-bold text-emerald-400">{hoveredStation.health_score ?? 98}%</span>
+              <span className="text-[10px] text-slate-500 uppercase block">Health Index</span>
+              <span className="font-bold text-emerald-600">{hoveredStation.health_score ?? 98}%</span>
             </div>
             <StatusBadge
               label={hoveredStation.health_status || 'NOMINAL'}

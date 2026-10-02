@@ -1,6 +1,6 @@
 """
 scripts/generate_replay_dataset.py
-SkyGuard AI / DataMend — Multi-Station 30-Day Historical Benchmark Generator.
+DataMend — Multi-Station 30-Day Historical Benchmark Generator.
 
 Generates physically realistic AWS time series (diurnal temperature curves, barometric tides,
 psychrometric relative humidity inverse correlation) across multiple stations (AWS-001, AWS-002, AWS-003, AWS-004),

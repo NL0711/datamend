@@ -1,6 +1,6 @@
 """
 backend/app/sources/simulated_source.py
-SkyGuard AI — Simulated Telemetry Data Source Adapter.
+DataMend — Simulated Telemetry Data Source Adapter.
 Wraps the multi-station DiurnalGenerator and programmatic Anomaly Injector into BaseDataSource.
 """
 
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 class SimulatedDataSource(BaseDataSource):
     """
-    Adapter integrating SkyGuard's Diurnal Atmospheric Simulator into the Data Source Layer.
+    Adapter integrating DataMend's Diurnal Atmospheric Simulator into the Data Source Layer.
     Emits canonical telemetry for simulated AWS stations and handles anomaly injections.
     """
 
@@ -34,7 +34,7 @@ class SimulatedDataSource(BaseDataSource):
         super().__init__(
             source_type=DataSourceType.SIMULATED,
             source_id="diurnal_generator",
-            name="SkyGuard Diurnal Atmospheric Simulator",
+            name="DataMend Diurnal Atmospheric Simulator",
             description="Synthetic meteorological generator modeling diurnal solar radiation, Magnus-Tetens thermodynamics, and barometric tides.",
         )
         self.interval_seconds = interval_seconds
@@ -90,7 +90,7 @@ class SimulatedDataSource(BaseDataSource):
                         humidity=float(modified["humidity"]),
                         source_type=DataSourceType.SIMULATED,
                         source_id=self.source_id,
-                        provider="SkyGuard-DiurnalEngine",
+                        provider="DataMend-DiurnalEngine",
                         latitude=generator.station_config.latitude if hasattr(generator, "station_config") else 28.6139,
                         longitude=generator.station_config.longitude if hasattr(generator, "station_config") else 77.2090,
                         elevation=generator.station_config.elevation if hasattr(generator, "station_config") else 216.0,
@@ -126,7 +126,7 @@ class SimulatedDataSource(BaseDataSource):
             is_active=self._is_running,
             is_available=True,
             station_id=self._station_id,
-            provider="SkyGuard Diurnal Engine",
+            provider="DataMend Diurnal Engine",
             last_received_at=self._last_received_at.isoformat() if self._last_received_at else None,
             last_successful_fetch=self._last_successful_fetch.isoformat() if self._last_successful_fetch else None,
             last_error_at=self._last_error_at.isoformat() if self._last_error_at else None,

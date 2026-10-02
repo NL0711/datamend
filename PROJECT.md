@@ -1,7 +1,7 @@
-# Project: SkyGuard AI — Intelligent Real-Time Anomaly Detection and Sensor Health System for AWS
+# Project: DataMend — Intelligent Real-Time Anomaly Detection and Sensor Health System for AWS
 
 ## Architecture Overview
-SkyGuard AI is a production-grade meteorological anomaly detection, fault classification, explainability, and sensor health platform.
+DataMend is a production-grade meteorological anomaly detection, fault classification, explainability, and sensor health platform.
 The architecture comprises:
 1. **Simulation & Injection Engine** (`backend/simulator/`): Synthetic diurnal generator adhering to Magnus-Tetens atmospheric physics, and programmatic injection for 6 anomaly classes (`SPIKE`, `DRIFT`, `FROZEN`, `DROPOUT`, `NOISE_BURST`, `MULTIVARIATE_INCONSISTENCY`).
 2. **5-Tier ML Pipeline Engine** (`backend/app/ml/`):
@@ -73,7 +73,7 @@ The architecture comprises:
 
 ## Code Layout
 ```
-c:\Users\ARYAN - AYUSH\OneDrive\Desktop\skyguard\
+c:\Users\ARYAN - AYUSH\OneDrive\Desktop\datamend\
 ├── backend/
 │   ├── app/
 │   │   ├── __init__.py

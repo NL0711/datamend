@@ -1,6 +1,6 @@
 """
 tests/test_phase4_api_websocket.py
-SkyGuard AI / DataMend — Test Suite for Phase 4 Operational Serving, REST APIs & WebSocket Broadcaster.
+DataMend — Test Suite for Phase 4 Operational Serving, REST APIs & WebSocket Broadcaster.
 """
 
 from datetime import datetime, timezone

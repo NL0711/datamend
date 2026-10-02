@@ -15,7 +15,7 @@ from datetime import datetime, timezone, timedelta
 import numpy as np
 import pandas as pd
 
-from backend.app.ml.pipeline import SkyGuardPipeline
+from backend.app.ml.pipeline import DataMendPipeline
 from backend.app.ml.tier1_qc import Tier1QC, Tier1QCConfig
 from backend.app.ml.tier4_classifier import FaultClassifier, FaultClass
 from backend.app.ml.tier5_health import SensorHealthEngine, HealthStatus, DegradationRisk
@@ -29,7 +29,7 @@ from backend.app.db.repositories import (
     HealthRepository,
 )
 
-async def test_csv_upload_edge_cases(pipeline: SkyGuardPipeline):
+async def test_csv_upload_edge_cases(pipeline: DataMendPipeline):
     print("\n" + "="*70)
     print("CHALLENGE 1: CSV UPLOAD EDGE CASES & ADVERSARIAL STRESS")
     print("="*70)
@@ -134,7 +134,7 @@ async def test_csv_upload_edge_cases(pipeline: SkyGuardPipeline):
     assert res.anomalies_detected >= 4
     print("PASS: 5,000 row batch ingestion processed with complete transaction integrity.")
 
-async def test_physical_bounds_boundary(pipeline: SkyGuardPipeline):
+async def test_physical_bounds_boundary(pipeline: DataMendPipeline):
     print("\n" + "="*70)
     print("CHALLENGE 2: PHYSICAL BOUNDS BOUNDARY TESTING (API VS TIER 1 QC)")
     print("="*70)
@@ -228,7 +228,7 @@ async def test_physical_bounds_boundary(pipeline: SkyGuardPipeline):
 
     print("PASS: Physical bounds cleanly tiered between API format validation (422) and Tier 1 QC rejection (QC_FLAGGED).")
 
-async def test_sensor_health_stress_and_recovery(pipeline: SkyGuardPipeline):
+async def test_sensor_health_stress_and_recovery(pipeline: DataMendPipeline):
     print("\n" + "="*70)
     print("CHALLENGE 3: SENSOR HEALTH DEGRADATION & RECOVERY DYNAMICS")
     print("="*70)
@@ -327,7 +327,7 @@ async def test_sensor_health_stress_and_recovery(pipeline: SkyGuardPipeline):
         assert st_entity.status == "ACTIVE"
         print("PASS: Sensor Health smoothly recovered and restored Station status to ACTIVE.")
 
-async def test_convective_front_classification(pipeline: SkyGuardPipeline):
+async def test_convective_front_classification(pipeline: DataMendPipeline):
     print("\n" + "="*70)
     print("CHALLENGE 4: CONVECTIVE FRONT VS SENSOR FAULT CLASSIFICATION")
     print("="*70)
@@ -427,7 +427,7 @@ async def test_convective_front_classification(pipeline: SkyGuardPipeline):
 
 async def main():
     await init_db()
-    pipeline = SkyGuardPipeline(auto_load=True)
+    pipeline = DataMendPipeline(auto_load=True)
     
     await test_csv_upload_edge_cases(pipeline)
     await test_physical_bounds_boundary(pipeline)

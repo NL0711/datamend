@@ -1,4 +1,4 @@
-# SKYGUARD AI — IMPLEMENTATION TODO
+# DATAMEND AI — IMPLEMENTATION TODO
 
 Status:
 - ⬜ Not Started
@@ -113,11 +113,22 @@ Create the non-ML quality-control baseline.
 
 ---
 
-# PHASE 4 — ISOLATION FOREST ✅
+# PHASE 4 — ISOLATION FOREST ✅ (canonical: ResidualIsolationForest, OpenSpec phase4-residual-isolation-forest)
 
 ## Objective
 
 Create the first ML anomaly detector.
+
+### Canonical implementation
+
+- `backend/app/ml/stages/stage2_ensemble.py::ResidualIsolationForest` on (m, 3) STL residuals; spec `openspec/changes/phase4-residual-isolation-forest/`, doc `docs/PHASE4_RESIDUAL_ISOLATION_FOREST.md`.
+- Legacy 9D `IsolationForestPointDetector` / `models/isolation_forest.joblib` SUPERSEDED and unsupported.
+
+### Standalone evidence (data/val_mixed.csv, 1440 rows / 30 anomalies, 2026-10-02)
+
+- ResidualIsolationForest: P 0.2679 / R 1.0000 / F1 0.4225 / FPR 0.0582.
+- Tier1QC baseline: P 0.9630 / R 0.8667 / F1 0.9123 / FPR 0.0007.
+- Exit met via complementary-information branch (IF catches 4/4 QC misses; fusion-motivated, not standalone deployment). Full table: `docs/evaluation_report.md` §6.
 
 ### Tasks
 

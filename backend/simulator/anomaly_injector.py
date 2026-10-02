@@ -1,5 +1,5 @@
 """
-SkyGuard AI — Anomaly Injector Engine.
+DataMend — Anomaly Injector Engine.
 
 Programmatically injects 8 ground-truth labeled anomaly patterns into AWS telemetry time series:
 - SPIKE: Instantaneous transient impulse

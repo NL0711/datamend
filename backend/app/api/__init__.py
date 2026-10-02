@@ -1,1 +1,1 @@
-"""SkyGuard AI API Package."""
+"""DataMend API Package."""

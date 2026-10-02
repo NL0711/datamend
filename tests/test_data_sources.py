@@ -1,6 +1,6 @@
 """
 tests/test_data_sources.py
-SkyGuard AI — Comprehensive Automated Test Suite for Data Source Abstraction Layer.
+DataMend — Comprehensive Automated Test Suite for Data Source Abstraction Layer.
 Validates Canonical Telemetry Contracts, Source Adapters, Source Switching, and Ingestion Routing.
 """
 

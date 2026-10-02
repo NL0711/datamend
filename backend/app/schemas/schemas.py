@@ -1,6 +1,6 @@
 """
 backend/app/schemas/schemas.py
-SkyGuard AI — Pydantic v2 Schemas for Requests, Responses, and Pipeline Telemetry Contracts.
+DataMend — Pydantic v2 Schemas for Requests, Responses, and Pipeline Telemetry Contracts.
 """
 
 from __future__ import annotations

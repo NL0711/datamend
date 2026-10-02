@@ -1,6 +1,6 @@
 """
 tests/test_noaa_benchmark.py
-SkyGuard AI — Test Suite for NOAA ISD Benchmark Pipeline.
+DataMend — Test Suite for NOAA ISD Benchmark Pipeline.
 """
 
 from pathlib import Path
@@ -33,5 +33,5 @@ def test_noaa_benchmark_execution(tmp_path: Path):
     md_path = reports_dir / "noaa_benchmark.md"
     assert md_path.exists()
     md_content = md_path.read_text(encoding="utf-8")
-    assert "SkyGuard AI — NOAA ISD Observational Benchmark Report" in md_content
+    assert "DataMend — NOAA ISD Observational Benchmark Report" in md_content
     assert "Executive Summary" in md_content

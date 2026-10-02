@@ -1,5 +1,5 @@
 """
-SkyGuard AI — High-Fidelity Diurnal Meteorological Simulation Engine.
+DataMend — High-Fidelity Diurnal Meteorological Simulation Engine.
 
 Generates realistic AWS observations (Temperature, Pressure, Relative Humidity)
 adhering to solar diurnal radiation curves, Magnus-Tetens thermodynamic saturation

@@ -1,6 +1,6 @@
 """
 backend/app/schemas/canonical.py
-SkyGuard AI — Canonical Telemetry Schema & Data Source Status Contract.
+DataMend — Canonical Telemetry Schema & Data Source Status Contract.
 Provides a provider-agnostic normalized interface for all incoming weather telemetry.
 """
 
@@ -33,7 +33,7 @@ class SourceConnectionStatus(str, Enum):
 
 class CanonicalTelemetry(BaseModel):
     """
-    Canonical Telemetry Contract for SkyGuard AI.
+    Canonical Telemetry Contract for DataMend.
     All data sources (Simulator, External API, Physical ESP32) MUST normalize into this schema
     before passing into the 5-Tier ML Quality Control and Anomaly Pipeline.
     """
@@ -68,7 +68,7 @@ class CanonicalTelemetry(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     def to_ml_input_dict(self) -> Dict[str, Any]:
-        """Converts canonical telemetry into dictionary format expected by SkyGuardPipeline."""
+        """Converts canonical telemetry into dictionary format expected by DataMendPipeline."""
         return {
             "station_id": self.station_id,
             "timestamp": self.timestamp,

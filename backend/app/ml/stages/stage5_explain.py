@@ -1,6 +1,6 @@
 """
 backend/app/ml/stage5_explain.py
-SkyGuard AI / DataMend — Stage 5: Explainable AI (XAI) & TreeSHAP Attribution Engine.
+DataMend — Stage 5: Explainable AI (XAI) & TreeSHAP Attribution Engine.
 
 Synthesizes:
 1. akshitbuilds/agent4/explainability.py: Narrative generation, FEATURE_PHRASES, and degradation context.

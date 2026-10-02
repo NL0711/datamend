@@ -26,48 +26,49 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   className = '',
 }) => {
   const getStyles = (): { bg: string; border: string; text: string; dot: string } => {
+    // Light-theme chips: deepened text on tinted backgrounds for contrast.
     switch (variant) {
       case 'nominal':
         return {
-          bg: 'bg-emerald-500/10',
-          border: 'border-emerald-500/30',
-          text: 'text-emerald-400',
-          dot: 'bg-emerald-400',
+          bg: 'bg-emerald-50',
+          border: 'border-emerald-200',
+          text: 'text-emerald-700',
+          dot: 'bg-emerald-500',
         };
       case 'info':
         return {
-          bg: 'bg-sky-500/10',
-          border: 'border-sky-500/30',
-          text: 'text-sky-400',
-          dot: 'bg-sky-400',
+          bg: 'bg-sky-50',
+          border: 'border-sky-200',
+          text: 'text-sky-700',
+          dot: 'bg-sky-500',
         };
       case 'warning':
         return {
-          bg: 'bg-amber-500/10',
-          border: 'border-amber-500/35',
-          text: 'text-amber-400',
-          dot: 'bg-amber-400',
+          bg: 'bg-amber-50',
+          border: 'border-amber-200',
+          text: 'text-amber-700',
+          dot: 'bg-amber-500',
         };
       case 'critical':
         return {
-          bg: 'bg-rose-500/15',
-          border: 'border-rose-500/40',
-          text: 'text-rose-400',
-          dot: 'bg-rose-400',
+          bg: 'bg-rose-50',
+          border: 'border-rose-200',
+          text: 'text-rose-700',
+          dot: 'bg-rose-500',
         };
       case 'extremeMet':
         return {
-          bg: 'bg-cyan-500/15',
-          border: 'border-cyan-500/40',
-          text: 'text-cyan-300',
-          dot: 'bg-cyan-400',
+          bg: 'bg-cyan-50',
+          border: 'border-cyan-200',
+          text: 'text-cyan-700',
+          dot: 'bg-cyan-500',
         };
       case 'neutral':
       default:
         return {
-          bg: 'bg-slate-800/60',
-          border: 'border-slate-700/60',
-          text: 'text-slate-300',
+          bg: 'bg-slate-100',
+          border: 'border-slate-200',
+          text: 'text-slate-600',
           dot: 'bg-slate-400',
         };
     }

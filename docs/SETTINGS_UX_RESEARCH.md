@@ -1,7 +1,7 @@
-# SKYGUARD AI — SETTINGS & CONFIGURATION CENTER UX RESEARCH
+# DATAMEND AI — SETTINGS & CONFIGURATION CENTER UX RESEARCH
 
 **Author:** Senior Product Designer & Full-Stack Systems Architect  
-**Project:** SkyGuard AI — WMO-No. 8 Automatic Weather Station Quality Control System  
+**Project:** DataMend — WMO-No. 8 Automatic Weather Station Quality Control System  
 **Date:** August 2026  
 **Status:** Research Complete • Design Direction Approved
 
@@ -11,7 +11,7 @@
 
 To design an industrial-grade configuration experience for meteorological operations, we analyzed best-in-class operational, scientific, and enterprise interfaces:
 
-| Platform | Configuration Pattern | Location & Status Presentation | Key Takeaway for SkyGuard AI |
+| Platform | Configuration Pattern | Location & Status Presentation | Key Takeaway for DataMend |
 | :--- | :--- | :--- | :--- |
 | **NASA Open MCT** | Slide-out telemetry drawer; contextual time conductor in persistent bar. | Provenance chips in top header; explicit channel status (Nominal, Stale, Loss-of-Signal). | Move all telemetry feed controls into a slide-out drawer; keep main viewport dedicated to high-density graphs. |
 | **NOAA AWIPS-II / WCT** | Dedicated configuration dialog; menu bar access to synoptic feeds and data sources. | Station IDs (`KORD`, `EGLL`) and WMO station blocks displayed in compact status bar. | Synoptic city/station selection should be cleanly accessible without taking 250px of canvas space. |
@@ -36,7 +36,7 @@ In real meteorological networks (e.g. Vaisala HydroMet, Campbell Scientific Camp
 
 ---
 
-## 3. Interaction Patterns Adopted for SkyGuard AI
+## 3. Interaction Patterns Adopted for DataMend
 
 ### 1. Global Header Integration
 - A top-right `⚙ System Configuration` trigger button paired with an active status chip (`Open-Meteo • New Delhi • LIVE • 12s ago`).

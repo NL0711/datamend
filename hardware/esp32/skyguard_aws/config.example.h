@@ -1,6 +1,6 @@
 /**
  * hardware/esp32/skyguard_aws/config.example.h
- * SkyGuard AI — ESP32 + BME280 AWS Station Configuration Template.
+ * DataMend — ESP32 + BME280 AWS Station Configuration Template.
  * Copy this file to "config.h" and insert your local Wi-Fi and MQTT credentials.
  * DO NOT commit "config.h" with secrets to Git.
  */

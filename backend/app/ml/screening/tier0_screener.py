@@ -1,6 +1,6 @@
 """
 backend/app/ml/tier0_screener.py
-SkyGuard AI / DataMend — In-Memory Tier 0 Deterministic Screening Module.
+DataMend — In-Memory Tier 0 Deterministic Screening Module.
 
 Executes sub-millisecond physical plausibility and integrity validation at the ingestion boundary:
 1. Physical allowable range verification (WMO-No. 8 boundaries).

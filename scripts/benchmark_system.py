@@ -1,6 +1,6 @@
 """
 scripts/benchmark_system.py
-SkyGuard AI — Empirical Performance & Latency Benchmark.
+DataMend — Empirical Performance & Latency Benchmark.
 Measures actual end-to-end ML inference latency, DB write latency, API latency, and calculates percentiles (Mean, Median, P95, P99, Max).
 """
 
@@ -10,13 +10,13 @@ import asyncio
 import numpy as np
 from datetime import datetime, timezone
 
-from backend.app.ml.pipeline import SkyGuardPipeline
+from backend.app.ml.pipeline import DataMendPipeline
 from backend.app.schemas.canonical import CanonicalTelemetry, DataSourceType
 
 
 def benchmark_ml_pipeline(n_iterations: int = 200):
     print(f"\n[1/3] Benchmarking 5-Tier ML Pipeline ({n_iterations} iterations)...")
-    pipeline = SkyGuardPipeline()
+    pipeline = DataMendPipeline()
     pipeline.reset_station("BENCH-001")
 
     latencies_ms = []
@@ -102,7 +102,7 @@ def benchmark_canonical_normalization(n_iterations: int = 1000):
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("SkyGuard AI — Performance & Latency Benchmark Suite")
+    print("DataMend — Performance & Latency Benchmark Suite")
     print("=" * 60)
     ml_results = benchmark_ml_pipeline(200)
     norm_results = benchmark_canonical_normalization(1000)

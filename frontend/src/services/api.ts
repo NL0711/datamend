@@ -1,5 +1,5 @@
 /**
- * SkyGuard AI — Typed REST API Service Client.
+ * DataMend — Typed REST API Service Client.
  */
 
 import {

@@ -1,5 +1,5 @@
 """
-SkyGuard AI — Empirical Stress Harness for Multi-Duration Benchmark Scenarios.
+DataMend — Empirical Stress Harness for Multi-Duration Benchmark Scenarios.
 
 Verifies that MultiStationNetworkScenario, SingleFaultScenario, WeatherFrontScenario,
 HealthDegradationScenario, CleanBaselineScenario, and MultiFaultStressScenario execute

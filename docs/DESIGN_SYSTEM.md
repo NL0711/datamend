@@ -1,6 +1,6 @@
-# SKYGUARD AI — PRODUCTION DESIGN SYSTEM SPECIFICATION
+# DATAMEND AI — PRODUCTION DESIGN SYSTEM SPECIFICATION
 
-**System Name:** SkyGuard Scientific Operations Design System (SG-SODS)  
+**System Name:** DataMend Scientific Operations Design System (SG-SODS)  
 **Target Archetype:** Mission-Critical Meteorological Observability & Industrial IoT Quality Control  
 **Visual Identity:** Precision • Restraint • High Legibility • Scientific Credibility • Zero-Gimmick Engineering
 
@@ -75,7 +75,7 @@
 ### 4.1 Global Application Shell
 ```
 +---------------------------------------------------------------------------------------+
-| [LOGO] SkyGuard AI | Meteorological QC Platform   [STATUS HUD: WS LIVE • 3 SOURCES]  |
+| [LOGO] DataMend | Meteorological QC Platform   [STATUS HUD: WS LIVE • 3 SOURCES]  |
 +---------------------------------------------------------------------------------------+
 | [Overview] [Live Monitoring] [Alert Center] [Sensor Health] [Event Detail] ...       |
 +---------------------------------------------------------------------------------------+

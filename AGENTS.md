@@ -1,12 +1,12 @@
-# SKYGUARD AI — AGENT INSTRUCTIONS
+# DATAMEND AI — AGENT INSTRUCTIONS
 
 ## 1. PROJECT IDENTITY
 
 Project Name:
-SkyGuard AI
+DataMend
 
 Full Name:
-SkyGuard AI — Intelligent Real-Time Anomaly Detection and Sensor Health System for Automatic Weather Stations
+DataMend — Intelligent Real-Time Anomaly Detection and Sensor Health System for Automatic Weather Stations
 
 Project Type:
 AI/ML + Real-Time Data Processing + Explainable AI + Sensor Health + Dashboard + Optional Edge AI
@@ -127,7 +127,7 @@ Existing approaches already include:
 - sensor fault classification
 - imputation
 
-Therefore, SkyGuard's differentiation should focus on integrating these capabilities into a unified system.
+Therefore, DataMend's differentiation should focus on integrating these capabilities into a unified system.
 
 Target differentiation:
 
@@ -808,7 +808,7 @@ At the end of every phase:
 
 # 27. DEFINITION OF DONE
 
-SkyGuard is complete only when:
+DataMend is complete only when:
 
 - historical data can be loaded
 - data is validated

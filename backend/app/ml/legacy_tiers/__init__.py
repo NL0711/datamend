@@ -9,16 +9,16 @@ Retained for backward compatibility with initial prototype test harnesses:
 - tier5_explain: Prototype TreeSHAP wrapper
 - tier5_health: Prototype sensor health index
 - fusion: Legacy score fusion engine
-- pipeline: Legacy monolithic SkyGuardPipeline
+- pipeline: Legacy monolithic DataMendPipeline
 - preprocessor: Legacy tabular data preprocessor
 """
 
 from backend.app.ml.legacy_tiers.tier1_qc import Tier1QC, Tier1QCResult
-from backend.app.ml.legacy_tiers.pipeline import SkyGuardPipeline, InferenceResult
+from backend.app.ml.legacy_tiers.pipeline import DataMendPipeline, InferenceResult
 
 __all__ = [
     "Tier1QC",
     "Tier1QCResult",
-    "SkyGuardPipeline",
+    "DataMendPipeline",
     "InferenceResult",
 ]
