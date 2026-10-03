@@ -232,13 +232,13 @@ export function DataExplorerView({ selectedStationId, onSelectStation }: DataExp
                     </td>
                     <td className="py-2.5 text-sky-600 font-bold">{obs.station_id}</td>
                     <td className="py-2.5 text-slate-900 font-bold">
-                      {obs.temperature !== undefined ? obs.temperature.toFixed(2) : '--'}
+                      {obs.temperature != null ? obs.temperature.toFixed(2) : '--'}
                     </td>
                     <td className="py-2.5 text-slate-700">
-                      {obs.pressure !== undefined ? obs.pressure.toFixed(1) : '--'}
+                      {obs.pressure != null ? obs.pressure.toFixed(1) : '--'}
                     </td>
                     <td className="py-2.5 text-slate-700">
-                      {obs.humidity !== undefined ? obs.humidity.toFixed(1) : '--'}
+                      {obs.humidity != null ? obs.humidity.toFixed(1) : '--'}
                     </td>
                     <td className="py-2.5 text-right">
                       <StatusBadge
