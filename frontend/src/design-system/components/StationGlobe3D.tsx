@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { Station } from '../../types';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 interface StationGlobe3DProps {
   stations: Station[];
@@ -57,19 +56,19 @@ export const StationGlobe3D: React.FC<StationGlobe3DProps> = ({
   const currentRotationRef = useRef<{ x: number; y: number }>({ x: 0.32, y: 1.4 });
 
   /**
-   * Calibrated WGS84 Geodetic to 3D Cartesian Conversion:
-   * Aligns with the 135° azimuthal baseline of the earth-globe-atlas mesh geometry.
+   * Standard WGS84 Geodetic to 3D Cartesian Conversion for an
+   * equirectangular-textured THREE.SphereGeometry (north pole = +Y).
+   * Same convention as the earth_map.jpg texture: prime meridian faces
+   * +X/-Z per the sphere UV layout, so pins sit on their true continents.
    * Latitude: [-90, +90] -> Y axis [-1, +1]
-   * Longitude: [-180, +180] -> XZ Plane with 135° prime-meridian offset
    */
   const latLonToVector3 = useCallback((lat: number, lon: number, radius: number): THREE.Vector3 => {
-    const phi = lat * (Math.PI / 180);
-    const theta = (135 - lon) * (Math.PI / 180);
-    
-    const y = radius * Math.sin(phi);
-    const rHoriz = radius * Math.cos(phi);
-    const x = rHoriz * Math.cos(theta);
-    const z = rHoriz * Math.sin(theta);
+    const phi = (90 - lat) * (Math.PI / 180);
+    const theta = (lon + 180) * (Math.PI / 180);
+
+    const x = -radius * Math.sin(phi) * Math.cos(theta);
+    const y = radius * Math.cos(phi);
+    const z = radius * Math.sin(phi) * Math.sin(theta);
     return new THREE.Vector3(x, y, z);
   }, []);
 
@@ -268,30 +267,50 @@ export const StationGlobe3D: React.FC<StationGlobe3DProps> = ({
     const atmosphereMesh = new THREE.Mesh(atmosphereGeo, atmosphereMat);
     globeGroup.add(atmosphereMesh);
 
-    // Fallback Textured Baseline Sphere
+    // Textured WGS84 baseline sphere (equirectangular earth_map.jpg).
+    // NOTE: the legacy 63 MB earth-globe.glb is intentionally NOT loaded:
+    // its single "Depth Map" mesh is a terrain heightfield (Y in [0, 1],
+    // not a sphere), so it rendered an inverted, continent-less dome that
+    // hid this correctly-oriented surface and its pins.
     const textureLoader = new THREE.TextureLoader();
-    const fallbackGeo = new THREE.SphereGeometry(1.0, 48, 48);
-    const fallbackMat = new THREE.MeshStandardMaterial({
+    const globeGeo = new THREE.SphereGeometry(1.0, 48, 48);
+    const globeMat = new THREE.MeshStandardMaterial({
       color: 0x1e3a5f,
       roughness: 0.8,
       metalness: 0.1,
     });
-    
+
+    textureLoader.load(
+      '/assets/earth/earth_bump.jpg',
+      (bump) => {
+        if (isDestroyed) return;
+        globeMat.bumpMap = bump;
+        globeMat.bumpScale = 0.8;
+        globeMat.needsUpdate = true;
+      },
+      undefined,
+      () => { /* bump is decorative; globe works without it */ }
+    );
+
     textureLoader.load(
       '/assets/earth/earth_map.jpg',
       (tex) => {
-        fallbackMat.map = tex;
-        fallbackMat.color.setHex(0xffffff);
-        fallbackMat.needsUpdate = true;
+        if (isDestroyed) return;
+        globeMat.map = tex;
+        globeMat.color.setHex(0xffffff);
+        globeMat.needsUpdate = true;
+        setModelStatus('loaded');
       },
       undefined,
       () => {
-        fallbackMat.color.setHex(0x162b4d);
+        if (isDestroyed) return;
+        globeMat.color.setHex(0x162b4d);
+        setModelStatus('fallback');
       }
     );
 
-    const fallbackMesh = new THREE.Mesh(fallbackGeo, fallbackMat);
-    globeGroup.add(fallbackMesh);
+    const globeMesh = new THREE.Mesh(globeGeo, globeMat);
+    globeGroup.add(globeMesh);
 
     // Dynamic Station Pins Group
     const pinsGroup = new THREE.Group();
@@ -305,54 +324,6 @@ export const StationGlobe3D: React.FC<StationGlobe3DProps> = ({
 
     // Initial Data Sync
     updatePinsAndArcs();
-
-    // 7. Load User's Actual 3D Mesh (earth-globe-atlas / earth-globe.glb)
-    const gltfLoader = new GLTFLoader();
-    gltfLoader.load(
-      '/assets/earth/earth-globe.glb',
-      (gltf: any) => {
-        if (isDestroyed) return;
-        const loadedModel = gltf.scene;
-
-        // Auto-scale calibration to ensure R=1.0 for the model
-        const box = new THREE.Box3().setFromObject(loadedModel);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        const maxDim = Math.max(size.x, size.y, size.z);
-        if (maxDim > 0) {
-          const scaleFactor = 2.0 / maxDim; // 2.0 diameter -> R = 1.0
-          loadedModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
-          
-          // Re-center model at origin
-          const newBox = new THREE.Box3().setFromObject(loadedModel);
-          const center = new THREE.Vector3();
-          newBox.getCenter(center);
-          loadedModel.position.sub(center);
-        }
-
-        // Configure PBR materials for crisp contrast
-        loadedModel.traverse((child: any) => {
-          if (child.isMesh && child.material) {
-            child.material.side = THREE.DoubleSide;
-            child.material.roughness = 0.75;
-            child.material.metalness = 0.1;
-            child.material.needsUpdate = true;
-          }
-        });
-
-        // Hide fallback baseline and display loaded physical mesh
-        fallbackMesh.visible = false;
-        globeGroup.add(loadedModel);
-        setModelStatus('loaded');
-      },
-      undefined,
-      (err: any) => {
-        console.warn('GLB load note (using baseline):', err);
-        if (!isDestroyed) {
-          setModelStatus('fallback');
-        }
-      }
-    );
 
     // 8. User Interaction Listeners
     const handleMouseDown = (e: MouseEvent) => {
@@ -652,7 +623,7 @@ export const StationGlobe3D: React.FC<StationGlobe3DProps> = ({
           <span className="flex items-center gap-1">
             <span>Mesh:</span>
             {modelStatus === 'loaded' ? (
-              <span className="text-emerald-600 font-bold flex items-center gap-1"> EarthGlobe Atlas (Calibrated WGS84)</span>
+              <span className="text-emerald-600 font-bold flex items-center gap-1"> WGS84 Globe (Textured)</span>
             ) : modelStatus === 'loading' ? (
               <span className="text-sky-600 font-semibold">Calibrating Projection...</span>
             ) : (
