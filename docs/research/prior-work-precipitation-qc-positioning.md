@@ -92,3 +92,30 @@
 | 4. Federated data-quality assessment for sensors / IoT | Partly: Navaz et al. 2023 FDQP (clinical data, synthetic errors); Valente Neto et al. 2025 (image data); FedDQ IoT not confirmed | Medium (FDQP); low (FedDQ, IEEE Access sensor scope) |
 | 5. 2025 heavy-rainfall QC with minute-level and remote-sensing context | Candidate only: Sun et al. 2025, Remote Sensing, DOI 10.3390/rs17243976 (publisher 403; snippets only). Confirmed 2025 paper does not match (Osrodka et al. 2025, AMT) | Low (candidate, UNVERIFIED) |
 | 6. Gauge QC with synthetic/injected faults, and with operational or expert labels | Expert/human labels: Villalobos-Herrera et al. 2022 (QJRMS); Sha et al. 2021. Synthetic injection: Bayesian streaming QC and co-kriging papers (UNVERIFIED snippets) | High (expert labels); low (synthetic injection); no match for both combined |
+
+## Corrections and related-work notes (project owner's reading, 2026-11-16)
+
+**Sha et al. (2021)**, "Deep-learning-based precipitation observation quality control", J. Atmos. Oceanic Technol. 38:1075-1091, doi:10.1175/JTECH-D-20-0081.1. Facts below were checked against the paper by the project owner (2026-11-16), not by the agent.
+
+- **Network:** 80 BC Hydro gauge stations in British Columbia, Canada. Not China.
+- **Labels:** raw values compared with BC Hydro's human-QC'd values; a value is "bad" if the two differ by more than 1/7200 mm/h. Human QC used neighbouring stations, the RDPA gridded analysis, snow pillows, and meteorologists when in doubt.
+- **Data and split:** 30-minute resampled rates, 2016-2017. Train on 2016; validation is 15-day windows in Feb/Apr/Jun/Oct 2017; test is the rest of 2017 (interleaved within one year).
+- **Base rate:** 2,429,047 samples; 81.2% have a raw value of zero and 99.8% of those are good; among nonzero raw values 28.3% are bad; overall bad rate about 5.5% (about 134k of 2.43M).
+- **Headline results:** AUC 0.927 and type I/II error below 15% are on a **balanced** test subset (6,700 bad / 6,700 good) at threshold 0.5. Not comparable with this project's roughly 1% fault prevalence and fixed false-alarm budgets.
+- **Model input:** their CNN replaces the centre 2x2 grid points with the raw station value, so the model sees the target. This project's spatial component excludes the target cell and everything within 2 cells. **Our spatial component is not a replication of theirs.**
+- **Resolution:** coarser inputs (30-38 km) beat 10 km; RF25 (about 27 km) is in their best-performing range.
+- **Data access:** acknowledgments say BC Hydro and ECCC provided the data; there is no public data-availability statement.
+- **Label quality:** the authors state human labels are imperfect and some CNN/human disagreements cannot be resolved. This supports this project's separate "ambiguous" group.
+
+**How this project differs from Sha et al. (2021)**
+- Splits here are year-blocked (train 1951-2012, validation 2013-2017, test 2018-2023) with whole regions held out behind a 6-cell buffer. That is stricter than their within-year interleaved split.
+- The spatial component here never sees the target; theirs does. Not a replication.
+- Prevalence and operating points differ (about 1% with fixed false-alarm budgets, versus a balanced subset at threshold 0.5), so numbers are not comparable.
+
+**Yu et al. (2025)**, "Rainy: Unlocking Satellite Calibration for Deep Learning in Precipitation", arXiv:2504.10776. Checked by the project owner (2026-11-16), not by the agent. **Verdict: not a QC label source. No QC flags - exclude.**
+
+- Pairs IMERG-Late with CMA's CMPA analysis and stations over China, 2015-2017. Tasks are calibration, rain/no-rain, intensity classes, forecasting and downscaling. No good/bad flags.
+- CMPA ingests the same gauges used as "truth", so it is not independent (the same circularity as RF25 built from IMD gauges).
+- Internal problems noted: Taper Loss weights are computed at reliable stations where the distance is about 0, so the weighting is unclear; hourly R2 is 0.5311 in Table 4 but 0.3736 in the ablation text; no train/test split is described; unresolved "Table ??" references.
+- Do not cite it for QC claims. At most, cite it as a satellite-gauge calibration dataset for China.
+

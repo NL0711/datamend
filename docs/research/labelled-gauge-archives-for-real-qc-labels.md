@@ -51,4 +51,27 @@ Scope: daily precipitation only. Each claim cites the URL that was opened. "UNVE
 | NOAA HPD | UNVERIFIED | UNVERIFIED | UNVERIFIED | None | Unverified, hourly |
 | Sha et al. 2021 | Human labels, BC Canada, 2016–2017; producer unstated | UNVERIFIED | UNVERIFIED | Gridded precip inputs (not an archive) | Not China; labels availability unknown |
 
-> **Note added 2026-11-16 (from the project owner):** BC Hydro / Sha et al. (2021) is a precedent, not a candidate source. Status: labels exist, access unconfirmed. Those labels are hourly gauge data with a reported bad-value share of roughly 30%, unlike this project's daily gridded benchmark at about 1% of cell-days.
+## Corrections from the project owner's reading (2026-11-16)
+
+**BC Hydro status:** labels exist (raw vs human-QC'd pairs), public access unconfirmed. A precedent, not a usable source.
+
+**Search criterion:** prefer archives that publish both the raw and the quality-controlled series, since that is how real labels are built.
+
+**Sha et al. (2021)**, "Deep-learning-based precipitation observation quality control", J. Atmos. Oceanic Technol. 38:1075-1091, doi:10.1175/JTECH-D-20-0081.1. Facts below were checked against the paper by the project owner (2026-11-16), not by the agent.
+
+- **Network:** 80 BC Hydro gauge stations in British Columbia, Canada. Not China.
+- **Labels:** raw values compared with BC Hydro's human-QC'd values; a value is "bad" if the two differ by more than 1/7200 mm/h. Human QC used neighbouring stations, the RDPA gridded analysis, snow pillows, and meteorologists when in doubt.
+- **Data and split:** 30-minute resampled rates, 2016-2017. Train on 2016; validation is 15-day windows in Feb/Apr/Jun/Oct 2017; test is the rest of 2017 (interleaved within one year).
+- **Base rate:** 2,429,047 samples; 81.2% have a raw value of zero and 99.8% of those are good; among nonzero raw values 28.3% are bad; overall bad rate about 5.5% (about 134k of 2.43M).
+- **Headline results:** AUC 0.927 and type I/II error below 15% are on a **balanced** test subset (6,700 bad / 6,700 good) at threshold 0.5. Not comparable with this project's roughly 1% fault prevalence and fixed false-alarm budgets.
+- **Model input:** their CNN replaces the centre 2x2 grid points with the raw station value, so the model sees the target. This project's spatial component excludes the target cell and everything within 2 cells. **Our spatial component is not a replication of theirs.**
+- **Resolution:** coarser inputs (30-38 km) beat 10 km; RF25 (about 27 km) is in their best-performing range.
+- **Data access:** acknowledgments say BC Hydro and ECCC provided the data; there is no public data-availability statement.
+- **Label quality:** the authors state human labels are imperfect and some CNN/human disagreements cannot be resolved. This supports this project's separate "ambiguous" group.
+
+**Yu et al. (2025)**, "Rainy: Unlocking Satellite Calibration for Deep Learning in Precipitation", arXiv:2504.10776. Checked by the project owner (2026-11-16), not by the agent. **Verdict: not a QC label source. No QC flags - exclude.**
+
+- Pairs IMERG-Late with CMA's CMPA analysis and stations over China, 2015-2017. Tasks are calibration, rain/no-rain, intensity classes, forecasting and downscaling. No good/bad flags.
+- CMPA ingests the same gauges used as "truth", so it is not independent (the same circularity as RF25 built from IMD gauges).
+- Internal problems noted: Taper Loss weights are computed at reliable stations where the distance is about 0, so the weighting is unclear; hourly R2 is 0.5311 in Table 4 but 0.3736 in the ablation text; no train/test split is described; unresolved "Table ??" references.
+- Do not cite it for QC claims. At most, cite it as a satellite-gauge calibration dataset for China.
