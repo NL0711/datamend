@@ -67,3 +67,9 @@ backend/app/skyguard.db*
 # OS
 .DS_Store
 Thumbs.db
+
+# ml-service training: raw data and run outputs stay out of git (upload data as a Kaggle dataset)
+ml-service/data/
+ml-service/artifacts/
+ml-service/*.nc
+*.nc
