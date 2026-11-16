@@ -36,14 +36,20 @@ The earlier models that read a whole window in both directions and see the targe
 _Avoid_: baseline (reserved for the simple untrained or minimal references)
 
 **Label tier**:
-The provenance of an error label: expert-reviewed, historical flag, or synthetic fault. Results are never pooled across tiers.
+The provenance of an error label: expert-reviewed, historical flag, or synthetic fault. Results are never pooled across tiers. Only the synthetic tier is populated; the other two are reported as not available.
 
 **Synthetic fault**:
 A deliberate, recorded corruption of clean data, used as a controlled stress test.
 _Avoid_: anomaly (also means a genuine climate extreme), injected anomaly
 
 **Protected extreme**:
-A genuine heavy-rain event that must not be flagged; the rate at which it is flagged is reported.
+A connected group of cells all above their own heavy-rain threshold on the same day in uncorrupted data. It is plausible but unverified, is never corrupted, and the rate at which it is flagged is reported.
+
+**Ambiguous extreme**:
+A heavy value at a single cell with ordinary rain around it. It is neither protected nor an error; its flag rate is reported on its own.
+
+**Case study**:
+A documented, named heavy-rain event inside the test years, shown individually.
 
 ## Example dialogue
 
