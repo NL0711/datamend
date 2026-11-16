@@ -50,3 +50,5 @@ Scope: daily precipitation only. Each claim cites the URL that was opened. "UNVE
 | USCRN (US) | No: no precip flags, flagged values set missing | No | Not stated | None | Reject |
 | NOAA HPD | UNVERIFIED | UNVERIFIED | UNVERIFIED | None | Unverified, hourly |
 | Sha et al. 2021 | Human labels, BC Canada, 2016–2017; producer unstated | UNVERIFIED | UNVERIFIED | Gridded precip inputs (not an archive) | Not China; labels availability unknown |
+
+> **Note added 2026-11-16 (from the project owner):** BC Hydro / Sha et al. (2021) is a precedent, not a candidate source. Status: labels exist, access unconfirmed. Those labels are hourly gauge data with a reported bad-value share of roughly 30%, unlike this project's daily gridded benchmark at about 1% of cell-days.
