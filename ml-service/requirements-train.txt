@@ -8,3 +8,4 @@ scikit-learn
 xarray
 netCDF4
 pytest
+matplotlib
