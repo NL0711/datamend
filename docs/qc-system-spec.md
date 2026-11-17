@@ -17,7 +17,7 @@ Map: [Wayfinder map: precipitation QC system spec](https://github.com/NL0711/dat
 
 ## 2. Data
 
-- **RF25** (IMD, Pai et al. 2014): files `RF25_ind<year>_rfp25.nc`, 1901-2023, one per year. Variable `RAINFALL`, dimensions `(TIME, LATITUDE, LONGITUDE)`, mm, fill value -999 read as missing. Grid 129 x 135 at 0.25 degree; 4,964 land cells.
+- **RF25** (IMD, Pai et al. 2014): files `RF25_ind<year>_rfp25.nc`, 1901-2025, one per year (123 files to 2023 plus 2024 and 2025). Variable `RAINFALL`, dimensions `(TIME, LATITUDE, LONGITUDE)`, mm, fill value -999 read as missing. Grid 129 x 135 at 0.25 degree; 4,964 land cells.
 - RF25 is an inverse-distance interpolation of 1-4 gauges within 1.5 degrees and carries **no QC flags**.
 - The data-contract check asserts exactly these facts and fails loudly otherwise ([Kaggle schema](https://github.com/NL0711/datamend/issues/13)).
 - Data and output locations follow `ml-service/training/paths.py`.
@@ -25,7 +25,7 @@ Map: [Wayfinder map: precipitation QC system spec](https://github.com/NL0711/dat
 ## 3. Clients and splits
 
 - **Clients:** 8 geographic blobs from k-means on latitude/longitude over the land mask. The seed is fixed and the map is saved and hashed ([clients](https://github.com/NL0711/datamend/issues/14)).
-- **Time:** train 1951-2012, validation 2013-2017, test 2018-2023 ([splits](https://github.com/NL0711/datamend/issues/16)).
+- **Time:** train 1951-2012, validation 2013-2017, test 2018-2025 ([splits](https://github.com/NL0711/datamend/issues/16); the test end year was moved from 2023 to 2025 by the owner after RF25 2024 and 2025 became available, before any real run).
 - **Unseen clients:** client 3 (northeast, wettest) and client 6 (west-central) are held out, behind a 6-cell buffer.
 - In federated and local-only training, other clients' cells are masked as missing.
 - **Normalization:** per client, fitted on that client's training years only. It is `log1p(mm) / scale` and must not clip or truncate heavy rain.
@@ -132,7 +132,7 @@ Priority order; drop from the bottom if time runs out, and list anything dropped
 | `kaggle` | two T4 GPUs | two experiments at once, one per GPU; resume across session limits |
 | `single-gpu` | one GPU on one machine | experiments one after another |
 
-- Budget caps, devices, parallel experiment count, batch size and worker count are config values. The same experiment config gives the same splits, seeds and benchmark under either profile.
+- Budget caps, devices, batch size and worker count are config values. Enforced today: the per-run time cap (`max_hours_per_run`). Not read by the code: `max_hours_total`, `session_hours` and `parallel_experiments`; the Kaggle notebook uses both GPUs by starting one process per GPU with `--shard I/N`. The same experiment config gives the same splits, seeds and benchmark under either profile.
 - No run has been timed. Caps are set from a timing run on the target machine. Provisional only: 2 GPU-hours per training run, 60 GPU-hours in total.
 
 ## 11. Runs and configuration
@@ -179,7 +179,7 @@ Each gate ends with its tests passing and a short report of what ran. A later ga
 | 4. Centralized components | Spatial and temporal components and the plain GRU baseline, three seeds. | Hidden-disc and causality tests pass; validation scores saved. | built, tested (tiny CPU run) |
 | 5. Fusion and budgets | Fit the fusion, draw validation curves, choose and log the two budgets. | Budgets logged in the protocol **before any test-year scoring**. | built, tested; budgets NOT CHOSEN |
 | 6. Federated variants | Main variant, then the comparisons, in priority order. | Masking and aggregation tests pass; same benchmark hash in every run. | built, tested (tiny CPU run) |
-| 7. Test scoring | Score 2018-2023 once with fixed budgets; unseen clients; 1901-1950 stress test; offline comparison. | All headline metrics with intervals; anything not run is listed. | built, tested; offline comparison and fusion on federated components built and tested on tiny runs, not run on real data |
+| 7. Test scoring | Score 2018-2025 once with fixed budgets; unseen clients; 1901-1950 stress test; offline comparison. | All headline metrics with intervals; anything not run is listed. | built, tested; offline comparison and fusion on federated components built and tested on tiny runs, not run on real data |
 | 8. UK study | Download, grid, label, train, score. | Subset and circularity caveats printed with the table. | built, tested on generated files; reader UNVERIFIED on real MIDAS |
 | 9. Paper outputs | Tables, figures, methods outline, claim check. | Each claim checked against its table. | built, tested on a tiny run; no real tables |
 

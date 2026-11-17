@@ -5,7 +5,7 @@ Data for the rainfall QC work. Only this file and the empty folder markers are i
 ```
 ml-service/data/
 ├── rf25/                        RF25 gridded daily rainfall for India (main study)
-│   └── RF25_ind<year>_rfp25.nc    one file per year, 1901-2023 (123 files, about 5.9 GB)
+│   └── RF25_ind<year>_rfp25.nc    one file per year, 1901-2025 (125 files, about 6.2 GB)
 ├── midas-open/                  UK Met Office MIDAS Open (separate real-label study)
 │   └── uk-daily-rain-obs/
 │       └── dataset-version-202607/

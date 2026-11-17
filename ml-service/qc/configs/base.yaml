@@ -23,7 +23,7 @@ grid:
 years:            # inclusive ranges
   train: [1951, 2012]
   val: [2013, 2017]
-  test: [2018, 2023]
+  test: [2018, 2025]   # RF25 2024 and 2025 are in the data; extended from 2023 before any real run
   fusion_fit: [2013, 2015]   # fusion is fitted on synthetic faults in these validation years
   threshold: [2016, 2017]    # false-alarm budgets are set on clean data from these validation years
   stress: [1901, 1950]       # evaluation-only stress test; never used for fitting

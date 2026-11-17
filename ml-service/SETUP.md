@@ -39,7 +39,7 @@ The folder layout is described in [`data/README.md`](data/README.md). The empty 
 
 ### RF25 (India, main study)
 
-Copy the 123 files `RF25_ind<year>_rfp25.nc` (1901-2023, about 5.9 GB) into `data/rf25/`.
+Copy the 125 files `RF25_ind<year>_rfp25.nc` (1901-2025, about 6.2 GB; the configured years need all of them) into `data/rf25/`.
 
 The files are not downloaded by any script here. Copy them from a machine that has them, or attach them as a Kaggle dataset (see section 6).
 

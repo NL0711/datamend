@@ -1,11 +1,12 @@
-# Kaggle notebook with two T4 GPUs. Two experiments run at once, one per GPU.
+# Kaggle notebook with two T4 GPUs. The qc commands themselves use only the first device (compute.devices[0]). The Kaggle notebook
+# gets both GPUs busy by starting one process per GPU (python -m qc train --shard I/N --set compute.devices=[cuda:I]).
 compute:
   devices: [cuda:0, cuda:1]
-  parallel_experiments: 2
+  parallel_experiments: 2  # NOT read by the code: parallelism is done by the notebook with --shard (see above)
   num_workers: 2
   batch_size: 4096
   amp: true
   # Budget caps. Provisional until the timing run has been done on Kaggle.
-  max_hours_per_run: 2.0
-  max_hours_total: 60.0
-  session_hours: 11.0      # stop and checkpoint before the session limit (check the limit on your account); resume next session
+  max_hours_per_run: 2.0   # enforced: the time cap of one training run (one component and seed); the run stops cleanly and resumes
+  max_hours_total: 60.0    # NOT enforced yet: nothing reads it
+  session_hours: 11.0      # NOT enforced yet: nothing reads it. Checkpoints are written every year, so a lost session resumes from the last one
