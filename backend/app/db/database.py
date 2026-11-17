@@ -5,9 +5,11 @@ DataMend — Async Database Engine, Sessionmaker, and Lifecycle Management.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import random
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Awaitable, Callable, TypeVar
 from contextlib import asynccontextmanager
 
 from sqlalchemy import event
@@ -46,7 +48,9 @@ engine_kwargs = {
 }
 
 if is_sqlite:
-    engine_kwargs["connect_args"] = {"check_same_thread": False}
+    # timeout (s) is honored by aiosqlite for the underlying sqlite3 connect;
+    # combined with WAL + busy_timeout this greatly reduces "database is locked".
+    engine_kwargs["connect_args"] = {"check_same_thread": False, "timeout": 30.0}
 else:
     engine_kwargs["pool_size"] = 10
     engine_kwargs["max_overflow"] = 20
@@ -67,7 +71,7 @@ if is_sqlite:
                 cursor.execute("PRAGMA journal_mode=WAL;")
                 cursor.execute("PRAGMA synchronous=NORMAL;")
                 cursor.execute("PRAGMA foreign_keys=ON;")
-                cursor.execute("PRAGMA busy_timeout=10000;")
+                cursor.execute("PRAGMA busy_timeout=30000;")
             finally:
                 cursor.close()
 
@@ -80,6 +84,52 @@ async_session_factory = async_sessionmaker(
     autoflush=False,
     expire_on_commit=False,
 )
+
+
+# Global write-serialization lock for SQLite.
+# SQLite allows a single writer; without this, concurrent telemetry ticks
+# (NOAA 1.5s loop across stations) + API + batch flushes collide with
+# "sqlite3.OperationalError: database is locked".
+db_write_lock = asyncio.Lock()
+
+T = TypeVar("T")
+
+
+def _is_retryable_db_error(exc: BaseException) -> bool:
+    msg = str(exc).lower()
+    return "database is locked" in msg or "database table is locked" in msg or "database is busy" in msg
+
+
+async def run_with_db_retry(
+    fn: Callable[[], Awaitable[T]],
+    max_retries: int = 6,
+    base_delay: float = 0.05,
+) -> T:
+    """Executes an async DB closure, retrying whole-transaction on SQLite lock contention.
+
+    Retries the *entire* closure (not just commit) so a rolled-back transaction
+    is rebuilt from scratch instead of reusing a poisoned session.
+    """
+    last_exc: BaseException | None = None
+    for attempt in range(max_retries + 1):
+        try:
+            return await fn()
+        except Exception as exc:  # noqa: BLE001
+            if _is_retryable_db_error(exc) and attempt < max_retries:
+                last_exc = exc
+                delay = base_delay * (2**attempt) + random.uniform(0, 0.05)
+                logger.warning(
+                    "SQLite write contention (attempt %d/%d), retrying in %.2fs: %s",
+                    attempt + 1,
+                    max_retries + 1,
+                    delay,
+                    exc,
+                )
+                await asyncio.sleep(delay)
+                continue
+            raise
+    assert last_exc is not None
+    raise last_exc
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
