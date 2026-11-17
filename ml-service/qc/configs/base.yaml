@@ -115,3 +115,19 @@ evaluation:
 # Set offline.artifacts.<arch> to an artifact folder. None ship with the repo; unset ones are listed as NOT RUN.
 offline:
   artifacts: {}
+
+# ERA5 daily temperature, humidity, pressure (qc/era5.py, qc/multivar.py). A separate path from the rainfall pipeline.
+era5:
+  hourly_dir: null           # monthly files from scripts/download_era5.py; null = $DATAMEND_DATA_DIR/era5 or ml-service/data/era5
+  dir: null                  # daily ERA5D_<year>.nc files; null = <paths.work>/era5_daily
+  label_offset_hours: 0      # day alignment. 0 = UTC calendar day. 21 = 24 h ending 03:00 UTC (08:30 IST). IMD alignment UNVERIFIED
+  stats:                     # daily statistics kept per variable. Which ones to use is OPEN
+    TEMP: [mean, min, max]
+    RH: [mean, min, max]
+    PRES: [mean, min, max]
+  years:                     # roles for the multivariate validation (disjoint)
+    train: [1951, 2012]
+    fusion_fit: [2013, 2015]
+    threshold: [2016, 2017]
+  fault_rate: 0.01
+  budgets: [0.5, 1, 2, 5]

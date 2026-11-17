@@ -77,3 +77,8 @@ ml-service/data/**
 ml-service/artifacts/
 ml-service/*.nc
 *.nc
+
+# ERA5 downloads
+*.grib
+*.grib.part
+*.idx

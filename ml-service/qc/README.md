@@ -35,3 +35,7 @@ Timing run and compute caps: spec section 14, gate 0. UK study: `qc/configs/uk.y
 ## Layout
 
 `config`, `paths`, `grid`, `clients`, `splits`, `stats`, `prepare` (data and splits); `faults`, `extremes`, `benchmark` (benchmark); `baselines`, `untrained`, `neighbours`, `scoring`, `metrics`, `evaluate` (untrained scores, metrics); `models`, `batches`, `trained` (components); `fusion`, `fusion_eval` (fusion, budgets); `federated`; `testscore`; `uk/` (MIDAS study); `paper` (tables, figures, claims); `tests/` (one file per gate).
+
+## ERA5 temperature, humidity, pressure (extension)
+
+Spec section 16. `python -m qc era5-daily --years 2016 2016` (reads `era5_single_<year>_<month>.grib` from `era5.hourly_dir`, writes `ERA5D_<year>.nc`), then `python -m qc era5-validate` (synthetic-fault validation of the per-variable and consistency experts). Day alignment (`era5.label_offset_hours`) is UNVERIFIED against IMD; learned heads, footprint faults, genuine-extreme protection and federated variants are NOT IMPLEMENTED; ERA5 is modelled, not measured, so faults are easier to detect than real ones.

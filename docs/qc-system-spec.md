@@ -196,3 +196,25 @@ Each gate ends with its tests passing and a short report of what ran. A later ga
 - Research notes extracted by subagents are unverified.
 - The UK counts cover a Devon subset only.
 - Held-out client numbers (3 and 6) refer to the saved client map; they are meaningless if the map is regenerated with a different seed.
+
+## 16. ERA5 temperature, humidity and pressure (extension)
+
+Separate from the rainfall system: `qc/era5.py` (data) and `qc/multivar.py` (experts, faults, validation). The rainfall pipeline stays rain-specific.
+
+**Built and tested (small generated data, plus one real month: the January 2016 GRIB sample reads, converts and passes range checks):**
+- **Reader:** monthly GRIB (`cfgrib` + `eccodes`, now in `requirements-train.txt`) or NetCDF from `scripts/download_era5.py`; the grid is checked against the RF25 contract and latitude is flipped to ascending.
+- **Daily conversion:** per hour, temperature in degC, pressure in hPa, relative humidity from temperature and dewpoint (Magnus over water, constants 17.625 and 243.04, clipped to 100 %); then daily mean, min and max. Output `ERA5D_<year>.nc`. A day is complete only if every cell has 24 hourly values; otherwise it is NaN and listed, never filled.
+- **Day alignment:** `era5.label_offset_hours`. 0 = UTC calendar day (default). 21 = the 24 h ending 03:00 UTC (08:30 IST) labelled with the end date. **UNVERIFIED** which one matches the IMD rain day; the offset is recorded in every output file. The hour-boundary convention at the day edge is also unchecked.
+- **Which daily statistics to keep:** OPEN (`era5.stats`); all three are kept by default.
+- **Volume:** one pass per year over its monthly files; no hourly data is rewritten. Hourly files are deleted only with `--delete-hourly`, only after the year came out complete, and only the months no later year needs. Default: keep everything.
+- **Per-variable experts:** anomaly, step, physical-bound and stuck-run rules per variable, each divided by a reference from clean threshold years (bound and stuck use fixed references 1 and 2).
+- **Cross-variable consistency expert:** Mahalanobis distance of the day's standardized anomaly vector (covariance fitted on training years, pooled over cells).
+- **Fusion:** logistic regression on the four expert scores, fitted on synthetic faults of the fusion-fit years.
+- **Synthetic faults for continuous variables:** spike, stuck, drift, amplitude error; single cell, one variable at a time; clipped to the physical range.
+- **Validation:** `python -m qc era5-daily --years A B`, then `python -m qc era5-validate`: recall per variable and fault kind at false-alarm budgets, written with the limits below.
+
+**NOT IMPLEMENTED:** learned per-variable heads (Gaussian or neural spatial and temporal experts), spatial footprint faults, protection of genuine extremes (heat waves, cold spells: the rain "protected extreme" idea has no counterpart yet), federated variants, a frozen hashed benchmark, a single-use test pass, and the paper tables and figures for these variables. The rainfall splits, client map and models are not reused.
+
+**Honest limit:** ERA5 is a reanalysis (modelled), not a measurement. It is smooth and spatially consistent by construction, so injected faults are easier to detect than real sensor faults. Every ERA5 number must carry this.
+
+**Volume:** one month of the three hourly variables is about 78 MB, so 1951-2023 would be about 68 GB if the hourly files were kept. Use `--delete-hourly` once a year is verified.

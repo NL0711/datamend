@@ -241,6 +241,42 @@ def cmd_set_budgets(cfg, args) -> int:
     return 0
 
 
+def _era5_dirs(cfg):
+    import os
+    d = cfg.to_dict()["era5"]
+    hourly = Path(d["hourly_dir"]) if d.get("hourly_dir") else         (Path(os.environ["DATAMEND_DATA_DIR"]) if os.environ.get("DATAMEND_DATA_DIR") else paths.ML_SERVICE / "data") / "era5"
+    daily = Path(d["dir"]) if d.get("dir") else paths.work_dir(cfg) / "era5_daily"
+    return d, hourly, daily
+
+
+def cmd_era5_daily(cfg, args) -> int:
+    from qc.era5 import Alignment, build_daily
+
+    d, hourly, daily = _era5_dirs(cfg)
+    reports = build_daily(hourly, daily, list(range(args.years[0], args.years[1] + 1)), cfg.grid,
+                          Alignment(float(d["label_offset_hours"])), d["stats"], args.delete_hourly, args.overwrite)
+    for r in reports:
+        print(f"{r.year}: {r.complete_days}/{r.days} complete days; missing monthly files: {r.files_missing or 'none'}")
+    print(f"day alignment: label_offset_hours={d['label_offset_hours']} (IMD alignment is UNVERIFIED); output {daily}")
+    return 0
+
+
+def cmd_era5_validate(cfg, args) -> int:
+    from qc.era5 import Era5Daily
+    from qc.multivar import run_validation
+
+    d, _, daily = _era5_dirs(cfg)
+    yrs = {k: list(range(v[0], v[1] + 1)) for k, v in d["years"].items()}
+    out = paths.out_dir(cfg) / str(cfg.name) / "era5" / "validation.json"
+    res = run_validation(Era5Daily(daily), yrs, float(d["fault_rate"]), int(cfg.seed), [float(b) for b in d["budgets"]], out)
+    for b, row in res["scores"]["fusion"].items():
+        rec = {n: {k: (None if v is None else round(v, 3)) for k, v in r.items()} for n, r in row["recall"].items()}
+        print(f"fusion at budget {b}: false alerts/1000 clean {row['false_per_1000_clean']:.2f}; recall {rec}")
+    print("LIMITS:"); [print(" -", x) for x in res["limits"]]
+    print(f"wrote {out}")
+    return 0
+
+
 def cmd_paper(cfg, args) -> int:
     from qc import paper
     from qc.prepare import load_prepared
@@ -261,7 +297,7 @@ def cmd_paper(cfg, args) -> int:
 
 
 COMMANDS = {"uk-grid": cmd_uk_grid, "uk-labels": cmd_uk_labels, "test-score": cmd_test_score, "federated": cmd_federated, "fusion": cmd_fusion, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
-            "train": cmd_train, "paper": cmd_paper}
+            "train": cmd_train, "paper": cmd_paper, "era5-daily": cmd_era5_daily, "era5-validate": cmd_era5_validate}
 
 
 def main(argv=None) -> int:
@@ -294,6 +330,10 @@ def main(argv=None) -> int:
     ts.add_argument("--seeds", nargs="+", type=int, default=None, help="default: train.seeds from the config")
     ts.add_argument("--splits", nargs="+", default=["test", "stress"], choices=["test", "stress"])
     ts.add_argument("--resume", action="store_true", help="continue an unfinished test pass; a finished one cannot be repeated")
+    ed = sub.choices["era5-daily"]
+    ed.add_argument("--years", type=int, nargs=2, required=True, metavar=("FIRST", "LAST"))
+    ed.add_argument("--delete-hourly", action="store_true", help="delete hourly files no later year needs, after a complete year (default: keep)")
+    ed.add_argument("--overwrite", action="store_true")
     pp = sub.choices["paper"]
     pp.add_argument("--out", default=None, help="default: <run folder>/paper")
     pp.add_argument("--seed", type=int, default=0, help="seed whose alerts and validation curves are drawn")
