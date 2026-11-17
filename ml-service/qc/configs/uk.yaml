@@ -1,0 +1,57 @@
+# UK MIDAS Open real-label study (spec section 12). A separate study: its own work folder, its own table.
+# Run order (from ml-service/):
+#   python scripts/download_midas.py --county devon cornwall somerset dorset --mode full
+#   python -m qc uk-grid     --config qc/configs/uk.yaml     # grid the stations: corrected series + labels
+#   python -m qc client-map  --config qc/configs/uk.yaml
+#   python -m qc prepare     --config qc/configs/uk.yaml
+#   python -m qc uk-labels   --config qc/configs/uk.yaml     # frozen real-label benchmark; prints its hash
+# then untrained / train / fusion as for India, with --config qc/configs/uk.yaml.
+# Choices the spec left open are marked OPEN: confirm or change them before the real run.
+extends: base.yaml
+name: uk
+
+paths:
+  rf25: data/uk/grid          # the gridded UK series, written in the RF25 file format (never falls back to India)
+  work: data/uk
+  out: artifacts/qc
+
+uk:
+  midas_dir: data/midas-open/uk-daily-rain-obs/dataset-version-202607
+  counties: [devon, cornwall, somerset, dorset]   # OPEN: Devon plus adjoining counties
+  search_radius_km: 35        # OPEN
+  max_gauges: 4               # same as RF25 (1-4 gauges)
+  power: 2.0
+
+grid:                         # 0.1 degree over 49.9-51.3 N, -5.8 to -2.0 E. OPEN: the UK grid spacing
+  n_lat: 15
+  n_lon: 39
+  lat0: 49.9
+  lon0: -5.8
+  step: 0.1
+  land_cells: null            # known only after the build
+
+years:
+  train: [1975, 2012]
+  val: [2013, 2017]
+  test: [2018, 2023]
+  fusion_fit: [2013, 2015]
+  threshold: [2016, 2017]
+  stress: null                # the UK study has no stress split
+
+clients:
+  k: 4                        # OPEN: a small region, so few clients
+  seed: 0
+  heldout: [4]
+  buffer_cells: 3
+  map: data/uk/client_map.json
+
+components:
+  hidden_radius: 1
+  slow: {windows: [30, 90], ring_outer: 3}
+  neighbour_baseline: {radius: 3}
+  spatial: {radius: 3, width: 32, dense: 128}
+
+benchmark:
+  name: uk_real
+  expected_hash: null
+  allow_unpinned: true        # set expected_hash to the printed value after `uk-labels`, then set this to false

@@ -5,6 +5,7 @@
   python -m qc benchmark  --config qc/configs/base.yaml      # frozen validation, test and stress fault benchmark
   python -m qc untrained  --config qc/configs/base.yaml      # rules, slow component, neighbour baseline: scores and metrics
   python -m qc federated  --variants fedpers fedavg fedft local   # gate 6: federated simulation, seeds from train.seeds
+  python -m qc uk-grid / uk-labels --config qc/configs/uk.yaml   # UK MIDAS real-label study (see that file for the run order)
   python -m qc test-score --config qc/configs/base.yaml      # gate 7: the single test-year pass (needs fixed budgets), stress, report
   python -m qc fusion     --config qc/configs/base.yaml      # gate 5: fit the fusion, validation curves, comparison
   python -m qc set-budgets --final 1 --review 5              # gate 5: fix the two budgets (once, before test scoring)
@@ -16,6 +17,7 @@ Common options: ``--profile kaggle|single-gpu`` and ``--set key.sub=value`` (rep
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 import json
 import logging
 import sys
@@ -34,18 +36,19 @@ def cmd_client_map(cfg, args) -> int:
     from qc.clients import build_client_map, map_hash, save_client_map
     from training.data import RainfallArchive
 
-    if paths.CLIENT_MAP_ASSET.is_file() and not args.force:
-        print(f"{paths.CLIENT_MAP_ASSET} already exists. It is the fixed client map; use --force only to replace it "
+    target = Path(cfg.clients.map) if cfg.clients.get("map") else paths.CLIENT_MAP_ASSET
+    if target.is_file() and not args.force:
+        print(f"{target} already exists. It is the fixed client map; use --force only to replace it "
               "(that invalidates every split, benchmark and result made with the old one).")
         return 1
     arch = RainfallArchive(paths.rf25_dir(cfg))
     cm = build_client_map(arch.land_mask, arch.lat, arch.lon, cfg.clients.k, cfg.clients.seed)
-    save_client_map(paths.CLIENT_MAP_ASSET, cm, cfg.clients.k, cfg.clients.seed)
+    save_client_map(target, cm, cfg.clients.k, cfg.clients.seed)
     rows, cols = np.nonzero(cm)
     for c in range(1, cfg.clients.k + 1):
         sel = cm[rows, cols] == c
         print(f"client {c}: {int(sel.sum()):4d} cells, centre {arch.lat[rows[sel]].mean():5.1f}N {arch.lon[cols[sel]].mean():5.1f}E")
-    print(f"wrote {paths.CLIENT_MAP_ASSET} (hash {map_hash(cm)})")
+    print(f"wrote {target} (hash {map_hash(cm)})")
     return 0
 
 
@@ -83,7 +86,8 @@ def print_table(results, budget: float, group: str = "seen") -> None:
     from qc.evaluate import summary_row
 
     fmt = lambda v, pct=False: "   -  " if v is None else (f"{100 * v:5.1f}%" if pct else f"{v:6.3f}")
-    print(f"group: {group} | budget: {budget} false alerts per 1,000 clean cell-days | labels: synthetic faults")
+    tier = next((r.get("label_tier") for r in results if r.get("label_tier")), "synthetic faults")
+    print(f"group: {group} | budget: {budget} false alerts per 1,000 clean cell-days | labels: {tier}")
     print(f"{'component':28s} {'PR-AUC':>7s} {'recall':>7s} {'ev.rec':>7s} {'FA/1000':>8s} {'prot.flag':>9s} {'IoU':>6s}")
     for res in results:
         if group not in res["groups"]:
@@ -91,6 +95,8 @@ def print_table(results, budget: float, group: str = "seen") -> None:
         r = summary_row(res, group, budget)
         print(f"{r['component']:28s} {fmt(r['pr_auc']):>7s} {fmt(r['recall'], True):>7s} {fmt(r['event_recall'], True):>7s} "
               f"{fmt(r['false_per_1000']):>8s} {fmt(r['protected_flagged'], True):>9s} {fmt(r['iou']):>6s}")
+    for c in sorted({c for res in results for c in res.get("caveats", [])}):
+        print("CAVEAT:", c)
 
 
 def cmd_untrained(cfg, args) -> int:
@@ -199,6 +205,27 @@ def cmd_test_score(cfg, args) -> int:
     return 0
 
 
+def cmd_uk_grid(cfg, args) -> int:
+    from qc.uk.build import build_grid
+
+    s = build_grid(cfg)
+    print(json.dumps(s, indent=1))
+    print("SUBSET:", s["subset_note"])
+    return 0
+
+
+def cmd_uk_labels(cfg, args) -> int:
+    from qc.prepare import load_prepared
+    from qc.uk.build import build_uk_benchmark
+
+    m = build_uk_benchmark(load_prepared(cfg), args.overwrite)
+    print(json.dumps(m["summary"], indent=1))
+    for c in m["caveats"]:
+        print("CAVEAT:", c)
+    print(f"benchmark hash: {m['hash']}  (set benchmark.expected_hash to this value, then benchmark.allow_unpinned=false)")
+    return 0
+
+
 def cmd_set_budgets(cfg, args) -> int:
     from qc.fusion_eval import set_budgets
     from qc.prepare import load_prepared
@@ -211,7 +238,7 @@ def cmd_set_budgets(cfg, args) -> int:
     return 0
 
 
-COMMANDS = {"test-score": cmd_test_score, "federated": cmd_federated, "fusion": cmd_fusion, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
+COMMANDS = {"uk-grid": cmd_uk_grid, "uk-labels": cmd_uk_labels, "test-score": cmd_test_score, "federated": cmd_federated, "fusion": cmd_fusion, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
             "train": cmd_train}
 
 
@@ -240,6 +267,7 @@ def main(argv=None) -> int:
     t.add_argument("--time-cap-hours", type=float, default=None)
     t.add_argument("--overwrite", action="store_true", help="recompute saved scores")
     t.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
+    sub.choices["uk-labels"].add_argument("--overwrite", action="store_true")
     ts = sub.choices["test-score"]
     ts.add_argument("--seeds", nargs="+", type=int, default=None, help="default: train.seeds from the config")
     ts.add_argument("--splits", nargs="+", default=["test", "stress"], choices=["test", "stress"])

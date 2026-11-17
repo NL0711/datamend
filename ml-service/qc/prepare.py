@@ -42,7 +42,7 @@ class Prepared:
 def all_years(cfg: Config):
     ys = set()
     for k in ("train", "val", "test", "stress"):
-        ys |= set(year_range(cfg.years[k]))
+        ys |= set(year_range(cfg.years[k])) if cfg.years.get(k) else set()
     return sorted(ys)
 
 

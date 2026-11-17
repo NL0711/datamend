@@ -82,7 +82,7 @@ class Split:
             sel = self.client_map == c
             counts[str(c)] = {ROLE_NAMES[r]: int((self.roles[sel] == r).sum()) for r in (TRAIN, BUFFER, HELDOUT)}
         doc = {
-            "years": {k: [v[0], v[-1]] for k, v in self.years.items()},
+            "years": {k: ([v[0], v[-1]] if v else []) for k, v in self.years.items()},
             "heldout_clients": list(self.heldout), "train_clients": self.train_clients,
             "buffer_cells": int(self.buffer_cells),
             "client_map_hash": map_hash(self.client_map),
@@ -94,7 +94,7 @@ class Split:
 
 
 def make_split(cfg, client_map: np.ndarray) -> Split:
-    years = {k: year_range(cfg.years[k]) for k in ("train", "val", "test", "fusion_fit", "threshold", "stress")}
+    years = {k: (year_range(cfg.years[k]) if cfg.years.get(k) else []) for k in ("train", "val", "test", "fusion_fit", "threshold", "stress")}
     split = Split(client_map, cell_roles(client_map, cfg.clients.heldout, cfg.clients.buffer_cells),
                   [int(c) for c in cfg.clients.heldout], int(cfg.clients.buffer_cells), years)
     audit_split(split)

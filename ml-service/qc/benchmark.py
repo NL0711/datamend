@@ -16,7 +16,7 @@ import logging
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 
@@ -40,6 +40,7 @@ class BenchYear:
     faults: FaultSet
     extremes: Extremes
     unseen_setting: np.ndarray   # (n_events,) bool
+    excluded: Optional[np.ndarray] = None   # (T, n_land) bool: changed but not labelled (UK study); in neither fault nor clean group
 
     @property
     def corrupted(self) -> np.ndarray:
@@ -169,4 +170,5 @@ def load_bench_year(p: Prepared, split: str, year: int) -> BenchYear:
     clean = p.store.year(year)
     if clean.shape != shape:
         raise ContractError(f"benchmark file for {year} has shape {shape}, data has {clean.shape}")
-    return BenchYear(int(year), split, clean, fs, ex, z["unseen_setting"])
+    excluded = unpack(z["excluded"]) if "excluded" in z.files else None
+    return BenchYear(int(year), split, clean, fs, ex, z["unseen_setting"], excluded)

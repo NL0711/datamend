@@ -77,7 +77,8 @@ def evaluate_component(p: Prepared, component: str, split: str, budgets: Sequenc
     thr = thresholds_for(p, component, budgets, store)
     years = load_years(p, component, split, years, store)
     out: Dict = {"component": component, "split": split, "years": [years[0].bench.year, years[-1].bench.year],
-                 "label_tier": "synthetic faults", "benchmark_hash": bench["hash"],
+                 "label_tier": bench.get("tier_short", "synthetic faults"), "benchmark_hash": bench["hash"],
+                 "caveats": bench.get("caveats", []),
                  "thresholds_from": {"years": p.split.years["threshold"], "cells": "training clients, clean data"},
                  "groups": {}}
     for g in groups:

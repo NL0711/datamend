@@ -73,6 +73,8 @@ def pr_auc(years: List[YearScores], cells: np.ndarray) -> Optional[float]:
     for y in years:
         lab = y.bench.faults.labels()
         keep = np.isfinite(y.score) & ~y.bench.extremes.ambiguous & cells[None, :]
+        if y.bench.excluded is not None:
+            keep &= ~y.bench.excluded
         ys.append(lab[keep])
         ss.append(y.score[keep])
     yv, sv = np.concatenate(ys), np.concatenate(ss)
@@ -97,6 +99,8 @@ def evaluate(years: List[YearScores], cells: np.ndarray, threshold: float, grid:
         lab = f.labels()
         # ---- clean cell-days and false alerts
         clean = scored & ~lab & ~b.extremes.protected & ~b.extremes.ambiguous
+        if b.excluded is not None:
+            clean &= ~b.excluded
         per_year.append((int(clean.sum()), int((flag & clean).sum())))
         # ---- faults, per event
         sel = scored[f.t, f.cell]
