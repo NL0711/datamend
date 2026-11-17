@@ -15,7 +15,7 @@ Rainfall anomaly-detection training and evaluation on RF25 gridded daily rainfal
 | `detectors/` | wrappers that load a trained artifact and score a series (`rainfall_ae`, ensemble) |
 | `evaluation/` | rainfall metrics (point-wise, event, affiliation, breakdowns) |
 | `validation/` | cross-scale consistency rules (daily against monthly or pentad totals) |
-| `scripts/` | `kaggle_train.sh`, `download_midas.py` |
+| `scripts/` | `kaggle_train.sh`, `download_midas.py`, `download_era5.py` |
 | `notebooks/` | `datamend_training.ipynb` for Kaggle |
 | `data/` | data folder skeleton; the data itself is not in git |
 
@@ -184,6 +184,8 @@ The repo contains code only; the RF25 `.nc` files (~870 MB) and run outputs are 
 3. Any `python -m training ...` command from the CLI docstring works unchanged from `ml-service/`.
 
 ## Downloading UK MIDAS Open daily rainfall
+
+`scripts/download_era5.py` downloads ERA5 hourly 2 m temperature, dewpoint and surface pressure for the RF25 box, one file per month (needs a free CDS key in `CDSAPI_KEY`; see `.env.example`; one month is about 78 MB). `python -m qc era5-daily` turns them into daily fields; see `docs/qc-system-spec.md` section 16 and `qc/README.md`.
 
 `scripts/download_midas.py` downloads the UK Met Office MIDAS Open daily rainfall files from the CEDA archive (used by the separate real-label study; see `docs/qc-system-spec.md`, section 12). It uses the standard library only.
 
