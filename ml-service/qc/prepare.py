@@ -7,6 +7,7 @@ through ``load_prepared`` and refuse to run if the manifest does not match the c
 from __future__ import annotations
 
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict
@@ -16,7 +17,7 @@ import numpy as np
 from qc import paths
 from qc.clients import load_client_map, map_hash
 from qc.config import Config, year_range
-from qc.grid import ContractError, Grid, SeriesStore, check_contract
+from qc.grid import ContractError, Grid, SeriesStore, check_contract, default_workers
 from qc.runs import read_json, write_json
 from qc.splits import Split, make_split
 from qc.stats import TrainStats, fit_train_stats
@@ -81,7 +82,12 @@ def prepare(cfg: Config, check_data: bool = True) -> Prepared:
     cell_client = store.grid.to_series(cm).astype(np.int8)
     train = split.years["train"]
     log.info("fitting training statistics on %d-%d", train[0], train[-1])
-    by_year = {y: store.year(y) for y in train}
+    workers = default_workers(store.arch._files[train[0]])
+    if workers > 1:                                   # read and cache the training years in parallel
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            by_year = dict(zip(train, pool.map(store.year, train)))
+    else:
+        by_year = {y: store.year(y) for y in train}
     stats = fit_train_stats(by_year, train, split, cell_client, cfg.normalization.wet_mm,
                             cfg.normalization.wet_quantile, cfg.extremes.quantile)
     manifest = split.manifest()

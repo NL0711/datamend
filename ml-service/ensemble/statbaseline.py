@@ -10,6 +10,22 @@ import numpy as np
 from training.sampler import Batch, YearCube
 
 
+def nanquantile0(pool: np.ndarray, q: float) -> np.ndarray:
+    """``np.nanquantile(pool, q, axis=0)``, same numbers, much faster. ``nanquantile`` runs a Python loop over every
+    column; here columns with no NaN go through the vectorized ``np.quantile`` (same method, so identical values) and
+    only the few columns that contain NaN take the slow path."""
+    flat = pool.reshape(pool.shape[0], -1)
+    bad = np.isnan(flat).any(axis=0)
+    if bad.all():
+        return np.nanquantile(pool, q, axis=0)
+    good = np.quantile(flat[:, ~bad], q, axis=0)
+    out = np.empty(flat.shape[1], good.dtype)
+    out[~bad] = good
+    if bad.any():
+        out[bad] = np.nanquantile(flat[:, bad], q, axis=0)
+    return out.reshape(pool.shape[1:])
+
+
 class StatBaseline:
     """bound[d, r, c] = ``q``-quantile of daily rainfall in a +-``half_window`` day window around day d,
     pooled over the *given* years at cell (r, c). The caller must pass only training-year cubes; the
@@ -35,7 +51,7 @@ class StatBaseline:
             pool = np.concatenate(parts, axis=0)
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", RuntimeWarning)
-                vals[i] = np.nanquantile(pool, q, axis=0)
+                vals[i] = nanquantile0(pool, q)
         days = np.arange(366)
         anchor_arr = np.array(anchors)
         hi_idx = np.clip(np.searchsorted(anchor_arr, days), 0, len(anchors) - 1)
