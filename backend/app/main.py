@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.routes import router as api_router
+from backend.app.api.locations import router as locations_router
 from backend.app.api.websocket import router as ws_router
 from backend.app.config import settings
 from backend.app.db.database import close_db, init_db
@@ -29,6 +30,13 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing %s v%s database...", settings.PROJECT_NAME, settings.VERSION)
     await init_db()
     logger.info("Database initialized successfully.")
+    try:
+        from backend.app.db.database import get_db_context
+        from backend.app.locations.service import LocationService
+        async with get_db_context() as session:
+            await LocationService(session).ensure_presets()          # Mumbai, when there are no locations yet (no network needed)
+    except Exception as exc:
+        logger.warning("Locations preset seeding skipped: %s", exc)
 
     # Auto-start configured default data source so telemetry streams immediately upon launch
     from backend.app.sources.manager import data_source_manager
@@ -64,6 +72,7 @@ app.add_middleware(
 
 # Mount REST and WebSocket routers
 app.include_router(api_router)
+app.include_router(locations_router)
 app.include_router(ws_router)
 
 

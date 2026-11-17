@@ -402,3 +402,99 @@ export interface Phase3InferenceResult {
 }
 
 
+
+// ---------------------------------------------------------------------------
+// Locations (grid cells of a place: weather status, weather anomaly, data-QC flag)
+// ---------------------------------------------------------------------------
+
+export interface LocationCellInfo {
+  row: number;
+  col: number;
+  lat: number;
+  lon: number;
+  is_land: boolean | null;
+  client: number | null;
+  held_out: boolean;
+}
+
+export interface LocationItem {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  radius_km: number;
+  preset: boolean;
+  created_at: string;
+  cells: LocationCellInfo[];
+}
+
+export interface VariableAnomaly {
+  value: number | null;
+  normal?: number;
+  sd?: number;
+  z?: number;
+  level: string;
+  direction?: string;
+}
+
+export interface RainAnomaly {
+  value: number | null;
+  level: string;
+  wet_p95?: number | null;
+  wet_p99?: number | null;
+  wet_probability_for_this_time_of_year?: number;
+}
+
+export interface LocationQcFinding {
+  check: string;
+  detail: string;
+  variable?: string;
+}
+
+export interface LocationCellStatus {
+  cell: LocationCellInfo & { id?: number };
+  status: string;
+  grid_point?: { lat: number; lon: number };
+  current?: { time: string; temperature: number; humidity: number; pressure: number; precipitation_1h: number | null } | null;
+  weather_anomaly?: {
+    status: string;
+    reason?: string;
+    date?: string;
+    normals_period?: string;
+    temperature?: VariableAnomaly;
+    humidity?: VariableAnomaly;
+    pressure?: VariableAnomaly;
+    precipitation?: RainAnomaly;
+  };
+  qc?: { method: string; findings: LocationQcFinding[]; neighbour_findings: LocationQcFinding[] };
+  classification?: { label: string; reasons: string[] };
+  model?: { status: string; reason?: string; model?: string; label_tier?: string; scores?: Record<string, number | string> };
+}
+
+export interface LocationStatusResponse {
+  location: { id: number; name: string; latitude: number; longitude: number; radius_km: number; preset: boolean; n_cells: number };
+  as_of: string;
+  stale: boolean;
+  source: { provider: string; kind: string };
+  summary: Record<string, number>;
+  cells: LocationCellStatus[];
+  limitations: string[];
+}
+
+export interface LocationSeriesCell {
+  cell: { row: number; col: number; lat?: number; lon?: number };
+  grid_point?: { lat: number; lon: number };
+  time: string[];
+  temperature: (number | null)[];
+  humidity: (number | null)[];
+  pressure: (number | null)[];
+  precipitation: (number | null)[];
+}
+
+export interface LocationSeriesResponse {
+  location_id: number;
+  as_of: string;
+  stale: boolean;
+  cells: LocationSeriesCell[];
+  normals_today: Record<string, Record<string, { mean: number; sd: number }>>;
+}

@@ -545,3 +545,11 @@ Spec: `docs/qc-system-spec.md` section 14. Status as of 2026-11-17: gates 0-9 bu
 - [ ] Verify the Kerala August 2018 case-study values before citing them
 - [x] ERA5 daily conversion, day-alignment option, per-variable and consistency experts, synthetic-fault validation (spec section 16; tiny data plus one real GRIB month)
 - [ ] ERA5: verify IMD day alignment, decide which daily statistics to keep, footprint faults, genuine-extreme protection, federated variants, frozen benchmark and test pass
+
+---
+
+# LOCATIONS (web app; design in docs/LOCATIONS_DESIGN.md)
+
+- [x] v1: add a place by name or coordinates, map it to 0.25-degree RF25/ERA5 cells (Mumbai preset: 4 cells, held-out region 6), recent hourly values from Open-Meteo, weather anomaly against 1991-2020 normals, rule and statistics data-QC flags with reasons, buddy check across cells, REST API and a Locations tab (tests: tests/test_locations.py, mocked Open-Meteo; one live check for Mumbai)
+- [ ] Trained-model scores per cell (the plug-in exists: data/location_scores/<row>_<col>.json; no scores are generated yet)
+- [ ] Websocket and alert integration (cells are not stations; virtual stations are a v2 option), scheduled batch fetch, station cross-check

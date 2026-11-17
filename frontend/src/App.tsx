@@ -12,6 +12,7 @@ import {
   Compass,
   Sliders,
   Globe,
+  MapPin,
 } from 'lucide-react';
 import { TelemetryStreamClient } from './services/websocket';
 import { InferenceResult } from './types';
@@ -21,6 +22,7 @@ import { AlertCenterView } from './components/AlertCenterView';
 import { SensorHealthView } from './components/SensorHealthView';
 import { EventDetailView } from './components/EventDetailView';
 import { DataExplorerView } from './components/DataExplorerView';
+import { LocationsView } from './components/LocationsView';
 import { AnomalyInjectorUI } from './components/AnomalyInjectorUI';
 import { ExplainabilityViewer } from './components/ExplainabilityViewer';
 import { SettingsCenter } from './settings/SettingsCenter';
@@ -40,7 +42,7 @@ function AppContent() {
   } = useSystemConfiguration();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'live' | 'alerts' | 'health' | 'events' | 'explorer' | 'injector' | 'explainability'
+    'overview' | 'live' | 'alerts' | 'health' | 'events' | 'explorer' | 'injector' | 'explainability' | 'locations'
   >(preferences.defaultView || 'overview');
 
   const [selectedIncidentId, setSelectedIncidentId] = useState<number | null>(null);
@@ -82,6 +84,7 @@ function AppContent() {
         | 'explorer'
         | 'injector'
         | 'explainability'
+        | 'locations'
       )[] = [
         'overview',
         'live',
@@ -91,9 +94,10 @@ function AppContent() {
         'explorer',
         'injector',
         'explainability',
+        'locations',
       ];
       const keyNum = parseInt(e.key, 10);
-      if (keyNum >= 1 && keyNum <= 8) {
+      if (keyNum >= 1 && keyNum <= 9) {
         setActiveTab(tabs[keyNum - 1]);
       }
       if (e.key === 's' || e.key === 'S' || (e.ctrlKey && e.key === ',')) {
@@ -136,6 +140,7 @@ function AppContent() {
     { id: 'explorer', label: 'Data Explorer', icon: Database, short: '6' },
     { id: 'injector', label: 'Anomaly Lab', icon: Zap, short: '7' },
     { id: 'explainability', label: 'XAI Reasoner', icon: Layers, short: '8' },
+    { id: 'locations', label: 'Locations', icon: MapPin, short: '9' },
   ];
 
   const getSourceBadge = () => {
@@ -361,6 +366,8 @@ function AppContent() {
               onNavigateToLive={() => setActiveTab('live')}
             />
           )}
+          {activeTab === 'locations' && <LocationsView />}
+
           {activeTab === 'explainability' && (
             <ExplainabilityViewer
               selectedStationId={selectedStationId}

@@ -17,6 +17,9 @@ import {
   StationHealthSnapshot,
   OperatorFeedbackPayload,
   OperatorFeedbackRecord,
+  LocationItem,
+  LocationStatusResponse,
+  LocationSeriesResponse,
 } from '../types';
 
 export const API_BASE_URL = '/api';
@@ -280,4 +283,36 @@ export async function submitOperatorFeedback(payload: OperatorFeedbackPayload): 
   return handleResponse(res);
 }
 
+// ---------------------------------------------------------------------------
+// Locations
+// ---------------------------------------------------------------------------
 
+export async function fetchLocations(): Promise<{ items: LocationItem[]; total: number }> {
+  return handleResponse(await fetch(`${API_BASE_URL}/locations`));
+}
+
+export async function createLocation(body: {
+  name: string;
+  latitude?: number;
+  longitude?: number;
+  radius_km?: number;
+}): Promise<LocationItem> {
+  const res = await fetch(`${API_BASE_URL}/locations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return handleResponse(res);
+}
+
+export async function deleteLocation(id: number): Promise<{ deleted: number }> {
+  return handleResponse(await fetch(`${API_BASE_URL}/locations/${id}`, { method: 'DELETE' }));
+}
+
+export async function fetchLocationStatus(id: number): Promise<LocationStatusResponse> {
+  return handleResponse(await fetch(`${API_BASE_URL}/locations/${id}/status`));
+}
+
+export async function fetchLocationSeries(id: number, days = 7): Promise<LocationSeriesResponse> {
+  return handleResponse(await fetch(`${API_BASE_URL}/locations/${id}/series?days=${days}`));
+}
