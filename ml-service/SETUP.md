@@ -2,7 +2,7 @@
 
 This covers the rainfall anomaly-detection and QC work in `ml-service/` on branch `ml-training`: Python environment, data, and a check that everything runs. It does not cover the DataMend web app (backend, frontend, hardware); for that see the repository's top-level `README.md`.
 
-**What exists today:** the training package (`python -m training ...`), its tests, the Kaggle notebook and the MIDAS download script. **What does not exist yet:** the QC system described in [`docs/qc-system-spec.md`](../docs/qc-system-spec.md) (`ml-service/qc/`, its configs and `python -m qc run`). Nothing in the spec has been built.
+**What exists today:** the training package (`python -m training ...`), its tests, the Kaggle notebook and the MIDAS download script. **QC system:** built as `ml-service/qc/` (gates 0-9 of [`docs/qc-system-spec.md`](../docs/qc-system-spec.md)) and tested on small synthetic worlds only; it has not been run on real RF25 or MIDAS data. See [`qc/README.md`](qc/README.md). There is no single `python -m qc run`; each step is its own command.
 
 ## 1. Get the code
 

@@ -1,6 +1,6 @@
 # Precipitation QC system: build spec
 
-Status: design locked 2026-11-17. Nothing in this document has been built or run. Each section links the ticket that holds the full decision; where this document and a ticket disagree, the ticket wins and this document is fixed.
+Status: design locked 2026-11-17. Gates 0-9 are built and tested on small synthetic worlds (see section 14). **Nothing has been run on real RF25 or MIDAS data yet**; no real result exists. Each section links the ticket that holds the full decision; where this document and a ticket disagree, the ticket wins and this document is fixed.
 
 Map: [Wayfinder map: precipitation QC system spec](https://github.com/NL0711/datamend/issues/10). Vocabulary: `CONTEXT.md`. Standing evaluation rules: `docs/qc-evaluation-protocol.md`.
 
@@ -170,20 +170,25 @@ Full decision: [paper outputs](https://github.com/NL0711/datamend/issues/29).
 
 Each gate ends with its tests passing and a short report of what ran. A later gate does not start before the earlier one passes.
 
-| gate | work | exit check |
-|---|---|---|
-| 0. Setup | Create `ml-service/qc/`, the config loader and the two compute profiles. (The uncommitted footprint-injector edit in `ml-service/training/` was discarded on 2026-11-17 by the owner's decision; field-level faults replace it.) Run the timing run and set the budget caps. | Existing training tests pass; timing numbers recorded. |
-| 1. Data and splits | Data-contract check, client map, split manifest, per-client normalization, leakage audit. | Contract and leakage tests pass; map and manifest hashed. |
-| 2. Benchmark | Fault library, protected and ambiguous extremes, frozen validation and test files. | Faults reproduce from seed; no protected cell is corrupted; test-only settings absent from training and validation. |
-| 3. Untrained scores and metrics | Rules, slow component, neighbour-average baseline, the metrics module. | Metrics match hand-computed values on a toy field; first validation numbers reported. |
-| 4. Centralized components | Spatial and temporal components and the plain GRU baseline, three seeds. | Hidden-disc and causality tests pass; validation scores saved. |
-| 5. Fusion and budgets | Fit the fusion, draw validation curves, choose and log the two budgets. | Budgets logged in the protocol **before any test-year scoring**. |
-| 6. Federated variants | Main variant, then the comparisons, in priority order. | Masking and aggregation tests pass; same benchmark hash in every run. |
-| 7. Test scoring | Score 2018-2023 once with fixed budgets; unseen clients; 1901-1950 stress test; offline comparison. | All headline metrics with intervals; anything not run is listed. |
-| 8. UK study | Download, grid, label, train, score. | Subset and circularity caveats printed with the table. |
-| 9. Paper outputs | Tables, figures, methods outline, claim check. | Each claim checked against its table. |
+| gate | work | exit check | status |
+|---|---|---|---|
+| 0. Setup | Create `ml-service/qc/`, the config loader and the two compute profiles. (The uncommitted footprint-injector edit in `ml-service/training/` was discarded on 2026-11-17 by the owner's decision; field-level faults replace it.) Run the timing run and set the budget caps. | Existing training tests pass; timing numbers recorded. | built; timing run NOT RUN |
+| 1. Data and splits | Data-contract check, client map, split manifest, per-client normalization, leakage audit. | Contract and leakage tests pass; map and manifest hashed. | built, tested |
+| 2. Benchmark | Fault library, protected and ambiguous extremes, frozen validation and test files. | Faults reproduce from seed; no protected cell is corrupted; test-only settings absent from training and validation. | built, tested |
+| 3. Untrained scores and metrics | Rules, slow component, neighbour-average baseline, the metrics module. | Metrics match hand-computed values on a toy field; first validation numbers reported. | built, tested (toy field) |
+| 4. Centralized components | Spatial and temporal components and the plain GRU baseline, three seeds. | Hidden-disc and causality tests pass; validation scores saved. | built, tested (tiny CPU run) |
+| 5. Fusion and budgets | Fit the fusion, draw validation curves, choose and log the two budgets. | Budgets logged in the protocol **before any test-year scoring**. | built, tested; budgets NOT CHOSEN |
+| 6. Federated variants | Main variant, then the comparisons, in priority order. | Masking and aggregation tests pass; same benchmark hash in every run. | built, tested (tiny CPU run) |
+| 7. Test scoring | Score 2018-2023 once with fixed budgets; unseen clients; 1901-1950 stress test; offline comparison. | All headline metrics with intervals; anything not run is listed. | built, tested; offline comparison NOT IMPLEMENTED, fusion over federated components NOT RUN |
+| 8. UK study | Download, grid, label, train, score. | Subset and circularity caveats printed with the table. | built, tested on generated files; reader UNVERIFIED on real MIDAS |
+| 9. Paper outputs | Tables, figures, methods outline, claim check. | Each claim checked against its table. | built, tested on a tiny run; no real tables |
 
 ## 15. Known gaps at the time of writing
+
+- No gate has been run on real data; every test uses a generated world. The training-machine steps (timing run, three-seed training, budget choice, single test-scoring pass, `python -m qc paper`) are all still to do.
+- Offline comparison: NOT IMPLEMENTED. Fusion over federated components: NOT RUN. Local-only on unseen clients: NOT AVAILABLE.
+- The UK reader is written from the documented layout and untested on real files; counties, grid spacing, search radius and client count are OPEN choices in `configs/uk.yaml`.
+- Paper-check bars (`BARS` in `qc/paper.py`) are the check's own judgement calls.
 
 - The fusion budgets are not chosen.
 - No run has been timed on any machine.

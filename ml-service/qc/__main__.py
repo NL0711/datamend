@@ -9,6 +9,7 @@
   python -m qc test-score --config qc/configs/base.yaml      # gate 7: the single test-year pass (needs fixed budgets), stress, report
   python -m qc fusion     --config qc/configs/base.yaml      # gate 5: fit the fusion, validation curves, comparison
   python -m qc set-budgets --final 1 --review 5              # gate 5: fix the two budgets (once, before test scoring)
+  python -m qc paper      --config qc/configs/base.yaml      # gate 9: tables, figures, claim check from the saved test outputs
   python -m qc train      --config qc/configs/base.yaml --components spatial temporal plain_gru   # gate 4, seeds from train.seeds
 
 Common options: ``--profile kaggle|single-gpu`` and ``--set key.sub=value`` (repeatable).

@@ -1,14 +1,15 @@
 # ml-service
 
-Rainfall anomaly-detection training and evaluation on RF25 gridded daily rainfall (India), and the home of the planned precipitation QC system.
+Rainfall anomaly-detection training and evaluation on RF25 gridded daily rainfall (India), and the home of the precipitation QC system (`qc/`).
 
 - **New machine?** Start with [`SETUP.md`](SETUP.md) (environment, data, checks). Data layout: [`data/README.md`](data/README.md).
-- **What is planned:** [`../docs/qc-system-spec.md`](../docs/qc-system-spec.md). The QC system in that spec (`ml-service/qc/`) is not built yet.
+- **What is planned:** [`../docs/qc-system-spec.md`](../docs/qc-system-spec.md). Gates 0-9 of that spec are built and tested on small synthetic worlds; nothing has been run on real data yet. How to run it: [`qc/README.md`](qc/README.md).
 
 ## What is here
 
 | folder | what it holds |
 | --- | --- |
+| `qc/` | precipitation QC system: contract, splits, benchmark, components, fusion, federated simulation, test scoring, UK study, paper outputs (`python -m qc ...`) |
 | `training/` | models, sampling, fault injection, training loop, CLI (`python -m training ...`) |
 | `ensemble/` | rule and statistical branches, score normalization, label-free fusion |
 | `detectors/` | wrappers that load a trained artifact and score a series (`rainfall_ae`, ensemble) |
