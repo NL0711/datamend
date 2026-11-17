@@ -3,6 +3,8 @@
 
 FastAPI anomaly-detection service using TSDB datasets and trained rainfall anomaly detectors.
 
+**Setting up the rainfall training and QC work on a new machine (environment, data, checks): see [`SETUP.md`](SETUP.md).** Data folder layout: [`data/README.md`](data/README.md).
+
 ## Setup
 
 ```bash

@@ -63,15 +63,20 @@ def read_env_file(path: Path) -> dict[str, str]:
     return out
 
 
-def load_token(env_file: Path | None) -> str:
-    """CEDA_TOKEN from the environment first, then from .env files."""
-    token = os.environ.get("CEDA_TOKEN", "").strip()
-    if not token:
+def setting(name: str, env_file: Path | None) -> str:
+    """A setting from the environment first, then from .env files."""
+    value = os.environ.get(name, "").strip()
+    if not value:
         candidates = [env_file] if env_file else [Path.cwd() / ".env", ML_SERVICE / ".env"]
         for path in candidates:
-            token = read_env_file(path).get("CEDA_TOKEN", "").strip()
-            if token:
+            value = read_env_file(path).get(name, "").strip()
+            if value:
                 break
+    return value
+
+
+def load_token(env_file: Path | None) -> str:
+    token = setting("CEDA_TOKEN", env_file)
     if not token:
         raise DownloadError(
             "No CEDA access token found. Set CEDA_TOKEN in the shell, or copy "
@@ -184,8 +189,8 @@ def plan_county(ceda: Ceda, base: str, county: str, mode: str, workers: int) -> 
     return urls, summary
 
 
-def default_out() -> Path:
-    data_dir = os.environ.get("DATAMEND_DATA_DIR")
+def default_out(env_file: Path | None) -> Path:
+    data_dir = setting("DATAMEND_DATA_DIR", env_file)
     return (Path(data_dir) if data_dir else ML_SERVICE / "data") / "midas-open" / "uk-daily-rain-obs"
 
 
@@ -213,7 +218,7 @@ def main(argv: list[str] | None = None) -> int:
             p.error("--county is required unless --check is given")
 
         base = f"{ARCHIVE}dataset-version-{a.version}/"
-        out = (a.out or default_out()) / f"dataset-version-{a.version}"
+        out = (a.out or default_out(a.env_file)) / f"dataset-version-{a.version}"
         urls = [base + "00README_catalogue_and_licence.txt"]
         summaries = []
         for county in a.county:

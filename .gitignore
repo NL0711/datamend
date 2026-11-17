@@ -69,7 +69,11 @@ backend/app/skyguard.db*
 Thumbs.db
 
 # ml-service training: raw data and run outputs stay out of git (upload data as a Kaggle dataset)
-ml-service/data/
+# Only the folder skeleton (README.md and .gitkeep files) under ml-service/data is tracked.
+ml-service/data/**
+!ml-service/data/**/
+!ml-service/data/README.md
+!ml-service/data/**/.gitkeep
 ml-service/artifacts/
 ml-service/*.nc
 *.nc
