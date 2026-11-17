@@ -202,6 +202,25 @@ def cmd_ablate(cfg, args) -> int:
     return 0
 
 
+def cmd_calibrate(cfg, args) -> int:
+    from qc.calibration import check_budget, format_rows
+    from qc.prepare import load_prepared
+    from qc.runs import RunDir, write_json
+
+    p = load_prepared(cfg)
+    names = args.components or [f"fusion_boosted_s{args.seed}", f"fusion_logistic_s{args.seed}"]
+    out = RunDir(paths.out_dir(cfg) / str(cfg.name), "calibration")
+    out.start(cfg, int(cfg.seed), {"split_manifest_hash": p.manifest["hash"], "components": names})
+    for n in names:
+        rows = check_budget(p, n, args.budget)
+        print(f"\n{n}: realised false alerts per 1,000 clean cell-days at budget {args.budget}, thresholds set on one threshold year and "
+              "checked on the other (validation data only; no formal guarantee, cell-days are dependent):")
+        print(format_rows(rows))
+        write_json(out.file(f"budget_check_{n}.json"), rows)
+    out.mark_done("calibration")
+    return 0
+
+
 def cmd_federated(cfg, args) -> int:
     from qc.federated import run_federated
     from qc.prepare import load_prepared
@@ -345,7 +364,7 @@ def cmd_paper(cfg, args) -> int:
     return 0
 
 
-COMMANDS = {"uk-grid": cmd_uk_grid, "uk-labels": cmd_uk_labels, "test-score": cmd_test_score, "federated": cmd_federated, "fusion": cmd_fusion, "ablate": cmd_ablate, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
+COMMANDS = {"uk-grid": cmd_uk_grid, "uk-labels": cmd_uk_labels, "test-score": cmd_test_score, "federated": cmd_federated, "fusion": cmd_fusion, "ablate": cmd_ablate, "calibrate": cmd_calibrate, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
             "train": cmd_train, "paper": cmd_paper, "era5-daily": cmd_era5_daily, "era5-inventory": cmd_era5_inventory, "era5-validate": cmd_era5_validate}
 
 
@@ -407,6 +426,10 @@ def main(argv=None) -> int:
     ab = sub.choices["ablate"]
     ab.add_argument("--seed", type=int, default=0)
     ab.add_argument("--budget", type=float, default=1.0, help="false alerts per 1,000 clean cell-days the components are compared at")
+    cb = sub.choices["calibrate"]
+    cb.add_argument("--seed", type=int, default=0)
+    cb.add_argument("--budget", type=float, default=1.0)
+    cb.add_argument("--components", nargs="+", default=None, help="score names (default: the seed's boosted and logistic fusion)")
     b = sub.choices["set-budgets"]
     b.add_argument("--final", type=float, required=True, help="false alerts per 1,000 clean cell-days for the final flag")
     b.add_argument("--review", type=float, required=True, help="the same for the review flag (larger)")

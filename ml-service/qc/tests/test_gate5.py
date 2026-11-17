@@ -166,3 +166,16 @@ def test_ablation_uses_a_separate_store_and_reports_missing_components(gp, fit):
     missing = [r for r in rows if r.get("variant") is None]
     assert len(missing) == 1 and "plain_gru" in missing[0]["note"] and missing[0]["note"].startswith("NOT RUN")
     assert "NOT RUN" in format_rows(rows)
+
+
+def test_budget_check_reports_every_client_and_rule_out_of_sample(gp, fit):
+    from qc.calibration import check_budget, format_rows
+    rows = check_budget(gp, "fusion_logistic_s0", 5.0, n_boot=20)
+    assert {r["rule"] for r in rows} == {"global", "per_client"}
+    assert {int(c) for c in gp.split.heldout} <= {r["client"] for r in rows}                  # held-out clients are reported too
+    held = [r for r in rows if r["role"] == "held-out"]
+    for g, pc in zip([r for r in held if r["rule"] == "global"], [r for r in held if r["rule"] == "per_client"]):
+        assert g["false_per_1000"] == pc["false_per_1000"]                                    # no calibration data: same global threshold
+    for r in rows:
+        assert r["false_per_1000"] is None or (r["false_per_1000"] >= 0 and r["ci95"][0] <= r["ci95"][1])
+    assert "global" in format_rows(rows)
