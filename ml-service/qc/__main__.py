@@ -3,6 +3,7 @@
   python -m qc client-map --config qc/configs/base.yaml      # once: create qc/assets/client_map.json
   python -m qc prepare    --config qc/configs/base.yaml      # data contract, splits, training statistics
   python -m qc benchmark  --config qc/configs/base.yaml      # frozen validation, test and stress fault benchmark
+  python -m qc untrained  --config qc/configs/base.yaml      # rules, slow component, neighbour baseline: scores and metrics
 
 Common options: ``--profile kaggle|single-gpu`` and ``--set key.sub=value`` (repeatable).
 """
@@ -73,7 +74,34 @@ def cmd_benchmark(cfg, args) -> int:
     return 0
 
 
-COMMANDS = {"client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark}
+def print_table(results, budget: float, group: str = "seen") -> None:
+    from qc.evaluate import summary_row
+
+    fmt = lambda v, pct=False: "   -  " if v is None else (f"{100 * v:5.1f}%" if pct else f"{v:6.3f}")
+    print(f"group: {group} | budget: {budget} false alerts per 1,000 clean cell-days | labels: synthetic faults")
+    print(f"{'component':28s} {'PR-AUC':>7s} {'recall':>7s} {'ev.rec':>7s} {'FA/1000':>8s} {'prot.flag':>9s} {'IoU':>6s}")
+    for res in results:
+        if group not in res["groups"]:
+            continue
+        r = summary_row(res, group, budget)
+        print(f"{r['component']:28s} {fmt(r['pr_auc']):>7s} {fmt(r['recall'], True):>7s} {fmt(r['event_recall'], True):>7s} "
+              f"{fmt(r['false_per_1000']):>8s} {fmt(r['protected_flagged'], True):>9s} {fmt(r['iou']):>6s}")
+
+
+def cmd_untrained(cfg, args) -> int:
+    from qc.baselines import run_untrained
+    from qc.prepare import load_prepared
+
+    results = run_untrained(load_prepared(cfg), tuple(args.splits), args.overwrite)
+    for split in args.splits:
+        print()
+        print(f"== {split}")
+        for b in args.show_budgets:
+            print_table([r for (n, s), r in results.items() if s == split], b)
+    return 0
+
+
+COMMANDS = {"client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained}
 
 
 def main(argv=None) -> int:
@@ -88,6 +116,10 @@ def main(argv=None) -> int:
     sub.choices["prepare"].add_argument("--skip-contract", action="store_true",
                                         help="skip the per-file data-contract check (use only for quick local tests)")
     sub.choices["benchmark"].add_argument("--overwrite", action="store_true")
+    u = sub.choices["untrained"]
+    u.add_argument("--splits", nargs="+", default=["val"], choices=["val", "test", "stress"])
+    u.add_argument("--overwrite", action="store_true")
+    u.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     try:

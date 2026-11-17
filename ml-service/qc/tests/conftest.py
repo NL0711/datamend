@@ -63,7 +63,9 @@ name: test
 paths: {{rf25: "{rf.as_posix()}", work: "{(root / 'work').as_posix()}", out: "{(root / 'out').as_posix()}"}}
 grid: {{n_lat: {H}, n_lon: {W}, lat0: 10.0, lon0: 70.0, step: 0.25, land_cells: {int(_land().sum())}}}
 years: {{train: [1990, 1995], val: [1996, 1999], test: [2000, 2001], fusion_fit: [1996, 1997], threshold: [1998, 1999], stress: [1989, 1989]}}
-benchmark: {{name: t, allow_unpinned: true, radius: {{min: 1.5, max_seen: 2.5, max: 4.0}}}}
+benchmark: {{name: t, allow_unpinned: true, expected_hash: null, radius: {{min: 1.5, max_seen: 2.5, max: 4.0}}}}
+components: {{slow: {{ring_outer: 3}}, neighbour_baseline: {{radius: 3}}}}
+evaluation: {{bootstrap: 20}}
 clients: {{k: 3, seed: 0, heldout: [3], buffer_cells: 3, map: "{(root / 'client_map.json').as_posix()}"}}
 """, encoding="utf-8")
     return root

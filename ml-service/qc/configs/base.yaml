@@ -58,3 +58,18 @@ benchmark:
   seeds: {val: 1001, test: 2002, stress: 3003}
   expected_hash: 3558013881231b2c   # hash of the frozen benchmark; scoring refuses a different one
   allow_unpinned: false
+
+components:
+  hidden_radius: 2           # cells; the spatial component, slow comparison and neighbour baseline never read inside it
+  history_days: 90           # days of history given to every component in front of the scored year
+  slow:
+    windows: [30, 90]        # trailing totals, days
+    ring_outer: 4            # neighbours for the slow comparison lie between hidden_radius and this distance
+  neighbour_baseline:
+    radius: 6
+
+evaluation:
+  # Candidate false-alarm budgets (false alerts per 1,000 clean cell-days) for curves. The two operating
+  # points are chosen from validation curves at gate 5 and logged in docs/qc-evaluation-protocol.md.
+  budgets: [0.5, 1, 2, 5, 10]
+  bootstrap: 200             # resamples of whole fault events and whole years for confidence intervals
