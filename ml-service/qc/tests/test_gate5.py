@@ -150,13 +150,17 @@ def test_ablation_uses_a_separate_store_and_reports_missing_components(gp, fit):
     from qc.ablate import FULL, ablation_store, format_rows, run_ablation
     from qc.evaluate import score_store
     main = score_store(gp)
-    before = sorted(p.name for p in main.root.rglob("*.npy"))
-    rows = run_ablation(gp, 0, 1.0, [FULL, ("rules",), ("rules", "slow", "spatial", "neighbour_baseline"), ("rules", "plain_gru")])
-    assert sorted(p.name for p in main.root.rglob("*.npy")) == before               # the main score store is untouched
+    def files():
+        return sorted(str(p.relative_to(main.root)) for p in main.root.rglob("*.npy") if not p.parent.name.startswith("nbr_"))
+    before = files()
+    rows = run_ablation(gp, 0, 1.0, [FULL, ("rules",), ("rules", "slow", "spatial", "neighbour_baseline"), ("rules", "plain_gru"),
+                              ("rules", "slow", "spatial", "temporal", "nbr_wet", "nbr_heavy")])
+    assert files() == before          # no component or fusion score changes; only the cheap context features are added
     assert any(ablation_store(gp).root.rglob("*.npy"))
     ok = [r for r in rows if r.get("variant")]
     assert {(r["components"], r["variant"]) for r in ok} >= {("rules+slow+spatial+temporal", "logistic"), ("rules", "boosted"),
-                                                           ("rules+slow+spatial+neighbour_baseline", "logistic")}
+                                                           ("rules+slow+spatial+neighbour_baseline", "logistic"),
+                                                           ("rules+slow+spatial+temporal+nbr_wet+nbr_heavy", "boosted")}
     for r in ok:
         assert 0.0 <= r["pr_auc"] <= 1.0 and r["false_per_1000"] >= 0.0
     missing = [r for r in rows if r.get("variant") is None]

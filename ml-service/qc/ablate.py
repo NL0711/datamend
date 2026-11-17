@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 
 from qc import paths
-from qc.evaluate import evaluate_component, score_store, summary_row
+from qc.context import CONTEXT, context_functions
+from qc.evaluate import compute_scores_many, evaluate_component, score_store, summary_row
 from qc.fusion import fit_fusion, load_features
 from qc.fusion_eval import holdout_years
 from qc.prepare import Prepared
@@ -32,6 +33,9 @@ SUBSETS: List[Sequence[str]] = [
     ("rules",), ("rules", "slow"), ("rules", "spatial"), ("rules", "slow", "spatial", "temporal", "neighbour_baseline"),
     ("rules", "slow", "spatial", "neighbour_baseline"),   # neighbour average instead of temporal
     ("rules", "slow", "spatial", "temporal", "neighbour_baseline", "plain_gru"),
+    ("rules", "slow", "spatial", "temporal", "nbr_wet", "nbr_heavy"),                  # + event-coherence context (qc.context)
+    ("rules", "slow", "spatial", "temporal", "neighbour_baseline", "nbr_wet", "nbr_heavy"),
+    ("rules", "nbr_wet", "nbr_heavy"),
 ]
 
 
@@ -46,6 +50,8 @@ def ablation_store(p: Prepared) -> ScoreStore:
 def run_ablation(p: Prepared, seed: int, budget: float = 1.0, subsets: Optional[Sequence[Sequence[str]]] = None) -> List[Dict]:
     main, store = score_store(p), ablation_store(p)
     rows: List[Dict] = []
+    if any(c in CONTEXT for sub in (subsets or SUBSETS) for c in sub):
+        compute_scores_many(p, context_functions(p), ("val",), main)       # cheap, CPU, validation years and clean threshold years only
     for subset in (subsets or SUBSETS):
         names = _names(seed, subset)
         missing = [n for n in names if not main.has(n, "val", p.split.years["fusion_fit"][0])]
