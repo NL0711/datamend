@@ -80,6 +80,7 @@ class NnConfig:
     steps: int = 3000
     batch: int = 1024
     drop_neighbours: float = 0.1
+    corrupt: float = 0.3                 # share of training samples with one neighbour value replaced by an outlier (targets stay clean)
 
 
 @dataclass
@@ -124,7 +125,7 @@ class NnExperts:
 
 
 def _gather_batch(Ap: torch.Tensor, y: torch.Tensor, t: torch.Tensor, r: torch.Tensor, c: torch.Tensor, cfg: NnConfig,
-                  la: torch.Tensor, lo: torch.Tensor, R: int, drop: float):
+                  la: torch.Tensor, lo: torch.Tensor, R: int, drop: float, corrupt: float = 0.0):
     P = 2 * R + 1
     ar = torch.arange(P, device=Ap.device)
     yy, tt = y[:, None, None], t[:, None, None]
@@ -133,18 +134,32 @@ def _gather_batch(Ap: torch.Tensor, y: torch.Tensor, t: torch.Tensor, r: torch.T
     target = Ap[y, t, r + R, c + R].float()                                              # (B, 3)
     lag1, lag2 = Ap[y, t - 1, r + R, c + R].float(), Ap[y, t - 2, r + R, c + R].float()
     ang = 2 * np.pi * t.float() / 365.25
-    extra = torch.cat([lag1, lag2, torch.sin(ang)[:, None], torch.cos(ang)[:, None], la[r, c][:, None], lo[r, c][:, None]], dim=1)
     patch = _hide(patch, R, cfg.hide)
+    if corrupt > 0:                       # robustness: a faulty neighbour must not make a healthy cell look faulty
+        B = patch.shape[0]
+        dev = patch.device
+        m = torch.rand(B, device=dev) < corrupt
+        idx = torch.nonzero(m).flatten()
+        if idx.numel():
+            v = torch.randint(0, 3, (idx.numel(),), device=dev)
+            i = torch.randint(0, P, (idx.numel(),), device=dev)
+            j = torch.randint(0, P, (idx.numel(),), device=dev)
+            off = (torch.rand(idx.numel(), device=dev) * 20 + 5) * (torch.randint(0, 2, (idx.numel(),), device=dev) * 2 - 1)
+            patch[idx, v, i, j] = patch[idx, v, i, j] + off                      # NaN (hidden or missing) stays NaN
+            lag_hit = torch.rand(idx.numel(), device=dev) < 0.3
+            lag1 = lag1.clone()
+            lag1[idx[lag_hit], v[lag_hit]] += off[lag_hit]                       # also a bad previous day, now and then
     if drop > 0:
         patch = torch.where(torch.rand(patch.shape[0], 1, P, P, device=patch.device) < drop, torch.full_like(patch, float("nan")), patch)
+    extra = torch.cat([lag1, lag2, torch.sin(ang)[:, None], torch.cos(ang)[:, None], la[r, c][:, None], lo[r, c][:, None]], dim=1)
     return patch, extra, target
 
 
 def _nll(mu, logsd, target):
     ok = torch.isfinite(target)
-    z = torch.where(ok, (target - mu) / logsd.exp(), torch.zeros_like(target))
-    nll = 0.5 * z ** 2 + logsd
-    return (nll * ok).sum() / ok.sum().clamp(min=1)
+    z = (torch.nan_to_num(target, nan=0.0) - mu) / logsd.exp()          # NaN targets are zeroed first: a NaN under torch.where still poisons the gradient
+    nll = (0.5 * z ** 2 + logsd) * ok
+    return nll.sum() / ok.sum().clamp(min=1)
 
 
 def _train(Ap, cfg: NnConfig, la, lo, R, steps: int, seed: int, device, valid_fn=None, time_cap_s: Optional[float] = None) -> Tuple[MaskedPatchNet, List[float]]:
@@ -162,7 +177,7 @@ def _train(Ap, cfg: NnConfig, la, lo, R, steps: int, seed: int, device, valid_fn
         t = torch.randint(2, Tn, (cfg.batch,), generator=gen).to(device)
         r = torch.randint(0, H, (cfg.batch,), generator=gen).to(device)
         c = torch.randint(0, W, (cfg.batch,), generator=gen).to(device)
-        patch, extra, target = _gather_batch(Ap, y, t, r, c, cfg, la, lo, R, cfg.drop_neighbours)
+        patch, extra, target = _gather_batch(Ap, y, t, r, c, cfg, la, lo, R, cfg.drop_neighbours, cfg.corrupt)
         mu, logsd = net(patch, extra)
         loss = _nll(mu, logsd, target)
         if not torch.isfinite(loss):
@@ -173,7 +188,7 @@ def _train(Ap, cfg: NnConfig, la, lo, R, steps: int, seed: int, device, valid_fn
         opt.step()
         sched.step()
         if step % 50 == 0:
-            losses.append(float(loss))
+            losses.append(float(loss.detach()))
         if time_cap_s and time.time() - t_start > time_cap_s:
             log.warning("nn training stopped at step %d by the time cap", step)
             break
@@ -209,7 +224,7 @@ def _validation_nll(net: MaskedPatchNet, Ap: torch.Tensor, cfg: NnConfig, la, lo
         patch, extra, target = _gather_batch(Ap, y, t, r, c, cfg, la, lo, R, 0.0)
         mu, logsd = net(patch, extra)
         ok = torch.isfinite(target)
-        z = torch.where(ok, (target - mu) / logsd.exp(), torch.zeros_like(target))
+        z = (torch.nan_to_num(target, nan=0.0) - mu) / logsd.exp()
         tot += float(((0.5 * z ** 2 + logsd) * ok).sum())
         cnt += int(ok.sum())
     return tot / max(cnt, 1)

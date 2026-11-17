@@ -297,7 +297,10 @@ def cmd_era5_validate(cfg, args) -> int:
     d, _, daily = _era5_dirs(cfg)
     yrs = {k: list(range(v[0], v[1] + 1)) for k, v in d["years"].items()}
     out = paths.out_dir(cfg) / str(cfg.name) / "era5" / "validation.json"
-    res = run_validation(Era5Daily(daily), yrs, float(d["fault_rate"]), int(cfg.seed), [float(b) for b in d["budgets"]], out)
+    nn = d.get("nn") if (d.get("nn") or {}).get("enabled") else None
+    res = run_validation(Era5Daily(daily), yrs, float(d["fault_rate"]), int(cfg.seed), [float(b) for b in d["budgets"]], out, nn=nn)
+    if res.get("nn"):
+        print("neural experts:", {k: v for k, v in res["nn"].items() if k not in ("train_loss",)})
     for b, row in res["scores"]["fusion_max"].items():
         rec = {n: {k: (None if v is None else round(v, 3)) for k, v in r.items()} for n, r in row["recall"].items()}
         print(f"fusion_max at budget {b}: false alerts/1000 clean {row['false_per_1000_clean']:.2f}; recall {rec}")

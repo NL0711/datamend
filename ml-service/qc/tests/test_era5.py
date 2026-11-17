@@ -324,3 +324,44 @@ def test_neighbour_regression_improves_drift_and_scale_detection_on_smooth_field
         rec = r["scores"]["fusion_max"]["2.0"]["recall"]
         rows[use] = float(np.mean([rec[v][k] for v in NAMES for k in ("drift", "scale")]))
     assert rows[True] > rows[False] + 0.15, rows
+
+
+# ---------------------------------------------------------------------------------------------- neural experts
+
+def test_neural_experts_train_score_do_not_read_the_cells_own_values_and_tune_on_clean_nll(smooth, tmp_path):
+    from qc.multivar import _fields
+    from qc.multivar_nn import NN_NAMES, NnConfig, fit_nn
+    # a year with missing days (NaN): training must stay finite (a NaN target must not poison the gradient)
+    _smooth_world(tmp_path / "nan", [2001])
+    import xarray as xr
+    p = tmp_path / "nan" / "ERA5D_2001.nc"
+    ds = xr.open_dataset(p, engine="scipy").load()
+    ds.close()
+    for k in ds.data_vars:
+        ds[k][:3] = np.nan
+    p.unlink()
+    ds.to_netcdf(p, engine="scipy")
+    st = fit_stats(smooth, YEARS["train"])
+    nan_data = Era5Daily(tmp_path / "nan")
+    nn_nan = fit_nn(nan_data, st, [2001], [2001], NnConfig(steps=40, batch=256), max_years=1)
+    assert np.isfinite(nn_nan.history["train_loss"]).all()
+
+    nn = fit_nn(smooth, st, YEARS["train"], [1996], NnConfig(steps=60, batch=256), trials=2, tune_steps=20, max_years=2, seed=1)
+    h = nn.history
+    assert len(h["trials"]) == 2 and h["device"] in ("cpu", "cuda")
+    best = min(h["trials"], key=lambda t: t["validation_nll"])
+    assert h["chosen"]["width"] == best["width"] and h["chosen"]["hidden"] == best["hidden"] and h["chosen"]["radius"] == best["radius"]
+    x = _fields(smooth, 1998)
+    base = nn.scores(x)
+    assert set(base) == set(NN_NAMES) and all(np.isfinite(v).mean() > 0.99 for v in base.values())
+    y = {n: v.copy() for n, v in x.items()}
+    y["humidity"][100, 7, 9] += 40.0
+    moved = nn.scores(y)
+    assert moved["nn_temperature"][100, 7, 9] == base["nn_temperature"][100, 7, 9]      # the cell's own humidity is not an input to temperature
+    assert moved["nn_pressure"][100, 7, 9] == base["nn_pressure"][100, 7, 9]
+    assert moved["nn_humidity"][100, 7, 9] > 3 * base["nn_humidity"][100, 7, 9]         # its own humidity score jumps
+    # a faulty neighbour does not make the healthy cell look faulty (it was trained against outlier neighbours)
+    z = {n: v.copy() for n, v in x.items()}
+    z["temperature"][100, 7, 10] += 60.0
+    ripple = nn.scores(z)["nn_temperature"][100, 7, 9]
+    assert ripple < 5 * max(float(np.nanpercentile(base["nn_temperature"], 99)), 1.0)

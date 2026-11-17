@@ -544,4 +544,4 @@ Spec: `docs/qc-system-spec.md` section 14. Status as of 2026-11-17: gates 0-9 bu
 - [ ] Verify the UK reader on real MIDAS files; confirm the OPEN UK choices
 - [ ] Verify the Kerala August 2018 case-study values before citing them
 - [x] ERA5 daily conversion, day-alignment option, per-variable and consistency experts, synthetic-fault validation (spec section 16; tiny data plus one real GRIB month)
-- [ ] ERA5: verify IMD day alignment, decide which daily statistics to keep, neural models, footprint faults, genuine-extreme protection, federated variants, frozen benchmark and test pass
+- [ ] ERA5: verify IMD day alignment, decide which daily statistics to keep, footprint faults, genuine-extreme protection, federated variants, frozen benchmark and test pass
