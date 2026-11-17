@@ -256,8 +256,24 @@ def cmd_era5_daily(cfg, args) -> int:
     reports = build_daily(hourly, daily, list(range(args.years[0], args.years[1] + 1)), cfg.grid,
                           Alignment(float(d["label_offset_hours"])), d["stats"], args.delete_hourly, args.overwrite)
     for r in reports:
-        print(f"{r.year}: {r.complete_days}/{r.days} complete days; missing monthly files: {r.files_missing or 'none'}")
+        print(f"{r.year}: {r.complete_days}/{r.days} complete days; months with incomplete days: {r.incomplete_months or 'none'}; "
+              f"files used: {len(r.files_used)}")
     print(f"day alignment: label_offset_hours={d['label_offset_hours']} (IMD alignment is UNVERIFIED); output {daily}")
+    return 0
+
+
+def cmd_era5_inventory(cfg, args) -> int:
+    from qc.era5 import inventory
+
+    _, hourly, _ = _era5_dirs(cfg)
+    inv = inventory(hourly, cfg.grid)
+    print(f"hourly folder: {hourly}")
+    for f in inv["files"]:
+        print(f"  {f['file']}: {f['first']} to {f['last']}, {f['hours']} hours" + ("  HAS GAPS" if f["gaps"] else ""))
+    for y, months in inv["years"].items():
+        bad = {m: v for m, v in months.items() if v != "ok"}
+        miss = [f"{m:02d}" for m in range(1, 13) if f"{m:02d}" not in months]
+        print(f"  {y}: " + ("complete" if y in inv["complete_years"] else f"incomplete; short months {bad or 'none'}; absent months {miss or 'none'}"))
     return 0
 
 
@@ -297,7 +313,7 @@ def cmd_paper(cfg, args) -> int:
 
 
 COMMANDS = {"uk-grid": cmd_uk_grid, "uk-labels": cmd_uk_labels, "test-score": cmd_test_score, "federated": cmd_federated, "fusion": cmd_fusion, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
-            "train": cmd_train, "paper": cmd_paper, "era5-daily": cmd_era5_daily, "era5-validate": cmd_era5_validate}
+            "train": cmd_train, "paper": cmd_paper, "era5-daily": cmd_era5_daily, "era5-inventory": cmd_era5_inventory, "era5-validate": cmd_era5_validate}
 
 
 def main(argv=None) -> int:

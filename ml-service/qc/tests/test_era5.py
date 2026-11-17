@@ -81,7 +81,7 @@ def test_day_alignment_shifts_which_hours_make_a_day(tmp_path):
     assert not np.isnan(i.year(2016, "TEMP_MEAN")[31 + 29, 0, 0]) and np.isnan(i.year(2016, "TEMP_MEAN")[31, 0, 0])
 
 
-def test_hourly_files_are_kept_unless_asked_and_never_after_an_incomplete_year(tmp_path):
+def test_hourly_files_are_kept_unless_asked_and_deleted_only_when_every_year_they_touch_is_complete(tmp_path):
     hourly = tmp_path / "h"
     for m in range(1, 13):
         _hourly(hourly, 2016, m, lambda h: 15.0 + 0 * h)
@@ -89,14 +89,24 @@ def test_hourly_files_are_kept_unless_asked_and_never_after_an_incomplete_year(t
     rep = build_daily(hourly, tmp_path / "d", [2016], SPEC, Alignment(0.0))[0]
     assert rep.complete_days == 366 and len(list(hourly.glob("*.nc"))) == 13       # default: nothing deleted
     build_daily(hourly, tmp_path / "d2", [2016], SPEC, Alignment(0.0), delete_consumed=True)
-    left = {p.name for p in hourly.glob("*.nc")}
-    assert era5.monthly_name(2016, 1, "nc") in left and era5.monthly_name(2016, 12, "nc") in left
-    assert era5.monthly_name(2016, 6, "nc") not in left
-    # incomplete year (June gone): the build reports it and deletes nothing more
-    before = {p.name for p in hourly.glob("*.nc")}
-    rep = build_daily(hourly, tmp_path / "d3", [2016], SPEC, Alignment(0.0), delete_consumed=True)[0]
-    assert rep.complete_days < rep.days and {p.name for p in hourly.glob("*.nc")} == before
-    assert any("2016_06" in m for m in rep.files_missing)
+    assert {p.name for p in hourly.glob("*.nc")} == {era5.monthly_name(2015, 12, "nc")}   # 2015 was never built: its file stays
+    # with the 21 h alignment the late hours of 31 December belong to the next label year: December stays until that year is built
+    hourly2 = tmp_path / "h2"
+    for m in range(1, 13):
+        _hourly(hourly2, 2016, m, lambda h: 15.0 + 0 * h)
+    _hourly(hourly2, 2015, 12, lambda h: 15.0 + 0 * h)
+    rep = build_daily(hourly2, tmp_path / "e", [2016], SPEC, Alignment(21.0), delete_consumed=True)[0]
+    assert rep.complete_days == 366
+    assert {p.name for p in hourly2.glob("*.nc")} == {era5.monthly_name(2015, 12, "nc"), era5.monthly_name(2016, 12, "nc")}
+    # an incomplete year (June missing) deletes nothing
+    hourly3 = tmp_path / "h3"
+    for m in range(1, 13):
+        if m != 6:
+            _hourly(hourly3, 2016, m, lambda h: 15.0 + 0 * h)
+    before = {p.name for p in hourly3.glob("*.nc")}
+    rep = build_daily(hourly3, tmp_path / "f", [2016], SPEC, Alignment(0.0), delete_consumed=True)[0]
+    assert rep.complete_days < rep.days and rep.incomplete_months == ["2016-06"]
+    assert {p.name for p in hourly3.glob("*.nc")} == before
 
 
 def test_wrong_grid_is_refused(tmp_path):
@@ -104,6 +114,52 @@ def test_wrong_grid_is_refused(tmp_path):
     bad = SimpleNamespace(n_lat=4, n_lon=5, lat0=11.0, lon0=70.0, step=0.25)
     with pytest.raises(ContractError, match="latitude"):
         build_daily(tmp_path / "h", tmp_path / "d", [2016], bad, Alignment(0.0))
+
+
+def _range_file(path: Path, start: str, hours: int, tfun, pad: float = 0.0):
+    """One file of ``hours`` consecutive hours from ``start``, with an optional margin of ``pad`` degrees around the grid."""
+    times = np.datetime64(start) + np.arange(hours) * np.timedelta64(1, "h")
+    k = int(round(pad / SPEC.step))
+    lat = SPEC.lat0 + SPEC.step * (np.arange(SPEC.n_lat + 2 * k) - k)
+    lon = SPEC.lon0 + SPEC.step * (np.arange(SPEC.n_lon + 2 * k) - k)
+    t = (tfun(np.arange(hours, dtype=np.float64)[:, None, None]) + np.zeros((1, lat.size, lon.size))).astype(np.float32)
+    dims = ("valid_time", "latitude", "longitude")                              # the CDS NetCDF layout
+    ds = xr.Dataset({"t2m": (dims, t + 273.15), "d2m": (dims, t - 10 + 273.15), "sp": (dims, np.full(t.shape, 95000.0, np.float32))},
+                    coords={"valid_time": times, "latitude": lat, "longitude": lon})
+    path.parent.mkdir(parents=True, exist_ok=True)
+    ds.isel(latitude=slice(None, None, -1)).to_netcdf(path, engine="scipy")
+
+
+def test_hand_downloaded_files_any_name_any_span_larger_area_and_overlap(tmp_path):
+    f = lambda h: 10.0 + (h % 24)
+    ref = tmp_path / "ref"
+    _range_file(ref / "one.nc", "2016-03-01T00:00", 31 * 24, f)
+    build_daily(ref, tmp_path / "dref", [2016], SPEC, Alignment(0.0))
+    # a differently named file per half-month, on a larger area, with 3 days of overlap between them
+    man = tmp_path / "man"
+    _range_file(man / "download (1).nc", "2016-03-01T00:00", 18 * 24, f, pad=0.5)
+    _range_file(man / "sub" / "era5 part two.nc", "2016-03-15T00:00", 17 * 24, lambda h: f(h + 14 * 24), pad=0.5)
+    rep = build_daily(man, tmp_path / "dman", [2016], SPEC, Alignment(0.0))[0]
+    assert rep.complete_days == 31 and len(rep.files_used) == 2
+    a, b = Era5Daily(tmp_path / "dref"), Era5Daily(tmp_path / "dman")
+    for k in ("TEMP_MEAN", "TEMP_MIN", "RH_MEAN", "PRES_MEAN"):
+        np.testing.assert_allclose(b.year(2016, k), a.year(2016, k), equal_nan=True, atol=1e-5)       # overlap counted once
+    # a file that does not cover the grid is refused with the area to download
+    _range_file(tmp_path / "small" / "x.nc", "2016-03-01T00:00", 24, f, pad=-0.25)
+    with pytest.raises(ContractError, match="N 38.5, W 66.5, S 6.5, E 100.0"):
+        build_daily(tmp_path / "small", tmp_path / "ds", [2016], SPEC, Alignment(0.0))
+
+
+def test_inventory_shows_gaps_and_complete_years_and_zips_are_flagged(tmp_path, caplog):
+    h = tmp_path / "h"
+    f = lambda t: 10.0 + 0 * t
+    _range_file(h / "jan_feb.nc", "2016-01-01T00:00", (31 + 29) * 24, f)
+    _range_file(h / "mar_short.nc", "2016-03-01T00:00", 30 * 24, f)               # 24 hours short of a full March
+    (h / "mystery.zip").write_bytes(b"PK")
+    inv = era5.inventory(h, SPEC)
+    assert inv["years"][2016]["01"] == "ok" and inv["years"][2016]["02"] == "ok" and inv["years"][2016]["03"] == "720/744 h"
+    assert inv["complete_years"] == [] and {x["file"] for x in inv["files"]} == {"jan_feb.nc", "mar_short.nc"}
+    assert any("unzip" in r.message for r in caplog.records)
 
 
 REAL = (glob.glob(str(Path(__file__).resolve().parents[3] / "data" / "*.grib")) or [None])[0]

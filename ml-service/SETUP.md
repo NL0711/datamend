@@ -114,6 +114,6 @@ Other commands (`sweep`, `ensemble`, other presets) are listed at the top of `tr
 | Data layout | `ml-service/data/README.md` |
 | Training package | `ml-service/training/` |
 | MIDAS download script | `ml-service/scripts/download_midas.py` |
-| ERA5 download script (needs `CDSAPI_KEY`, licence accepted once) | `ml-service/scripts/download_era5.py` |
-| ERA5 daily conversion and validation | `python -m qc era5-daily` / `era5-validate`; `docs/qc-system-spec.md` section 16 |
+| ERA5 download (by hand from the CDS form, or the optional script `ml-service/scripts/download_era5.py`) | `ml-service/qc/README.md`, ERA5 section |
+| ERA5 daily conversion and validation | `python -m qc era5-inventory` / `era5-daily` / `era5-validate`; `docs/qc-system-spec.md` section 16 |
 | Environment template | `ml-service/.env.example` |
