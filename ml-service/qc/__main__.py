@@ -238,8 +238,27 @@ def cmd_set_budgets(cfg, args) -> int:
     return 0
 
 
+def cmd_paper(cfg, args) -> int:
+    from qc import paper
+    from qc.prepare import load_prepared
+    from qc.testscore import run_root
+
+    p = load_prepared(cfg)
+    root = run_root(p)
+    run = paper.load_run(root / "test")
+    uk = None
+    if "uk" in cfg.to_dict():
+        from qc.uk.build import CAVEATS
+        uk = CAVEATS
+    out = Path(args.out) if args.out else root / "paper"
+    manifest = paper.build_all(p, out, run, root / "fusion" / "validation" / f"curves_s{args.seed}.json", uk, args.seed)
+    print(json.dumps(manifest, indent=1))
+    print(f"wrote {out}")
+    return 0
+
+
 COMMANDS = {"uk-grid": cmd_uk_grid, "uk-labels": cmd_uk_labels, "test-score": cmd_test_score, "federated": cmd_federated, "fusion": cmd_fusion, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
-            "train": cmd_train}
+            "train": cmd_train, "paper": cmd_paper}
 
 
 def main(argv=None) -> int:
@@ -272,6 +291,9 @@ def main(argv=None) -> int:
     ts.add_argument("--seeds", nargs="+", type=int, default=None, help="default: train.seeds from the config")
     ts.add_argument("--splits", nargs="+", default=["test", "stress"], choices=["test", "stress"])
     ts.add_argument("--resume", action="store_true", help="continue an unfinished test pass; a finished one cannot be repeated")
+    pp = sub.choices["paper"]
+    pp.add_argument("--out", default=None, help="default: <run folder>/paper")
+    pp.add_argument("--seed", type=int, default=0, help="seed whose alerts and validation curves are drawn")
     g = sub.choices["federated"]
     g.add_argument("--variants", nargs="+", default=["fedpers"], choices=["fedpers", "fedavg", "fedft", "local"],
                    help="priority order: fedpers (main) first, then fedavg, fedft, local; FedProx via --set federated.prox_mu=0.01")
