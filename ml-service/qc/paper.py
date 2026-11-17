@@ -24,6 +24,7 @@ from qc.testscore import _stat, base_name
 
 SINGLE = ("rules", "slow", "neighbour_baseline", "spatial", "temporal", "plain_gru")
 FUSIONS = ("fusion_logistic", "fusion_mean", "fusion_or", "fusion_boosted", "fusion_per_client", "fusion_logistic_fed")
+FED_FUSIONS = ("fusion_logistic@fedpers", "fusion_logistic@fedavg", "fusion_logistic@fedft")
 FED_VARIANTS = ("fedpers", "fedavg", "fedft", "local")
 FED_COMPONENTS = ("spatial", "temporal")
 KERALA_BBOX = (8.2, 12.8, 74.8, 77.4)            # lat_min, lat_max, lon_min, lon_max: a rough box, not a boundary
@@ -165,17 +166,21 @@ def ablation(run: Run, split: str = "test", key: str = "ablation", title: Option
              notes: Sequence[str] = ()) -> Table:
     """Every single component, every fusion variant, at the final budget."""
     title = title or f"Component ablation, {split} years, final flag"
-    fams = [f for f in SINGLE + FUSIONS if run.runs(split, f)]
+    offline = [f for f in run.families(split) if f.startswith("offline_")]
+    fams = [f for f in SINGLE + FUSIONS if run.runs(split, f)] + offline
     if not fams:
         return _not_run(key, title, f"no scores for {split}")
     rows = []
     for fam in fams:
-        rows.append([fam, _f(pr_auc(run, split, fam, "seen")), _f(metric(run, split, fam, "seen", run.final, "faults", "recall"), True),
+        rows.append([fam + (" (non-causal reference)" if fam in offline else ""), _f(pr_auc(run, split, fam, "seen")), _f(metric(run, split, fam, "seen", run.final, "faults", "recall"), True),
                      _f(metric(run, split, fam, "seen", run.final, "faults", "event_recall"), True),
                      _f(metric(run, split, fam, "seen", run.final, "false_alerts", "per_1000_clean")),
                      _f(metric(run, split, fam, "unseen", run.final, "faults", "recall"), True)])
     missing = [f for f in SINGLE + FUSIONS if f not in fams]
     nt = [f"Labels: {_tier(run)}. Final false-alert budget {run.final} per 1,000 clean cell-days. Mean over seeds [range].", *notes]
+    if offline:
+        nt.append("Offline models read days on both sides of the scored day (NON-CAUSAL) and were trained outside this system on "
+                  "all cells, so unseen clients are not scored for them; their recall is a reference, not a like-for-like comparison.")
     if missing:
         nt.append("Not in this table (no scores): " + ", ".join(missing))
     return Table(key, title, ["model", "PR-AUC (seen)", "recall (seen)", "event recall (seen)", "false alerts /1000 (seen)", "recall (unseen)"], rows, nt)
@@ -201,7 +206,10 @@ def federated(run: Run, split: str = "test") -> Table:
                 cells += [_f(pr_auc(run, split, fam, group)), _f(metric(run, split, fam, group, run.final, "faults", "recall"), True),
                           _f(metric(run, split, fam, group, run.final, "false_alerts", "per_1000_clean"))]
             rows.append(cells)
-    for lab, fam in (("fusion of central components", "fusion_logistic"), ("fusion of federated-averaged logistic", "fusion_logistic_fed")):
+    fused = [("fusion of central components", "fusion_logistic"), ("fusion of federated-averaged logistic", "fusion_logistic_fed")] +             [(f"fusion fitted on {f.split('@')[1]} components", f) for f in FED_FUSIONS]
+    for lab, fam in fused:
+        if not run.runs(split, fam) and fam in FED_FUSIONS:
+            absent.append(lab)
         if run.runs(split, fam):
             rows.append([lab] + [x for g in ("seen", "unseen") for x in (_f(pr_auc(run, split, fam, g)),
                                  _f(metric(run, split, fam, g, run.final, "faults", "recall"), True),
@@ -210,7 +218,7 @@ def federated(run: Run, split: str = "test") -> Table:
         return _not_run("federated", title, f"no federated or central scores for {split}")
     notes = [f"Labels: {_tier(run)}. Federation is simulated on one machine: this is a comparison of training schemes, not a privacy result.",
              "Unseen clients never contributed a gradient. 'local' has no model for them and is NOT AVAILABLE there.",
-             "Fusion over federated components was NOT RUN (see the not-run list in the test report)."]
+             "Rows 'fusion fitted on <variant> components' use that variant's spatial and temporal scores as fusion inputs."]
     if absent:
         notes.append("NOT RUN: " + ", ".join(absent))
     hdr = ["model"] + [f"{m} ({g})" for g in ("seen", "unseen") for m in ("PR-AUC", "recall", "false alerts /1000")]

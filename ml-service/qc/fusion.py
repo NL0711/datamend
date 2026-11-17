@@ -44,11 +44,22 @@ from qc.splits import assert_years_allowed
 log = logging.getLogger(__name__)
 BASE = ("rules", "slow", "spatial", "temporal")
 VARIANTS = ("logistic", "mean", "or", "boosted", "per_client")
+FED_SOURCES = ("fedpers", "fedavg", "fedft")      # federated variants that score every cell, so a fusion can use them
 
 
-def component_names(seed: int, base: Sequence[str] = BASE) -> List[str]:
-    """Store names of the four inputs: rules and slow are untrained; spatial and temporal carry the seed."""
-    return [b if b in ("rules", "slow") else f"{b}_s{seed}" for b in base]
+def component_names(seed: int, base: Sequence[str] = BASE, source: str = "central", prox_mu: float = 0.0) -> List[str]:
+    """Store names of the four inputs: rules and slow are untrained; spatial and temporal carry the seed.
+    ``source`` is "central" (the centralized components) or a federated variant: then spatial and temporal are that
+    variant's scores (``fedpers_spatial_s0``), so the fusion is fitted on what the federated components produce."""
+    if source != "central" and source not in FED_SOURCES:
+        raise ValueError(f"fusion source {source!r}: use central or one of {FED_SOURCES} (local-only leaves unseen cells unscored)")
+    from qc.federated import run_label
+
+    def one(b: str) -> str:
+        if b in ("rules", "slow"):
+            return b
+        return f"{b}_s{seed}" if source == "central" else run_label(source, b, seed, prox_mu)
+    return [one(b) for b in base]
 
 
 def load_features(store: ScoreStore, names: Sequence[str], tag: str, year: int) -> np.ndarray:
@@ -71,6 +82,11 @@ class FusionFit:
     tail_sorted: List[np.ndarray]        # per component, sorted clean threshold-year scores (the "or" variant)
     scale_limit: float = 50.0
     logistic_fed: Optional[Dict] = None  # logistic regression fitted by federated averaging (see fit_fusion_federated)
+    source: str = "central"              # which spatial and temporal scores the fusion was fitted on (central or a federated variant)
+
+    @property
+    def tag(self) -> str:
+        return "" if self.source == "central" else f"_{self.source}"
 
     def standardize(self, feats: np.ndarray) -> np.ndarray:
         z = (feats - self.mu) / self.sd
@@ -118,23 +134,25 @@ class FusionFit:
 
     def save(self, folder: Path) -> None:
         folder.mkdir(parents=True, exist_ok=True)
-        doc = {"seed": self.seed, "names": self.names, "mu": self.mu.tolist(), "sd": self.sd.tolist(),
+        doc = {"seed": self.seed, "source": self.source, "names": self.names, "mu": self.mu.tolist(), "sd": self.sd.tolist(),
                "fit_years": self.fit_years, "n_rows": self.n_rows, "n_positive": self.n_positive,
                "logistic": {"coef": self.logistic["coef"].tolist(), "intercept": float(self.logistic["intercept"])},
                "logistic_fed": None if self.logistic_fed is None else {"coef": self.logistic_fed["coef"].tolist(), "intercept": float(self.logistic_fed["intercept"])},
                "per_client": {str(c): {"coef": m["coef"].tolist(), "intercept": float(m["intercept"])} for c, m in self.per_client.items()}}
-        (folder / f"logistic_s{self.seed}.json").write_text(json.dumps(doc, indent=1), encoding="utf-8")
-        joblib.dump({"boosted": self.boosted, "tail_sorted": self.tail_sorted}, folder / f"other_s{self.seed}.joblib")
+        (folder / f"logistic{self.tag}_s{self.seed}.json").write_text(json.dumps(doc, indent=1), encoding="utf-8")
+        joblib.dump({"boosted": self.boosted, "tail_sorted": self.tail_sorted}, folder / f"other{self.tag}_s{self.seed}.joblib")
 
     @classmethod
-    def load(cls, folder: Path, seed: int) -> "FusionFit":
-        doc = json.loads((folder / f"logistic_s{seed}.json").read_text(encoding="utf-8"))
-        other = joblib.load(folder / f"other_s{seed}.joblib")
+    def load(cls, folder: Path, seed: int, source: str = "central") -> "FusionFit":
+        tag = "" if source == "central" else f"_{source}"
+        doc = json.loads((folder / f"logistic{tag}_s{seed}.json").read_text(encoding="utf-8"))
+        other = joblib.load(folder / f"other{tag}_s{seed}.joblib")
         return cls(seed, doc["names"], np.array(doc["mu"]), np.array(doc["sd"]), doc["fit_years"], doc["n_rows"], doc["n_positive"],
                    {"coef": np.array(doc["logistic"]["coef"]), "intercept": doc["logistic"]["intercept"]}, other["boosted"],
                    {int(c): {"coef": np.array(m["coef"]), "intercept": m["intercept"]} for c, m in doc["per_client"].items()},
                    other["tail_sorted"],
-                   logistic_fed=None if not doc.get("logistic_fed") else {"coef": np.array(doc["logistic_fed"]["coef"]), "intercept": doc["logistic_fed"]["intercept"]})
+                   logistic_fed=None if not doc.get("logistic_fed") else {"coef": np.array(doc["logistic_fed"]["coef"]), "intercept": doc["logistic_fed"]["intercept"]},
+                   source=doc.get("source", "central"))
 
 
 def _logit_fit(x, y, w, C):
@@ -175,12 +193,13 @@ def fusion_rows(p: Prepared, seed: int, store: ScoreStore, names: Sequence[str])
     return x, yv, w, client
 
 
-def fit_fusion(p: Prepared, seed: int, store: Optional[ScoreStore] = None, base: Sequence[str] = BASE) -> FusionFit:
+def fit_fusion(p: Prepared, seed: int, store: Optional[ScoreStore] = None, base: Sequence[str] = BASE,
+               source: str = "central") -> FusionFit:
     """Fit every variant on the synthetic faults of ``years.fusion_fit``. Uses no test-year or threshold-year benchmark data
     (the "or" variant uses clean threshold-year scores, never labels)."""
     cfg, store = p.cfg, store or score_store(p)
     years = list(p.split.years["fusion_fit"])
-    names = component_names(seed, base)
+    names = component_names(seed, base, source, float(cfg.federated.prox_mu))
     cells = group_cells(p, "seen")
     x, yv, w, client = fusion_rows(p, seed, store, names)
     mu, sd = np.nanmean(x, axis=0, dtype=np.float64), np.nanstd(x, axis=0, dtype=np.float64) + 1e-6
@@ -203,11 +222,12 @@ def fit_fusion(p: Prepared, seed: int, store: Optional[ScoreStore] = None, base:
             keep = ~ex.protected & ~ex.ambiguous & cells[None, :] & np.isfinite(s)
             ref.append(s[keep])
         tails.append(np.sort(np.concatenate(ref)))
-    return FusionFit(seed, names, mu, sd, years, int(yv.size), int(yv.sum()), shared, boosted, per_client, tails)
+    return FusionFit(seed, names, mu, sd, years, int(yv.size), int(yv.sum()), shared, boosted, per_client, tails, source=source)
 
 
-def fused_name(variant: str, seed: int) -> str:
-    return f"fusion_{variant}_s{seed}"
+def fused_name(variant: str, seed: int, source: str = "central") -> str:
+    """Score-store name. A fusion fitted on federated components gets ``@<variant>`` so it never overwrites the main one."""
+    return f"fusion_{variant}_s{seed}" if source == "central" else f"fusion_{variant}@{source}_s{seed}"
 
 
 def apply_fusion(p: Prepared, fit: FusionFit, splits: Sequence[str] = ("val",), variants: Sequence[str] = VARIANTS,
@@ -216,12 +236,12 @@ def apply_fusion(p: Prepared, fit: FusionFit, splits: Sequence[str] = ("val",), 
     store = store or score_store(p)
     jobs = [(s, y) for s in splits for y in p.split.years[s]] + [("clean", y) for y in p.split.years["threshold"]]
     for tag, year in jobs:
-        todo = [v for v in variants if overwrite or not store.has(fused_name(v, fit.seed), tag, year)]
+        todo = [v for v in variants if overwrite or not store.has(fused_name(v, fit.seed, fit.source), tag, year)]
         if not todo:
             continue
         feats = load_features(store, fit.names, tag, year)
         for v in todo:
-            store.save(fused_name(v, fit.seed), tag, year, fit.score(v, feats, p.cell_client))
+            store.save(fused_name(v, fit.seed, fit.source), tag, year, fit.score(v, feats, p.cell_client))
 
 
 def fit_fusion_federated(p: Prepared, fit: FusionFit, store: Optional[ScoreStore] = None, rounds: Optional[int] = None,

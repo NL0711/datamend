@@ -4,7 +4,15 @@ and on hand-written metric files for the verdict logic."""
 import copy
 import shutil
 
+import numpy as np
 import pytest
+
+from training import artifact
+from training.calibration import Calibration
+from training.presets import make_config
+from training.sampler import Batch
+from training.trainer import LocalTrainer
+from training.transform import RainfallTransform
 
 from qc.baselines import run_untrained
 from qc.benchmark import build_benchmark
@@ -22,9 +30,23 @@ from qc.tests.test_gate4 import TINY
 BASE = TINY + ["name=g9", "benchmark.name=g9bench", "fusion.max_rows=100000", "fusion.boosted_iter=10", "federated.finetune_steps=2"]
 
 
+def _old_model(folder, arch, train_years):
+    """A tiny old-format artifact (random weights: this tests the adapter, not the model)."""
+    t = LocalTrainer(RainfallTransform(3.0), make_config("smoke", arch=arch, device="cpu"))
+    w = t.config.window
+    b = Batch.from_windows(np.random.default_rng(0).gamma(0.5, 5.0, (16, w)).astype(np.float32))
+    st = t.score(b)
+    cal = Calibration({k: (float(np.median(v)), max(float(np.std(v)), 1e-3)) for k, v in st.items()}, 1.0)
+    artifact.save(artifact.Artifact(t, cal, {"train_years": train_years, "val_years": [train_years[-1] + 1]}), folder)
+    return str(folder)
+
+
 @pytest.fixture(scope="module")
-def p9(world, prepared):
-    cfg = load_config(world / "test.yaml", BASE)
+def p9(world, prepared, tmp_path_factory):
+    old = tmp_path_factory.mktemp("old_models")
+    over = [f"offline.artifacts.rainnet={_old_model(old / 'rainnet', 'rainnet', [1900, 1901])}",
+            f"offline.artifacts.lstm_ae={_old_model(old / 'lstm', 'lstm_ae', [1999, 2000])}"]      # 2000 is a test year here
+    cfg = load_config(world / "test.yaml", BASE + over)
     p = load_prepared(cfg)
     build_benchmark(p, splits=("val", "test", "stress"), overwrite=True)
     run_untrained(p, ("val",))
@@ -32,11 +54,16 @@ def p9(world, prepared):
         assert run_component(p, c, 0, ("val",), max_years=2)["train"].status == "done"
     for v in ("fedpers", "fedavg"):
         assert run_federated(p, "temporal", v, 0, ("val",), max_years=2)["train"].status == "done"
+    assert run_federated(p, "spatial", "fedavg", 0, ("val",), max_years=2)["train"].status == "done"
     fit = fit_fusion(p, 0)
     fit_fusion_federated(p, fit, rounds=5)
     fit.save(run_root(p) / "fusion" / "models")
     apply_fusion(p, fit, ("val",), VARIANTS + ("logistic_fed",))
     run_fusion_validation(p, fit, run_root(p) / "fusion" / "validation")
+    ffit = fit_fusion(p, 0, source="fedavg")                    # fusion fitted on the federated components
+    ffit.save(run_root(p) / "fusion" / "models")
+    apply_fusion(p, ffit, ("val",), VARIANTS)
+    run_fusion_validation(p, ffit, run_root(p) / "fusion" / "validation")
     proto = run_root(p).parent / "protocol_copy.md"
     shutil.copy(PROTOCOL, proto)
     set_budgets(p, 1, 5, run_root(p) / "fusion" / "validation" / "curves_s0.json", proto, today="2026-11-21")
@@ -186,3 +213,60 @@ def test_per_kind_rows_and_missing_models_are_named():
     ab = ablation(r)
     assert any("Not in this table" in n and "spatial" in n for n in ab.notes)
     assert protected_extremes(_run({}))[0].rows[0][0].startswith("NOT RUN")
+
+
+# ---------------------------------------------------------------------------------------------- the two formerly missing pieces
+
+def test_fusion_on_federated_components_is_fitted_stored_and_scored(p9, run9):
+    root = run_root(p9)
+    # it has its own files and score names: the main fusion is untouched
+    assert (root / "fusion" / "models" / "logistic_fedavg_s0.json").is_file() and (root / "fusion" / "models" / "logistic_s0.json").is_file()
+    assert (root / "fusion" / "validation" / "curves_fedavg_s0.json").is_file()
+    from qc.fusion import FusionFit
+    f = FusionFit.load(root / "fusion" / "models", 0, "fedavg")
+    assert f.source == "fedavg" and f.names == ["rules", "slow", "fedavg_spatial_s0", "fedavg_temporal_s0"]
+    assert FusionFit.load(root / "fusion" / "models", 0).names == ["rules", "slow", "spatial_s0", "temporal_s0"]
+    # scored on the test years in the single pass, with metrics for both client groups
+    fam = run9.report["splits"]["test"]["by_model_family"]
+    assert {"fusion_logistic@fedavg", "fusion_mean@fedavg"} <= set(fam) and set(fam["fusion_logistic@fedavg"]) == {"seen", "unseen"}
+    assert 0 <= fam["fusion_logistic@fedavg"]["seen"][run9.final]["recall"]["mean"] <= 1
+    # variants that were not fitted are listed, not hidden
+    nr = run9.report["not_run"]
+    assert any("fedpers components" in k and "NOT RUN" in v for k, v in nr.items())
+    assert not any("fedavg components" in k for k in nr)
+    # the paper table shows it, and says what was not run
+    t = federated(run9)
+    assert any(r[0] == "fusion fitted on fedavg components" for r in t.rows)
+    assert any("fusion fitted on fedpers components" in n for n in t.notes)
+
+
+def test_fusion_source_must_score_every_cell():
+    from qc.fusion import component_names
+    assert component_names(1, source="fedpers") == ["rules", "slow", "fedpers_spatial_s1", "fedpers_temporal_s1"]
+    with pytest.raises(ValueError, match="unseen cells unscored"):
+        component_names(0, source="local")
+
+
+def test_offline_models_are_scored_labelled_non_causal_and_leak_checked(p9, run9):
+    fam = run9.report["splits"]["test"]["by_model_family"]
+    assert "offline_rainnet" in fam
+    # held-out clients were seen in the old model's training: not scored
+    assert fam["offline_rainnet"]["unseen"][run9.final]["recall"] is None
+    assert fam["offline_rainnet"]["seen"][run9.final]["recall"] is not None
+    nr = run9.report["not_run"]
+    # the model trained on a test year is refused with the year named; unconfigured models say so
+    key = next(k for k in nr if "lstm_ae" in k)
+    assert "NOT RUN" in nr[key] and "2000" in nr[key] and "leak" in nr[key]
+    assert any("msnet" in k and "no artifact configured" in v for k, v in nr.items())
+    assert "offline_lstm_ae" not in fam
+    assert not any("NOT IMPLEMENTED" in v for v in nr.values())
+    row = next(r for r in ablation(run9).rows if r[0].startswith("offline_rainnet"))
+    assert "non-causal" in row[0]
+    assert any("NON-CAUSAL" in n for n in ablation(run9).notes)
+
+
+def test_offline_scores_use_the_same_budget_thresholds_and_skip_unseen_cells(p9):
+    from qc.evaluate import score_store
+    s = score_store(p9).load("offline_rainnet", "test", p9.split.years["test"][0])
+    assert s.shape[1] == p9.grid.n_land
+    assert np.isnan(s[:, p9.cell_role == 3]).all() and np.isfinite(s[:, p9.cell_role == 1]).any()

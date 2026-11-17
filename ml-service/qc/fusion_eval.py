@@ -93,7 +93,7 @@ def calibration_report(p: Prepared, fit: FusionFit, store: Optional[ScoreStore] 
     store = store or score_store(p)
     cells = group_cells(p, "seen")
     probs, labs = [], []
-    for y in load_years(p, f"fusion_logistic_s{fit.seed}", "val", holdout_years(p), store):
+    for y in load_years(p, fused_name("logistic", fit.seed, fit.source), "val", holdout_years(p), store):
         sc = y.score
         ok = np.isfinite(sc) & cells[None, :] & ~y.bench.extremes.ambiguous
         probs.append(1.0 / (1.0 + np.exp(-sc[ok].astype(np.float64))))
@@ -107,23 +107,26 @@ def comparison(p: Prepared, names: Sequence[str], budgets: Sequence[float], stor
     return {n: evaluate_component(p, n, "val", budgets, ("seen",), store, True, holdout_years(p)) for n in names}
 
 
-def untrained_and_trained_names(seed: int) -> List[str]:
-    return ["rules", "slow", "neighbour_baseline", f"spatial_s{seed}", f"temporal_s{seed}", f"plain_gru_s{seed}"]
+def untrained_and_trained_names(seed: int, source: str = "central", prox_mu: float = 0.0) -> List[str]:
+    from qc.fusion import component_names
+    c = component_names(seed, ("rules", "slow", "spatial", "temporal"), source, prox_mu)
+    return [c[0], c[1], "neighbour_baseline", c[2], c[3]] + ([f"plain_gru_s{seed}"] if source == "central" else [])
 
 
 def run_fusion_validation(p: Prepared, fit: FusionFit, out_dir: Path, store: Optional[ScoreStore] = None) -> Dict:
     """Curves, plot, calibration and the comparison table, written into ``out_dir``."""
     store = store or score_store(p)
-    names = untrained_and_trained_names(fit.seed) + [fused_name(v, fit.seed) for v in VARIANTS + ("logistic_fed",)]
+    names = (untrained_and_trained_names(fit.seed, fit.source, float(p.cfg.federated.prox_mu))
+             + [fused_name(v, fit.seed, fit.source) for v in VARIANTS + ("logistic_fed",)])
     names = [n for n in names if store.has(n, "val", holdout_years(p)[0])]
     curves = validation_curves(p, names, store)
-    write_json(out_dir / f"curves_s{fit.seed}.json", curves)
-    plot_curves(curves, out_dir / f"curves_s{fit.seed}.png")
+    write_json(out_dir / f"curves{fit.tag}_s{fit.seed}.json", curves)
+    plot_curves(curves, out_dir / f"curves{fit.tag}_s{fit.seed}.png")
     cal = calibration_report(p, fit, store)
-    write_json(out_dir / f"calibration_s{fit.seed}.json", cal)
+    write_json(out_dir / f"calibration{fit.tag}_s{fit.seed}.json", cal)
     table = comparison(p, names, [float(b) for b in p.cfg.evaluation.budgets], store)
-    write_json(out_dir / f"comparison_s{fit.seed}.json", table)
-    write_json(out_dir / f"fusion_weights_s{fit.seed}.json",
+    write_json(out_dir / f"comparison{fit.tag}_s{fit.seed}.json", table)
+    write_json(out_dir / f"fusion_weights{fit.tag}_s{fit.seed}.json",
                {"names": fit.names, "standardizer_mu": fit.mu, "standardizer_sd": fit.sd,
                 "logistic": {"coef": fit.logistic["coef"], "intercept": fit.logistic["intercept"]},
                 "fit_years": fit.fit_years, "fit_rows": fit.n_rows, "fit_positive_rows": fit.n_positive})

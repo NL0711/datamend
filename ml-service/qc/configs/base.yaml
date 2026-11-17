@@ -110,3 +110,8 @@ evaluation:
   # points are chosen from validation curves at gate 5 and logged in docs/qc-evaluation-protocol.md.
   budgets: [0.5, 1, 2, 5, 10]
   bootstrap: 200             # resamples of whole fault events and whole years for confidence intervals
+
+# Offline comparison (qc/offline.py): existing rainnet / scalenet / msnet / lstm_ae artifacts, non-causal references.
+# Set offline.artifacts.<arch> to an artifact folder. None ship with the repo; unset ones are listed as NOT RUN.
+offline:
+  artifacts: {}

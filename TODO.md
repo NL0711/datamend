@@ -537,7 +537,7 @@ Spec: `docs/qc-system-spec.md` section 14. Status as of 2026-11-17: gates 0-9 bu
 - [x] Gate 4 spatial, temporal and plain GRU components
 - [x] Gate 5 fusion and validation curves (budgets NOT CHOSEN)
 - [x] Gate 6 federated variants
-- [x] Gate 7 single-use test scoring (offline comparison NOT IMPLEMENTED; fusion over federated components NOT RUN)
+- [x] Gate 7 single-use test scoring (offline comparison and fusion on federated components built, tiny-run tests only)
 - [x] Gate 8 UK MIDAS study (reader UNVERIFIED on real files)
 - [x] Gate 9 paper tables, figures, claim check, methods outline (no real tables yet)
 - [ ] On the training machine: timing run, three-seed training, choose and log budgets, test scoring, `python -m qc paper`

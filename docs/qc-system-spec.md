@@ -68,7 +68,7 @@ Full decision: [components](https://github.com/NL0711/datamend/issues/18). New c
 | rules | existing rules in `ensemble/branches.py`, the bound in `ensemble/statbaseline.py`, and a new step rule | score |
 
 - **Baselines:** leave-out-disc neighbour-average residual, and a plain one-direction GRU.
-- **Offline comparison:** the existing rainnet, scalenet, msnet and lstm_ae models, labelled as non-causal.
+- **Offline comparison:** the existing rainnet, scalenet, msnet and lstm_ae models, labelled as non-causal. Implemented in `qc/offline.py`: artifacts are set under `offline.artifacts` in the config; a model trained or tuned on any scored year is refused (named in the report); held-out cells are left unscored because these models were trained on all cells; their own threshold is not used.
 - **Tests:** the target cell and its hidden disc cannot reach the spatial prediction; the temporal component sees no same-day or future value.
 
 ## 7. Fusion
@@ -89,7 +89,7 @@ Full decision: [federated setup](https://github.com/NL0711/datamend/issues/20).
 - **Main variant:** shared body; local head and normalization.
 - **Comparisons:** FedAvg, FedAvg plus fine-tune, local-only, centralized. FedProx sits behind a switch.
 - **Unseen clients** fit only their own local statistics and receive averaged heads.
-- The shared fusion is fitted by federated averaging.
+- The shared fusion is fitted by federated averaging. A fusion can also be fitted on a federated variant's spatial and temporal scores (`python -m qc fusion --on fedpers|fedavg|fedft`; not local-only, which leaves unseen cells unscored); it is stored and scored as `fusion_<variant>@<source>`.
 - One local epoch per client per round; six training clients in a fixed seeded order; rounds set so total gradient steps match the centralized run.
 
 ## 9. Metrics
@@ -179,14 +179,14 @@ Each gate ends with its tests passing and a short report of what ran. A later ga
 | 4. Centralized components | Spatial and temporal components and the plain GRU baseline, three seeds. | Hidden-disc and causality tests pass; validation scores saved. | built, tested (tiny CPU run) |
 | 5. Fusion and budgets | Fit the fusion, draw validation curves, choose and log the two budgets. | Budgets logged in the protocol **before any test-year scoring**. | built, tested; budgets NOT CHOSEN |
 | 6. Federated variants | Main variant, then the comparisons, in priority order. | Masking and aggregation tests pass; same benchmark hash in every run. | built, tested (tiny CPU run) |
-| 7. Test scoring | Score 2018-2023 once with fixed budgets; unseen clients; 1901-1950 stress test; offline comparison. | All headline metrics with intervals; anything not run is listed. | built, tested; offline comparison NOT IMPLEMENTED, fusion over federated components NOT RUN |
+| 7. Test scoring | Score 2018-2023 once with fixed budgets; unseen clients; 1901-1950 stress test; offline comparison. | All headline metrics with intervals; anything not run is listed. | built, tested; offline comparison and fusion on federated components built and tested on tiny runs, not run on real data |
 | 8. UK study | Download, grid, label, train, score. | Subset and circularity caveats printed with the table. | built, tested on generated files; reader UNVERIFIED on real MIDAS |
 | 9. Paper outputs | Tables, figures, methods outline, claim check. | Each claim checked against its table. | built, tested on a tiny run; no real tables |
 
 ## 15. Known gaps at the time of writing
 
 - No gate has been run on real data; every test uses a generated world. The training-machine steps (timing run, three-seed training, budget choice, single test-scoring pass, `python -m qc paper`) are all still to do.
-- Offline comparison: NOT IMPLEMENTED. Fusion over federated components: NOT RUN. Local-only on unseen clients: NOT AVAILABLE.
+- Offline comparison and fusion on federated components are implemented but have only been run on tiny generated worlds (the offline test uses random-weight artifacts: it checks the adapter, not a model). No real old-format artifact is in the repo. Local-only on unseen clients: NOT AVAILABLE.
 - The UK reader is written from the documented layout and untested on real files; counties, grid spacing, search radius and client count are OPEN choices in `configs/uk.yaml`.
 - Paper-check bars (`BARS` in `qc/paper.py`) are the check's own judgement calls.
 

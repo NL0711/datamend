@@ -113,7 +113,8 @@ def test_test_scoring_runs_once_and_reports_everything(fixed):
 
     # what was not run is listed, not hidden
     text = (root / "test_report.md").read_text(encoding="utf-8")
-    assert "NOT IMPLEMENTED" in text and "offline comparison" in text and "fedpers_spatial_s0" in text
+    assert "offline comparison" in text and "no artifact configured" in text and "fedpers_spatial_s0" in text
+    assert "fusion fitted on fedpers components" in text and "NOT IMPLEMENTED" not in text
     assert "Labels: synthetic faults" in text
 
     # per-alert records: the four component scores, the fused score and the flag

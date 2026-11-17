@@ -13,9 +13,9 @@ Scores for each seed: rules, slow, neighbour_baseline (untrained); spatial, temp
 every federated variant whose model exists; and the fusion variants fitted at gate 5. Metrics use the clean
 threshold years for thresholds, as on validation, for the groups ``seen`` and ``unseen`` clients.
 
-NOT RUN by this module (listed in every report): the offline comparison against the existing non-causal
-rainnet, scalenet, msnet and lstm_ae models (NOT IMPLEMENTED: they need an adapter from their window
-format to the QC benchmark and have no trained artifacts here), and fusion fitted on federated components.
+Also scored when they exist: the offline comparison models (qc.offline; non-causal, configured under
+``offline.artifacts``) and fusions fitted on federated components (``python -m qc fusion --on fedpers``, stored as
+``fusion_<variant>@<source>``). Whatever is missing is listed in every report as NOT RUN, with the reason.
 """
 
 from __future__ import annotations
@@ -35,17 +35,13 @@ from qc.federated import COMPONENTS as FED_COMPONENTS, VARIANTS as FED_VARIANTS,
 from qc.fusion import FusionFit, VARIANTS as FUSION_VARIANTS, apply_fusion, component_names, fused_name, load_features
 from qc.fusion_eval import budgets_path, load_budgets
 from qc.metrics import calibration
+from qc.offline import ARCHS as OFFLINE_ARCHS, offline_name, offline_scorers
 from qc.prepare import Prepared
 from qc.runs import RunDir, git_commit, read_json, write_json
 from qc.trained import COMPONENTS as CENTRAL_COMPONENTS, load_model, resolve_device, run_name, score_function
 
 log = logging.getLogger(__name__)
-NOT_IMPLEMENTED = {
-    "offline comparison (rainnet, scalenet, msnet, lstm_ae; non-causal)":
-        "NOT IMPLEMENTED: no adapter from the old window format to the QC benchmark, and no trained artifacts on this machine",
-    "fusion fitted on federated components":
-        "NOT RUN: the fusion is fitted on the centralized spatial and temporal scores only",
-}
+FUSION_SOURCES = ("fedpers", "fedavg", "fedft")          # federated variants a fusion can be fitted on (qc.fusion.FED_SOURCES)
 
 
 def run_root(p: Prepared) -> Path:
@@ -111,7 +107,7 @@ def _scorers(p: Prepared, seed: int, device) -> Dict:
 def score_all(p: Prepared, seeds: Sequence[int], splits: Sequence[str]) -> Dict:
     """Write score files for ``splits`` and return what was not run."""
     cfg, store, device = p.cfg, score_store(p), resolve_device(p.cfg)
-    not_run = dict(NOT_IMPLEMENTED)
+    not_run: Dict[str, str] = {}
     for name, fn in score_functions(p).items():
         compute_scores(p, name, fn, splits, store)
     for seed in seeds:
@@ -123,6 +119,21 @@ def score_all(p: Prepared, seeds: Sequence[int], splits: Sequence[str]) -> Dict:
         fit = FusionFit.load(run_root(p) / "fusion" / "models", seed)
         variants = FUSION_VARIANTS + (("logistic_fed",) if fit.logistic_fed is not None else ())
         apply_fusion(p, fit, splits, variants, store)
+        for src in FUSION_SOURCES:
+            label = f"fusion fitted on {src} components (seed {seed})"
+            f = run_root(p) / "fusion" / "models" / f"logistic_{src}_s{seed}.json"
+            if not f.is_file():
+                not_run[label] = f"NOT RUN: no fit found (run `python -m qc fusion --on {src}`)"
+                continue
+            sfit = FusionFit.load(run_root(p) / "fusion" / "models", seed, src)
+            if not all(store.has(n, splits[0], p.split.years[splits[0]][0]) or n in {"rules", "slow"} for n in sfit.names):
+                not_run[label] = f"NOT RUN: the {src} component scores were not computed (no {src} models for seed {seed})"
+                continue
+            apply_fusion(p, sfit, splits, FUSION_VARIANTS + (("logistic_fed",) if sfit.logistic_fed is not None else ()), store)
+    offline, why = offline_scorers(p, splits, str(device))
+    not_run.update(why)
+    for name, fn in offline.items():
+        compute_scores(p, name, fn, splits, store)
     return not_run
 
 
@@ -135,6 +146,8 @@ def evaluate_all(p: Prepared, seeds: Sequence[int], splits: Sequence[str], budge
         names += [run_name(c, s) for c in CENTRAL_COMPONENTS]
         names += [run_label(v, c, s, float(p.cfg.federated.prox_mu)) for v in FED_VARIANTS for c in FED_COMPONENTS]
         names += [fused_name(v, s) for v in FUSION_VARIANTS + ("logistic_fed",)]
+        names += [fused_name(v, s, src) for src in FUSION_SOURCES for v in FUSION_VARIANTS + ("logistic_fed",)]
+    names += [offline_name(a) for a in OFFLINE_ARCHS]
     out: Dict = {}
     for split in splits:
         out[split] = {}

@@ -150,12 +150,14 @@ def cmd_fusion(cfg, args) -> int:
     out = RunDir(paths.out_dir(cfg) / str(cfg.name), "fusion")
     out.start(cfg, int(cfg.seed), {"split_manifest_hash": p.manifest["hash"], "seeds": seeds})
     for seed in seeds:
-        missing = [n for n in component_names(seed) for tag, y in [("val", p.split.years["fusion_fit"][0])] if not store.has(n, tag, y)]
+        src = args.on
+        missing = [n for n in component_names(seed, source=src, prox_mu=float(cfg.federated.prox_mu))
+                   for tag, y in [("val", p.split.years["fusion_fit"][0])] if not store.has(n, tag, y)]
         if missing:
             print(f"error: seed {seed}: missing validation scores for {missing}. Run `python -m qc untrained` and "
-                  "`python -m qc train` first.", file=sys.stderr)
+                  "`python -m qc train` (or `python -m qc federated` for --on a federated variant) first.", file=sys.stderr)
             return 2
-        fit = fit_fusion(p, seed, store)
+        fit = fit_fusion(p, seed, store, source=src)
         fit_fusion_federated(p, fit, store)              # the shared logistic fusion again, by federated averaging
         fit.save(out.path / "models")
         apply_fusion(p, fit, ("val",), VARIANTS + ("logistic_fed",), store, args.overwrite)
@@ -164,7 +166,7 @@ def cmd_fusion(cfg, args) -> int:
               f"evaluated on {holdout_years(p)[0]}-{holdout_years(p)[-1]}; ECE {res['calibration']['expected_calibration_error']:.4f}")
         for b in args.show_budgets:
             print_table(list(res["comparison"].values()), b)
-        print(f"curves: {out.path / 'validation' / f'curves_s{seed}.png'}")
+        print(f"curves: {out.path / 'validation' / f'curves{fit.tag}_s{seed}.png'}")
     out.mark_done("fusion")
     return 0
 
@@ -306,6 +308,8 @@ def main(argv=None) -> int:
     g.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
     f = sub.choices["fusion"]
     f.add_argument("--seeds", nargs="+", type=int, default=None, help="default: train.seeds from the config")
+    f.add_argument("--on", default="central", choices=["central", "fedpers", "fedavg", "fedft"],
+                   help="fit on the centralized spatial and temporal scores (default, the main fusion) or on a federated variant's")
     f.add_argument("--overwrite", action="store_true")
     f.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
     b = sub.choices["set-budgets"]
