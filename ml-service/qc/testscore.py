@@ -30,7 +30,7 @@ import numpy as np
 from qc import paths
 from qc.baselines import UNTRAINED, score_functions
 from qc.benchmark import check_benchmark, load_bench_year
-from qc.evaluate import compute_scores, evaluate_component, group_cells, score_store, summary_row, thresholds_for
+from qc.evaluate import compute_scores_many, evaluate_component, group_cells, score_store, summary_row, thresholds_for
 from qc.federated import COMPONENTS as FED_COMPONENTS, VARIANTS as FED_VARIANTS, federated_score_function, load_client_models, run_label
 from qc.fusion import FusionFit, VARIANTS as FUSION_VARIANTS, apply_fusion, component_names, fused_name, load_features
 from qc.fusion_eval import budgets_path, load_budgets
@@ -108,12 +108,10 @@ def score_all(p: Prepared, seeds: Sequence[int], splits: Sequence[str]) -> Dict:
     """Write score files for ``splits`` and return what was not run."""
     cfg, store, device = p.cfg, score_store(p), resolve_device(p.cfg)
     not_run: Dict[str, str] = {}
-    for name, fn in score_functions(p).items():
-        compute_scores(p, name, fn, splits, store)
+    compute_scores_many(p, score_functions(p), splits, store)
     for seed in seeds:
         fns, missing = _scorers(p, seed, device)
-        for name, fn in fns.items():
-            compute_scores(p, name, fn, splits, store)
+        compute_scores_many(p, fns, splits, store)
         for name in missing:
             not_run[name] = "NOT RUN: no trained model found"
         fit = FusionFit.load(run_root(p) / "fusion" / "models", seed)
@@ -132,8 +130,7 @@ def score_all(p: Prepared, seeds: Sequence[int], splits: Sequence[str]) -> Dict:
             apply_fusion(p, sfit, splits, FUSION_VARIANTS + (("logistic_fed",) if sfit.logistic_fed is not None else ()), store)
     offline, why = offline_scorers(p, splits, str(device))
     not_run.update(why)
-    for name, fn in offline.items():
-        compute_scores(p, name, fn, splits, store)
+    compute_scores_many(p, offline, splits, store)
     return not_run
 
 

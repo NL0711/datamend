@@ -34,3 +34,30 @@ def test_threaded_contract_check_matches_the_serial_one_and_reports_the_first_ba
     assert np.array_equal(serial["land"], threaded["land"]) and np.array_equal(serial["lat"], threaded["lat"])
     with pytest.raises(ContractError, match="missing"):
         check_contract(d, years + [2150], cfg.grid, workers=4)
+
+
+def test_shared_block_scoring_writes_the_same_scores_and_leaves_the_block_untouched(world, cfg, prepared):
+    from qc.baselines import score_functions
+    from qc.benchmark import build_benchmark
+    from qc.evaluate import compute_scores, compute_scores_many
+    from qc.scoring import ScoreStore, make_block
+
+    build_benchmark(prepared, splits=("val",), overwrite=True)
+    fns = score_functions(prepared)
+    a, b = ScoreStore(world / "scores_a"), ScoreStore(world / "scores_b")
+    for name, fn in fns.items():
+        compute_scores(prepared, name, fn, ("val",), a)
+    compute_scores_many(prepared, fns, ("val",), b)
+    years = [("val", y) for y in prepared.split.years["val"]] + [("clean", y) for y in prepared.split.years["threshold"]]
+    for name in fns:
+        for tag, y in years:
+            assert np.array_equal(a.load(name, tag, y), b.load(name, tag, y), equal_nan=True), (name, tag, y)
+    y0 = prepared.split.years["val"][0]
+    blk = make_block(prepared, y0, "val", int(prepared.cfg.components.history_days))
+    before = blk.obs.copy()
+    for fn in fns.values():
+        fn(blk)
+    assert np.array_equal(before, blk.obs, equal_nan=True)                          # scorers do not modify the shared block
+    mtime = b.path("rules", "val", y0).stat().st_mtime_ns
+    compute_scores_many(prepared, fns, ("val",), b)                                   # existing files are skipped
+    assert b.path("rules", "val", y0).stat().st_mtime_ns == mtime

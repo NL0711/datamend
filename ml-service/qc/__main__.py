@@ -185,6 +185,23 @@ def cmd_fusion(cfg, args) -> int:
     return 0
 
 
+def cmd_ablate(cfg, args) -> int:
+    from qc.ablate import format_rows, run_ablation
+    from qc.prepare import load_prepared
+    from qc.runs import RunDir, write_json
+
+    p = load_prepared(cfg)
+    rows = run_ablation(p, args.seed, args.budget)
+    print(f"Fusion ablation, seed {args.seed}, validation years (held out from the fusion fit), budget {args.budget} false alerts per 1,000 "
+          "clean cell-days, synthetic faults:")
+    print(format_rows(rows))
+    out = RunDir(paths.out_dir(cfg) / str(cfg.name), "ablation")
+    out.start(cfg, int(cfg.seed), {"split_manifest_hash": p.manifest["hash"], "seed": args.seed})
+    write_json(out.file("ablation_s%d.json" % args.seed), {"budget": args.budget, "seed": args.seed, "rows": rows})
+    out.mark_done("ablation")
+    return 0
+
+
 def cmd_federated(cfg, args) -> int:
     from qc.federated import run_federated
     from qc.prepare import load_prepared
@@ -328,7 +345,7 @@ def cmd_paper(cfg, args) -> int:
     return 0
 
 
-COMMANDS = {"uk-grid": cmd_uk_grid, "uk-labels": cmd_uk_labels, "test-score": cmd_test_score, "federated": cmd_federated, "fusion": cmd_fusion, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
+COMMANDS = {"uk-grid": cmd_uk_grid, "uk-labels": cmd_uk_labels, "test-score": cmd_test_score, "federated": cmd_federated, "fusion": cmd_fusion, "ablate": cmd_ablate, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
             "train": cmd_train, "paper": cmd_paper, "era5-daily": cmd_era5_daily, "era5-inventory": cmd_era5_inventory, "era5-validate": cmd_era5_validate}
 
 
@@ -387,6 +404,9 @@ def main(argv=None) -> int:
                    help="fit on the centralized spatial and temporal scores (default, the main fusion) or on a federated variant's")
     f.add_argument("--overwrite", action="store_true")
     f.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
+    ab = sub.choices["ablate"]
+    ab.add_argument("--seed", type=int, default=0)
+    ab.add_argument("--budget", type=float, default=1.0, help="false alerts per 1,000 clean cell-days the components are compared at")
     b = sub.choices["set-budgets"]
     b.add_argument("--final", type=float, required=True, help="false alerts per 1,000 clean cell-days for the final flag")
     b.add_argument("--review", type=float, required=True, help="the same for the review flag (larger)")

@@ -53,6 +53,23 @@ def compute_scores(p: Prepared, component: str, fn: ScoreFn, splits: Sequence[st
         log.info("%s: scored %s %d", component, tag, year)
 
 
+def compute_scores_many(p: Prepared, fns: Dict[str, ScoreFn], splits: Sequence[str], store: Optional[ScoreStore] = None,
+                        overwrite: bool = False) -> None:
+    """Same files as calling :func:`compute_scores` once per component, but each year's block is built once and shared by
+    every component that still lacks that year (the block is read-only for scorers). Skips what exists."""
+    store = store or score_store(p)
+    pad = int(p.cfg.components.history_days)
+    jobs = [(s, y, s) for s in splits for y in p.split.years[s]] + [("clean", y, None) for y in p.split.years["threshold"]]
+    for tag, year, split in jobs:
+        todo = [n for n in fns if overwrite or not store.has(n, tag, year)]
+        if not todo:
+            continue
+        block = make_block(p, year, split, pad)
+        for name in todo:
+            store.save(name, tag, year, fns[name](block))
+            log.info("%s: scored %s %d", name, tag, year)
+
+
 def thresholds_for(p: Prepared, component: str, budgets: Sequence[float], store: Optional[ScoreStore] = None) -> Dict[float, float]:
     store = store or score_store(p)
     cells = group_cells(p, "seen")

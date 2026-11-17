@@ -144,3 +144,21 @@ def test_budgets_are_logged_and_cannot_be_changed(budget_env):
     with pytest.raises(RuntimeError, match="already exists"):
         set_budgets(p, 2, 8, curves, proto, store)
     budgets_path(p).unlink()
+
+
+def test_ablation_uses_a_separate_store_and_reports_missing_components(gp, fit):
+    from qc.ablate import FULL, ablation_store, format_rows, run_ablation
+    from qc.evaluate import score_store
+    main = score_store(gp)
+    before = sorted(p.name for p in main.root.rglob("*.npy"))
+    rows = run_ablation(gp, 0, 1.0, [FULL, ("rules",), ("rules", "slow", "spatial", "neighbour_baseline"), ("rules", "plain_gru")])
+    assert sorted(p.name for p in main.root.rglob("*.npy")) == before               # the main score store is untouched
+    assert any(ablation_store(gp).root.rglob("*.npy"))
+    ok = [r for r in rows if r.get("variant")]
+    assert {(r["components"], r["variant"]) for r in ok} >= {("rules+slow+spatial+temporal", "logistic"), ("rules", "boosted"),
+                                                           ("rules+slow+spatial+neighbour_baseline", "logistic")}
+    for r in ok:
+        assert 0.0 <= r["pr_auc"] <= 1.0 and r["false_per_1000"] >= 0.0
+    missing = [r for r in rows if r.get("variant") is None]
+    assert len(missing) == 1 and "plain_gru" in missing[0]["note"] and missing[0]["note"].startswith("NOT RUN")
+    assert "NOT RUN" in format_rows(rows)
