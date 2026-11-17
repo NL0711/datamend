@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 from backend.app.api.websocket import ws_manager
-from backend.app.db.database import get_db_context
+from backend.app.db.database import db_write_lock, get_db_context, run_with_db_retry
 from backend.app.db.models import utcnow
 from backend.app.db.repositories import (
     AnomalyRepository,
@@ -154,81 +154,86 @@ class IngestionService:
             persisted = False
 
             if save_db:
-                async with get_db_context() as session:
-                    station_repo = StationRepository(session)
-                    obs_repo = ObservationRepository(session)
-                    anomaly_repo = AnomalyRepository(session)
-                    health_repo = HealthRepository(session)
+                async def _persist_single() -> int:
+                    async with db_write_lock:
+                        async with get_db_context() as session:
+                            station_repo = StationRepository(session)
+                            obs_repo = ObservationRepository(session)
+                            anomaly_repo = AnomalyRepository(session)
+                            health_repo = HealthRepository(session)
 
-                    # 1. Ensure Station entity exists
-                    await station_repo.get_or_create(
-                        station_id=station_id,
-                        latitude=data.get("latitude"),
-                        longitude=data.get("longitude"),
-                        elevation=data.get("elevation"),
-                    )
+                            # 1. Ensure Station entity exists
+                            await station_repo.get_or_create(
+                                station_id=station_id,
+                                latitude=data.get("latitude"),
+                                longitude=data.get("longitude"),
+                                elevation=data.get("elevation"),
+                            )
 
-                    # 2. Insert Observation record
-                    qc_flag = inference_res.tier_scores.tier1_qc_flag
-                    obs_db = await obs_repo.create({
-                        "station_id": station_id,
-                        "timestamp": dt_parsed,
-                        "temperature": float_t,
-                        "pressure": float_p,
-                        "humidity": float_rh,
-                        "validation_status": "QC_FLAGGED" if qc_flag else "VALID",
-                        "tier0_flag": str(data.get("tier0_flag") or ("PASS" if not qc_flag else "FLAGGED")),
-                        "source_type": data.get("source_type", "SIMULATED"),
-                        "source_id": data.get("source_id", "diurnal_generator"),
-                        "provider": data.get("provider"),
-                        "device_id": data.get("device_id"),
-                    })
-                    obs_id = obs_db.id
+                            # 2. Insert Observation record
+                            qc_flag = inference_res.tier_scores.tier1_qc_flag
+                            obs_db = await obs_repo.create({
+                                "station_id": station_id,
+                                "timestamp": dt_parsed,
+                                "temperature": float_t,
+                                "pressure": float_p,
+                                "humidity": float_rh,
+                                "validation_status": "QC_FLAGGED" if qc_flag else "VALID",
+                                "tier0_flag": str(data.get("tier0_flag") or ("PASS" if not qc_flag else "FLAGGED")),
+                                "source_type": data.get("source_type", "SIMULATED"),
+                                "source_id": data.get("source_id", "diurnal_generator"),
+                                "provider": data.get("provider"),
+                                "device_id": data.get("device_id"),
+                            })
+                            created_id = obs_db.id
 
-                    # 3. If Anomaly detected, insert AnomalyEvent
-                    if inference_res.is_anomaly:
-                        await anomaly_repo.create({
-                            "observation_id": obs_id,
-                            "station_id": station_id,
-                            "timestamp": dt_parsed,
-                            "is_anomaly": True,
-                            "anomaly_score": inference_res.anomaly_score,
-                            "confidence": inference_res.confidence,
-                            "severity": inference_res.severity,
-                            "anomaly_type": inference_res.classification,
-                            "classification": inference_res.classification,
-                            "is_fault": inference_res.is_fault,
-                            "source_type": data.get("source_type", "SIMULATED"),
-                            "source_id": data.get("source_id", "diurnal_generator"),
-                            "reason": inference_res.reason,
-                            "explanation": inference_res.explanation.model_dump(),
-                            "tier_scores": inference_res.tier_scores.model_dump(),
-                            "recommended_action": inference_res.recommended_action,
-                            "raw_values": inference_res.raw_values,
-                        })
+                            # 3. If Anomaly detected, insert AnomalyEvent
+                            if inference_res.is_anomaly:
+                                await anomaly_repo.create({
+                                    "observation_id": created_id,
+                                    "station_id": station_id,
+                                    "timestamp": dt_parsed,
+                                    "is_anomaly": True,
+                                    "anomaly_score": inference_res.anomaly_score,
+                                    "confidence": inference_res.confidence,
+                                    "severity": inference_res.severity,
+                                    "anomaly_type": inference_res.classification,
+                                    "classification": inference_res.classification,
+                                    "is_fault": inference_res.is_fault,
+                                    "source_type": data.get("source_type", "SIMULATED"),
+                                    "source_id": data.get("source_id", "diurnal_generator"),
+                                    "reason": inference_res.reason,
+                                    "explanation": inference_res.explanation.model_dump(),
+                                    "tier_scores": inference_res.tier_scores.model_dump(),
+                                    "recommended_action": inference_res.recommended_action,
+                                    "raw_values": inference_res.raw_values,
+                                })
 
-                    # 4. Insert SensorHealth record
-                    await health_repo.create({
-                        "station_id": station_id,
-                        "timestamp": dt_parsed,
-                        "health_score": inference_res.sensor_health,
-                        "health_status": inference_res.sensor_status,
-                        "anomaly_rate": 0.0,
-                        "drift_score": 0.0,
-                        "data_quality_score": 0.5 if qc_flag else 1.0,
-                        "degradation_risk": inference_res.degradation_risk,
-                        "estimated_hours_to_failure": inference_res.estimated_hours_to_failure,
-                        "recommended_action": inference_res.recommended_action,
-                    })
+                            # 4. Insert SensorHealth record
+                            await health_repo.create({
+                                "station_id": station_id,
+                                "timestamp": dt_parsed,
+                                "health_score": inference_res.sensor_health,
+                                "health_status": inference_res.sensor_status,
+                                "anomaly_rate": 0.0,
+                                "drift_score": 0.0,
+                                "data_quality_score": 0.5 if qc_flag else 1.0,
+                                "degradation_risk": inference_res.degradation_risk,
+                                "estimated_hours_to_failure": inference_res.estimated_hours_to_failure,
+                                "recommended_action": inference_res.recommended_action,
+                            })
 
-                    # 5. Update Station status
-                    new_station_status = (
-                        inference_res.sensor_status
-                        if inference_res.sensor_status in ["DEGRADED", "CRITICAL"]
-                        else "ACTIVE"
-                    )
-                    await station_repo.update_status(station_id, new_station_status)
-                    persisted = True
+                            # 5. Update Station status
+                            new_station_status = (
+                                inference_res.sensor_status
+                                if inference_res.sensor_status in ["DEGRADED", "CRITICAL"]
+                                else "ACTIVE"
+                            )
+                            await station_repo.update_status(station_id, new_station_status)
+                            return created_id
+
+                obs_id = await run_with_db_retry(_persist_single)
+                persisted = True
 
             # Construct ObservationResponse
             obs_resp = ObservationResponse(
@@ -393,34 +398,39 @@ class IngestionService:
         async def _flush_db_chunk() -> None:
             if not chunk_obs:
                 return
-            async with get_db_context() as session:
-                station_repo = StationRepository(session)
-                obs_repo = ObservationRepository(session)
-                anomaly_repo = AnomalyRepository(session)
-                health_repo = HealthRepository(session)
 
-                for st_id_key, st_meta in chunk_stations.items():
-                    await station_repo.get_or_create(
-                        station_id=st_id_key,
-                        latitude=st_meta.get("latitude"),
-                        longitude=st_meta.get("longitude"),
-                        elevation=st_meta.get("elevation"),
-                    )
+            async def _do_flush() -> None:
+                async with db_write_lock:
+                    async with get_db_context() as session:
+                        station_repo = StationRepository(session)
+                        obs_repo = ObservationRepository(session)
+                        anomaly_repo = AnomalyRepository(session)
+                        health_repo = HealthRepository(session)
 
-                created_obs = await obs_repo.create_batch(chunk_obs)
+                        for st_id_key, st_meta in chunk_stations.items():
+                            await station_repo.get_or_create(
+                                station_id=st_id_key,
+                                latitude=st_meta.get("latitude"),
+                                longitude=st_meta.get("longitude"),
+                                elevation=st_meta.get("elevation"),
+                            )
 
-                if chunk_anomalies:
-                    anomaly_records = []
-                    for anomaly_item, obs_idx in chunk_anomalies:
-                        anomaly_item["observation_id"] = created_obs[obs_idx].id
-                        anomaly_records.append(anomaly_item)
-                    await anomaly_repo.create_batch(anomaly_records)
+                        created_obs = await obs_repo.create_batch(chunk_obs)
 
-                if chunk_health:
-                    await health_repo.create_batch(chunk_health)
+                        if chunk_anomalies:
+                            anomaly_records = []
+                            for anomaly_item, obs_idx in chunk_anomalies:
+                                anomaly_item["observation_id"] = created_obs[obs_idx].id
+                                anomaly_records.append(anomaly_item)
+                            await anomaly_repo.create_batch(anomaly_records)
 
-                for st_id_key, st_status in chunk_latest_station_status.items():
-                    await station_repo.update_status(st_id_key, st_status)
+                        if chunk_health:
+                            await health_repo.create_batch(chunk_health)
+
+                        for st_id_key, st_status in chunk_latest_station_status.items():
+                            await station_repo.update_status(st_id_key, st_status)
+
+            await run_with_db_retry(_do_flush)
 
             chunk_stations.clear()
             chunk_obs.clear()

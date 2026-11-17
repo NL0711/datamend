@@ -84,8 +84,8 @@ echo.
 :: ──────────────────────────────────────────────
 echo [5/5] Launching DataMend...
 echo.
-echo        Backend:  http://localhost:8899
-echo        API Docs: http://localhost:8899/docs
+echo        Backend:  http://localhost:8000
+echo        API Docs: http://localhost:8000/docs
 echo        Frontend: http://localhost:5199
 echo.
 echo ============================================================
@@ -95,7 +95,10 @@ echo ============================================================
 echo.
 
 :: Start backend in a new window
-start "DataMend Backend (port 8899)" cmd /k "cd /d "%PROJECT_DIR%" && python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8899 --reload"
+:: NOTE: --reload spawns TWO processes sharing skyguard.db, which causes
+:: "sqlite3.OperationalError: database is locked" on Windows. Keep it OFF
+:: for normal runs; use run-dev-reload.bat only for code iteration.
+start "DataMend Backend (port 8000)" cmd /k "cd /d "%PROJECT_DIR%" && python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000"
 
 :: Small delay to let backend start first
 timeout /t 3 /nobreak >nul
@@ -111,7 +114,7 @@ start http://localhost:5199
 echo.
 echo DataMend is running!
 echo.
-echo   Backend:  http://localhost:8899      (API Docs: http://localhost:8899/docs)
+echo   Backend:  http://localhost:8000      (API Docs: http://localhost:8000/docs)
 echo   Frontend: http://localhost:5199
 echo.
 echo To stop: close the Backend and Frontend command windows.
