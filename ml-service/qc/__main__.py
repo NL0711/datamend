@@ -4,6 +4,7 @@
   python -m qc prepare    --config qc/configs/base.yaml      # data contract, splits, training statistics
   python -m qc benchmark  --config qc/configs/base.yaml      # frozen validation, test and stress fault benchmark
   python -m qc untrained  --config qc/configs/base.yaml      # rules, slow component, neighbour baseline: scores and metrics
+  python -m qc train      --config qc/configs/base.yaml --components spatial temporal plain_gru   # gate 4, seeds from train.seeds
 
 Common options: ``--profile kaggle|single-gpu`` and ``--set key.sub=value`` (repeatable).
 """
@@ -101,7 +102,32 @@ def cmd_untrained(cfg, args) -> int:
     return 0
 
 
-COMMANDS = {"client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained}
+def cmd_train(cfg, args) -> int:
+    from qc.prepare import load_prepared
+    from qc.trained import run_component
+
+    p = load_prepared(cfg)
+    seeds = args.seeds if args.seeds is not None else [int(s) for s in cfg.train.seeds]
+    results = []
+    for comp in args.components:
+        for seed in seeds:
+            out = run_component(p, comp, seed, tuple(args.splits), args.max_train_years, args.time_cap_hours, args.overwrite)
+            tr = out["train"]
+            print(f"{tr.name}: {tr.status}, {tr.years_done}/{tr.years_total} year-steps, last loss {tr.last_loss}, {tr.seconds:.0f} s")
+            if tr.status != "done":
+                print("  stopped at the time cap; run the same command again to resume")
+                return 3
+            results.extend(out["metrics"].values())
+    for split in args.splits:
+        print()
+        print(f"== {split}")
+        for b in args.show_budgets:
+            print_table([r for r in results if r["split"] == split], b)
+    return 0
+
+
+COMMANDS = {"client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
+            "train": cmd_train}
 
 
 def main(argv=None) -> int:
@@ -120,6 +146,15 @@ def main(argv=None) -> int:
     u.add_argument("--splits", nargs="+", default=["val"], choices=["val", "test", "stress"])
     u.add_argument("--overwrite", action="store_true")
     u.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
+    t = sub.choices["train"]
+    t.add_argument("--components", nargs="+", default=["spatial", "temporal", "plain_gru"], choices=["spatial", "temporal", "plain_gru"])
+    t.add_argument("--seeds", nargs="+", type=int, default=None, help="default: train.seeds from the config")
+    t.add_argument("--splits", nargs="+", default=["val"], choices=["val"],
+                   help="validation only: test years are scored once, at gate 7")
+    t.add_argument("--max-train-years", type=int, default=None, help="train on the earliest N training years (smoke runs)")
+    t.add_argument("--time-cap-hours", type=float, default=None)
+    t.add_argument("--overwrite", action="store_true", help="recompute saved scores")
+    t.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     try:

@@ -67,6 +67,29 @@ components:
     ring_outer: 4            # neighbours for the slow comparison lie between hidden_radius and this distance
   neighbour_baseline:
     radius: 6
+  spatial:
+    radius: 6                # patch half-width in cells; must not exceed clients.buffer_cells
+    width: 32
+    dense: 128
+  temporal:
+    history: 30              # the cell's own previous days (never the scored day); must not exceed history_days
+    hidden: 64
+    dense: 64
+  plain_gru:
+    history: 30
+    hidden: 64
+
+# Training of the centralized components (gate 4). One year-step = one visit to one training year.
+train:
+  epochs: 3
+  steps_per_year: 40
+  batch_size: null           # null = compute.batch_size
+  infer_batch_size: 16384
+  lr: 0.001
+  weight_decay: 0.0001
+  grad_clip: 1.0
+  corruption: true           # corrupt the inputs on the fly with the seen fault settings; targets stay clean
+  seeds: [0, 1, 2]
 
 evaluation:
   # Candidate false-alarm budgets (false alerts per 1,000 clean cell-days) for curves. The two operating
