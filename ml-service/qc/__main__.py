@@ -4,6 +4,7 @@
   python -m qc prepare    --config qc/configs/base.yaml      # data contract, splits, training statistics
   python -m qc benchmark  --config qc/configs/base.yaml      # frozen validation, test and stress fault benchmark
   python -m qc untrained  --config qc/configs/base.yaml      # rules, slow component, neighbour baseline: scores and metrics
+  python -m qc federated  --variants fedpers fedavg fedft local   # gate 6: federated simulation, seeds from train.seeds
   python -m qc fusion     --config qc/configs/base.yaml      # gate 5: fit the fusion, validation curves, comparison
   python -m qc set-budgets --final 1 --review 5              # gate 5: fix the two budgets (once, before test scoring)
   python -m qc train      --config qc/configs/base.yaml --components spatial temporal plain_gru   # gate 4, seeds from train.seeds
@@ -130,7 +131,7 @@ def cmd_train(cfg, args) -> int:
 
 def cmd_fusion(cfg, args) -> int:
     from qc.evaluate import score_store
-    from qc.fusion import VARIANTS, apply_fusion, component_names, fit_fusion
+    from qc.fusion import VARIANTS, apply_fusion, component_names, fit_fusion, fit_fusion_federated
     from qc.fusion_eval import holdout_years, run_fusion_validation
     from qc.prepare import load_prepared
     from qc.runs import RunDir
@@ -147,8 +148,9 @@ def cmd_fusion(cfg, args) -> int:
                   "`python -m qc train` first.", file=sys.stderr)
             return 2
         fit = fit_fusion(p, seed, store)
+        fit_fusion_federated(p, fit, store)              # the shared logistic fusion again, by federated averaging
         fit.save(out.path / "models")
-        apply_fusion(p, fit, ("val",), VARIANTS, store, args.overwrite)
+        apply_fusion(p, fit, ("val",), VARIANTS + ("logistic_fed",), store, args.overwrite)
         res = run_fusion_validation(p, fit, out.path / "validation", store)
         print(f"== seed {seed}: fit on {fit.fit_years[0]}-{fit.fit_years[-1]} ({fit.n_positive} fault rows of {fit.n_rows}); "
               f"evaluated on {holdout_years(p)[0]}-{holdout_years(p)[-1]}; ECE {res['calibration']['expected_calibration_error']:.4f}")
@@ -156,6 +158,30 @@ def cmd_fusion(cfg, args) -> int:
             print_table(list(res["comparison"].values()), b)
         print(f"curves: {out.path / 'validation' / f'curves_s{seed}.png'}")
     out.mark_done("fusion")
+    return 0
+
+
+def cmd_federated(cfg, args) -> int:
+    from qc.federated import run_federated
+    from qc.prepare import load_prepared
+
+    p = load_prepared(cfg)
+    seeds = args.seeds if args.seeds is not None else [int(s) for s in cfg.train.seeds]
+    results = []
+    for variant in args.variants:
+        for comp in args.components:
+            for seed in seeds:
+                out = run_federated(p, comp, variant, seed, ("val",), args.max_train_years, args.time_cap_hours, args.overwrite)
+                tr = out["train"]
+                print(f"{tr.name}: {tr.status}, round {tr.rounds_done}/{tr.rounds_total}, {tr.gradient_steps} gradient steps "
+                      f"(centralized {tr.centralized_steps}), {tr.seconds:.0f} s")
+                if tr.status != "done":
+                    print("  stopped at the time cap; run the same command again to resume")
+                    return 3
+                results.extend(out["metrics"].values())
+    print()
+    for b in args.show_budgets:
+        print_table(results, b)
     return 0
 
 
@@ -171,7 +197,7 @@ def cmd_set_budgets(cfg, args) -> int:
     return 0
 
 
-COMMANDS = {"fusion": cmd_fusion, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
+COMMANDS = {"federated": cmd_federated, "fusion": cmd_fusion, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
             "train": cmd_train}
 
 
@@ -200,6 +226,15 @@ def main(argv=None) -> int:
     t.add_argument("--time-cap-hours", type=float, default=None)
     t.add_argument("--overwrite", action="store_true", help="recompute saved scores")
     t.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
+    g = sub.choices["federated"]
+    g.add_argument("--variants", nargs="+", default=["fedpers"], choices=["fedpers", "fedavg", "fedft", "local"],
+                   help="priority order: fedpers (main) first, then fedavg, fedft, local; FedProx via --set federated.prox_mu=0.01")
+    g.add_argument("--components", nargs="+", default=["spatial", "temporal"], choices=["spatial", "temporal"])
+    g.add_argument("--seeds", nargs="+", type=int, default=None, help="default: train.seeds from the config")
+    g.add_argument("--max-train-years", type=int, default=None)
+    g.add_argument("--time-cap-hours", type=float, default=None)
+    g.add_argument("--overwrite", action="store_true")
+    g.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
     f = sub.choices["fusion"]
     f.add_argument("--seeds", nargs="+", type=int, default=None, help="default: train.seeds from the config")
     f.add_argument("--overwrite", action="store_true")

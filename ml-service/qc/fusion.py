@@ -70,6 +70,7 @@ class FusionFit:
     per_client: Dict[int, Dict]          # client -> coef, intercept
     tail_sorted: List[np.ndarray]        # per component, sorted clean threshold-year scores (the "or" variant)
     scale_limit: float = 50.0
+    logistic_fed: Optional[Dict] = None  # logistic regression fitted by federated averaging (see fit_fusion_federated)
 
     def standardize(self, feats: np.ndarray) -> np.ndarray:
         z = (feats - self.mu) / self.sd
@@ -80,6 +81,10 @@ class FusionFit:
         z = self.standardize(feats)
         if variant == "logistic":
             out = z @ self.logistic["coef"] + self.logistic["intercept"]
+        elif variant == "logistic_fed":
+            if self.logistic_fed is None:
+                raise ValueError("no federated fusion fitted; call fit_fusion_federated first")
+            out = z @ self.logistic_fed["coef"] + self.logistic_fed["intercept"]
         elif variant == "mean":
             out = z.mean(axis=-1)
         elif variant == "or":
@@ -116,6 +121,7 @@ class FusionFit:
         doc = {"seed": self.seed, "names": self.names, "mu": self.mu.tolist(), "sd": self.sd.tolist(),
                "fit_years": self.fit_years, "n_rows": self.n_rows, "n_positive": self.n_positive,
                "logistic": {"coef": self.logistic["coef"].tolist(), "intercept": float(self.logistic["intercept"])},
+               "logistic_fed": None if self.logistic_fed is None else {"coef": self.logistic_fed["coef"].tolist(), "intercept": float(self.logistic_fed["intercept"])},
                "per_client": {str(c): {"coef": m["coef"].tolist(), "intercept": float(m["intercept"])} for c, m in self.per_client.items()}}
         (folder / f"logistic_s{self.seed}.json").write_text(json.dumps(doc, indent=1), encoding="utf-8")
         joblib.dump({"boosted": self.boosted, "tail_sorted": self.tail_sorted}, folder / f"other_s{self.seed}.joblib")
@@ -127,7 +133,8 @@ class FusionFit:
         return cls(seed, doc["names"], np.array(doc["mu"]), np.array(doc["sd"]), doc["fit_years"], doc["n_rows"], doc["n_positive"],
                    {"coef": np.array(doc["logistic"]["coef"]), "intercept": doc["logistic"]["intercept"]}, other["boosted"],
                    {int(c): {"coef": np.array(m["coef"]), "intercept": m["intercept"]} for c, m in doc["per_client"].items()},
-                   other["tail_sorted"])
+                   other["tail_sorted"],
+                   logistic_fed=None if not doc.get("logistic_fed") else {"coef": np.array(doc["logistic_fed"]["coef"]), "intercept": doc["logistic_fed"]["intercept"]})
 
 
 def _logit_fit(x, y, w, C):
@@ -135,21 +142,19 @@ def _logit_fit(x, y, w, C):
     return {"coef": m.coef_[0].astype(np.float64), "intercept": float(m.intercept_[0])}
 
 
-def fit_fusion(p: Prepared, seed: int, store: Optional[ScoreStore] = None, base: Sequence[str] = BASE) -> FusionFit:
-    """Fit every variant on the synthetic faults of ``years.fusion_fit``. Uses no test-year or threshold-year benchmark data
-    (the "or" variant uses clean threshold-year scores, never labels)."""
+def fusion_rows(p: Prepared, seed: int, store: ScoreStore, names: Sequence[str]):
+    """Fit rows: (x (N, F) log1p scores, y (N,), weight (N,), client (N,)) from the synthetic faults of ``years.fusion_fit``,
+    cells of training clients only. Clean rows are subsampled to ``fusion.max_rows`` and reweighted."""
     from qc.benchmark import load_bench_year
-    cfg, store = p.cfg, store or score_store(p)
+    cfg = p.cfg
     years = list(p.split.years["fusion_fit"])
     assert_years_allowed("fusion fit", years, p.split, "val")
     if set(years) & set(p.split.years["threshold"]):
         raise RuntimeError("fusion fit years overlap the threshold years")
-    names = component_names(seed, base)
     cells = group_cells(p, "seen")
     rng = np.random.default_rng([int(cfg.seed), seed, 5])
     xs, ys, ws, cl = [], [], [], []
-    max_rows = int(cfg.fusion.max_rows)
-    per_year = max(max_rows // len(years), 1)
+    per_year = max(int(cfg.fusion.max_rows) // len(years), 1)
     for y in years:
         feats = load_features(store, names, "val", y)
         bench = load_bench_year(p, "val", y)
@@ -161,12 +166,23 @@ def fit_fusion(p: Prepared, seed: int, store: Optional[ScoreStore] = None, base:
         neg_s = rng.choice(neg, take, replace=False) if take < neg.size else neg
         w_neg = neg.size / max(neg_s.size, 1)                    # undo the subsampling so probabilities stay calibrated
         flat = feats.reshape(-1, feats.shape[-1])
-        for idx, label, w in ((pos, 1, 1.0), (neg_s, 0, w_neg)):
-            xs.append(flat[idx]); ys.append(np.full(idx.size, label, np.int8)); ws.append(np.full(idx.size, w, np.float32))
+        for idx, lab_value, w in ((pos, 1, 1.0), (neg_s, 0, w_neg)):
+            xs.append(flat[idx]); ys.append(np.full(idx.size, lab_value, np.int8)); ws.append(np.full(idx.size, w, np.float32))
             cl.append(p.cell_client[idx % feats.shape[1]])
     x, yv, w, client = np.concatenate(xs), np.concatenate(ys), np.concatenate(ws), np.concatenate(cl)
     if yv.sum() == 0:
         raise RuntimeError("no fault cell-days in the fusion fit years")
+    return x, yv, w, client
+
+
+def fit_fusion(p: Prepared, seed: int, store: Optional[ScoreStore] = None, base: Sequence[str] = BASE) -> FusionFit:
+    """Fit every variant on the synthetic faults of ``years.fusion_fit``. Uses no test-year or threshold-year benchmark data
+    (the "or" variant uses clean threshold-year scores, never labels)."""
+    cfg, store = p.cfg, store or score_store(p)
+    years = list(p.split.years["fusion_fit"])
+    names = component_names(seed, base)
+    cells = group_cells(p, "seen")
+    x, yv, w, client = fusion_rows(p, seed, store, names)
     mu, sd = np.nanmean(x, axis=0, dtype=np.float64), np.nanstd(x, axis=0, dtype=np.float64) + 1e-6
     z = np.nan_to_num((x - mu) / sd, nan=0.0)
     C = float(cfg.fusion.C)
@@ -206,3 +222,49 @@ def apply_fusion(p: Prepared, fit: FusionFit, splits: Sequence[str] = ("val",), 
         feats = load_features(store, fit.names, tag, year)
         for v in todo:
             store.save(fused_name(v, fit.seed), tag, year, fit.score(v, feats, p.cell_client))
+
+
+def fit_fusion_federated(p: Prepared, fit: FusionFit, store: Optional[ScoreStore] = None, rounds: Optional[int] = None,
+                         local_iters: int = 3) -> Dict:
+    """Fit the shared logistic fusion by federated averaging and store it as ``fit.logistic_fed``.
+
+    Each training client holds only its own fit rows. The server first aggregates per-client sums to get the
+    standardizer (it equals the pooled one), then for ``rounds`` rounds every client takes ``local_iters``
+    Newton steps on its own regularized logistic loss starting from the global weights, and the server averages
+    the results weighted by each client's total row weight. Simulation only; no privacy claim.
+    """
+    store = store or score_store(p)
+    cfg = p.cfg
+    rounds = int(rounds or cfg.federated.fusion_rounds)
+    x, yv, w, client = fusion_rows(p, fit.seed, store, fit.names)
+    clients = [c for c in p.split.train_clients if (client == c).any()]
+    n = x.shape[1]
+    cnt, tot, sq = np.zeros(n), np.zeros(n), np.zeros(n)
+    for c in clients:                                              # what each client reports: counts and sums
+        xc = x[client == c].astype(np.float64)
+        ok = np.isfinite(xc)
+        cnt += ok.sum(0); tot += np.where(ok, xc, 0).sum(0); sq += (np.where(ok, xc, 0) ** 2).sum(0)
+    mu = tot / cnt
+    sd = np.sqrt(np.maximum(sq / cnt - mu ** 2, 0.0)) + 1e-6
+    local = {}
+    for c in clients:
+        m = client == c
+        z = np.nan_to_num((x[m] - mu) / sd, nan=0.0)
+        local[c] = (np.hstack([z, np.ones((z.shape[0], 1))]), yv[m].astype(float), w[m].astype(float))
+    w_total = float(sum(v[2].sum() for v in local.values()))
+    lam = 1.0 / (float(cfg.fusion.C) * w_total)                    # sklearn: 0.5 ||b||^2 + C * sum(w * loss)
+    beta = np.zeros(n + 1)
+    for _ in range(rounds):
+        updates, weights = [], []
+        for c, (xa, ya, wa) in local.items():
+            b = beta.copy()
+            for _ in range(local_iters):
+                pr = 1.0 / (1.0 + np.exp(-np.clip(xa @ b, -30, 30)))
+                reg = np.r_[np.full(n, lam), 0.0]                  # the intercept is not regularized
+                grad = xa.T @ (wa * (pr - ya)) / wa.sum() + reg * b
+                hess = (xa * (wa * pr * (1 - pr))[:, None]).T @ xa / wa.sum() + np.diag(reg) + 1e-8 * np.eye(n + 1)
+                b = b - np.linalg.solve(hess, grad)
+            updates.append(b); weights.append(wa.sum())
+        beta = np.average(updates, axis=0, weights=weights)
+    fit.logistic_fed = {"coef": beta[:n], "intercept": float(beta[n]), "mu": mu, "sd": sd, "rounds": rounds}
+    return fit.logistic_fed

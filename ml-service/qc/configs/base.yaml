@@ -91,6 +91,13 @@ train:
   corruption: true           # corrupt the inputs on the fly with the seen fault settings; targets stay clean
   seeds: [0, 1, 2]
 
+# Federated simulation (gate 6). No privacy claim: everything runs on one machine.
+federated:
+  rounds: null               # null = set so total gradient steps match the centralized run
+  prox_mu: 0.0               # > 0 switches FedProx on in every variant
+  finetune_steps: 40         # gradient steps of the per-client fine-tune in the fedft variant
+  fusion_rounds: 20          # rounds of federated averaging for the shared logistic fusion
+
 # Fusion (gate 5): fitted on synthetic faults of years.fusion_fit; thresholds from clean years.threshold.
 fusion:
   max_rows: 3000000          # fit rows (all fault cell-days kept; clean ones subsampled and reweighted)

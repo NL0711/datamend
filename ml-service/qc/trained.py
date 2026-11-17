@@ -131,6 +131,46 @@ def _loss(component: str, model, batch, mm, unit, scale, wet_mm) -> torch.Tensor
     return nll(out, mm, unit, wet_mm).mean()
 
 
+def year_steps(p: Prepared, component: str, model: torch.nn.Module, opt, scaler, amp: bool, device: torch.device, year: int,
+               rng: np.random.Generator, steps: int, bs: int, readable: np.ndarray, targets: np.ndarray, gen: FaultGenerator,
+               pad: int, prox_ref: Optional[Dict[str, torch.Tensor]] = None, prox_mu: float = 0.0) -> List[float]:
+    """``steps`` gradient steps on one training year. Cells outside ``readable`` (a (H, W) mask) are NaN in every
+    input, so a client trains on its own cells only; targets are drawn from ``targets`` (land-cell indices).
+    ``prox_ref``/``prox_mu`` add the FedProx term ``mu/2 * ||w - w_ref||^2`` (off when ``prox_mu`` is 0)."""
+    cfg, tr = p.cfg, p.cfg.train
+    clean, doy = train_block(p, year, pad)
+    clean = mask_unreadable(clean, readable, p.grid)
+    seen = corrupt(p, gen, clean, rng) if tr.corruption else clean
+    view = make_view(p, component, seen, doy, pad)
+    T = clean.shape[0] - pad
+    wet = float(cfg.normalization.wet_mm)
+    losses = []
+    for _ in range(steps):
+        t = rng.integers(0, T, bs)
+        cell = targets[rng.integers(0, targets.size, bs)]
+        mm = clean[pad + t, cell]
+        ok = np.isfinite(mm)
+        if not ok.any():
+            continue
+        t, cell, mm = t[ok], cell[ok], mm[ok]
+        batch = to_torch(get_batch(view, component, cfg, t, cell), device)
+        mm_t = torch.from_numpy(mm).to(device)
+        unit = torch.from_numpy(view.unit(cell)).to(device)
+        scale = torch.from_numpy(p.stats.scale[cell]).to(device)
+        with torch.autocast(device.type, enabled=amp):
+            loss = _loss(component, model, batch, mm_t, unit, scale, wet)
+        if prox_mu > 0 and prox_ref is not None:
+            loss = loss + 0.5 * prox_mu * sum(((q - prox_ref[n]) ** 2).sum() for n, q in model.named_parameters())
+        opt.zero_grad(set_to_none=True)
+        scaler.scale(loss).backward()
+        scaler.unscale_(opt)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), float(tr.grad_clip))
+        scaler.step(opt)
+        scaler.update()
+        losses.append(float(loss.detach()))
+    return losses
+
+
 def train_component(p: Prepared, component: str, seed: int, run: RunDir, max_years: Optional[int] = None,
                     time_cap_hours: Optional[float] = None) -> TrainResult:
     cfg, tr = p.cfg, p.cfg.train
@@ -171,33 +211,7 @@ def train_component(p: Prepared, component: str, seed: int, run: RunDir, max_yea
         order = np.random.default_rng([seed, epoch]).permutation(len(years))
         year = years[int(order[i])]
         rng = np.random.default_rng([seed, epoch, year])
-        clean, doy = train_block(p, year, pad)
-        clean = mask_unreadable(clean, readable, p.grid)
-        seen = corrupt(p, gen, clean, rng) if tr.corruption else clean
-        view = make_view(p, component, seen, doy, pad)
-        T = clean.shape[0] - pad
-        losses = []
-        for _ in range(steps):
-            t = rng.integers(0, T, bs)
-            cell = targets[rng.integers(0, targets.size, bs)]
-            mm = clean[pad + t, cell]
-            ok = np.isfinite(mm)
-            if not ok.any():
-                continue
-            t, cell, mm = t[ok], cell[ok], mm[ok]
-            batch = to_torch(get_batch(view, component, cfg, t, cell), device)
-            mm_t = torch.from_numpy(mm).to(device)
-            unit = torch.from_numpy(view.unit(cell)).to(device)
-            scale = torch.from_numpy(p.stats.scale[cell]).to(device)
-            with torch.autocast(device.type, enabled=amp):
-                loss = _loss(component, model, batch, mm_t, unit, scale, wet)
-            opt.zero_grad(set_to_none=True)
-            scaler.scale(loss).backward()
-            scaler.unscale_(opt)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), float(tr.grad_clip))
-            scaler.step(opt)
-            scaler.update()
-            losses.append(float(loss.detach()))
+        losses = year_steps(p, component, model, opt, scaler, amp, device, year, rng, steps, bs, readable, targets, gen, pad)
         done += 1
         last_loss = float(np.mean(losses)) if losses else None
         log_rows.append({"epoch": epoch, "year": year, "loss": last_loss})
@@ -226,8 +240,9 @@ def load_model(p: Prepared, component: str, path: Path, device: torch.device) ->
 # ---------------------------------------------------------------------------------------------- scoring
 
 def score_function(p: Prepared, component: str, model: torch.nn.Module, device: torch.device,
-                   batch_size: Optional[int] = None) -> Callable[[Block], np.ndarray]:
-    """Score every cell-day of a block. Every land cell is readable at scoring time, as for the untrained scores."""
+                   batch_size: Optional[int] = None, cells: Optional[np.ndarray] = None) -> Callable[[Block], np.ndarray]:
+    """Score every cell-day of a block. Every land cell is readable at scoring time, as for the untrained scores.
+    ``cells`` (land-cell indices) limits which cells are scored; the others stay NaN."""
     cfg = p.cfg
     bs = int(batch_size or cfg.train.infer_batch_size)
     wet = float(cfg.normalization.wet_mm)
@@ -238,8 +253,10 @@ def score_function(p: Prepared, component: str, model: torch.nn.Module, device: 
         view = make_view(p, component, block.obs, block.doy, block.pad)
         T, n = block.days, p.grid.n_land
         out = np.full((T, n), np.nan, np.float32)
-        tt, cc = np.divmod(np.arange(T * n), n)
-        for s in range(0, T * n, bs):
+        sel = np.arange(n) if cells is None else np.asarray(cells)
+        tt, cc = np.divmod(np.arange(T * sel.size), sel.size)
+        cc = sel[cc]
+        for s in range(0, tt.size, bs):
             t, cell = tt[s:s + bs], cc[s:s + bs]
             mm = view.target(t, cell)
             ok = np.isfinite(mm)

@@ -114,7 +114,7 @@ def untrained_and_trained_names(seed: int) -> List[str]:
 def run_fusion_validation(p: Prepared, fit: FusionFit, out_dir: Path, store: Optional[ScoreStore] = None) -> Dict:
     """Curves, plot, calibration and the comparison table, written into ``out_dir``."""
     store = store or score_store(p)
-    names = untrained_and_trained_names(fit.seed) + [fused_name(v, fit.seed) for v in VARIANTS]
+    names = untrained_and_trained_names(fit.seed) + [fused_name(v, fit.seed) for v in VARIANTS + ("logistic_fed",)]
     names = [n for n in names if store.has(n, "val", holdout_years(p)[0])]
     curves = validation_curves(p, names, store)
     write_json(out_dir / f"curves_s{fit.seed}.json", curves)
