@@ -5,6 +5,7 @@
   python -m qc benchmark  --config qc/configs/base.yaml      # frozen validation, test and stress fault benchmark
   python -m qc untrained  --config qc/configs/base.yaml      # rules, slow component, neighbour baseline: scores and metrics
   python -m qc federated  --variants fedpers fedavg fedft local   # gate 6: federated simulation, seeds from train.seeds
+  python -m qc test-score --config qc/configs/base.yaml      # gate 7: the single test-year pass (needs fixed budgets), stress, report
   python -m qc fusion     --config qc/configs/base.yaml      # gate 5: fit the fusion, validation curves, comparison
   python -m qc set-budgets --final 1 --review 5              # gate 5: fix the two budgets (once, before test scoring)
   python -m qc train      --config qc/configs/base.yaml --components spatial temporal plain_gru   # gate 4, seeds from train.seeds
@@ -185,6 +186,19 @@ def cmd_federated(cfg, args) -> int:
     return 0
 
 
+def cmd_test_score(cfg, args) -> int:
+    from qc.prepare import load_prepared
+    from qc.testscore import run_root, run_test_scoring
+
+    p = load_prepared(cfg)
+    report = run_test_scoring(p, args.seeds, tuple(args.splits), args.resume)
+    print(f"wrote {run_root(p) / 'test'}/test_report.md (and metrics, alerts)")
+    print("not run:")
+    for k, v in report["not_run"].items():
+        print(f"  - {k}: {v}")
+    return 0
+
+
 def cmd_set_budgets(cfg, args) -> int:
     from qc.fusion_eval import set_budgets
     from qc.prepare import load_prepared
@@ -197,7 +211,7 @@ def cmd_set_budgets(cfg, args) -> int:
     return 0
 
 
-COMMANDS = {"federated": cmd_federated, "fusion": cmd_fusion, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
+COMMANDS = {"test-score": cmd_test_score, "federated": cmd_federated, "fusion": cmd_fusion, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
             "train": cmd_train}
 
 
@@ -226,6 +240,10 @@ def main(argv=None) -> int:
     t.add_argument("--time-cap-hours", type=float, default=None)
     t.add_argument("--overwrite", action="store_true", help="recompute saved scores")
     t.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
+    ts = sub.choices["test-score"]
+    ts.add_argument("--seeds", nargs="+", type=int, default=None, help="default: train.seeds from the config")
+    ts.add_argument("--splits", nargs="+", default=["test", "stress"], choices=["test", "stress"])
+    ts.add_argument("--resume", action="store_true", help="continue an unfinished test pass; a finished one cannot be repeated")
     g = sub.choices["federated"]
     g.add_argument("--variants", nargs="+", default=["fedpers"], choices=["fedpers", "fedavg", "fedft", "local"],
                    help="priority order: fedpers (main) first, then fedavg, fedft, local; FedProx via --set federated.prox_mu=0.01")

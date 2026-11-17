@@ -57,7 +57,7 @@ def test_contract_fails_loudly(tmp_path, cfg, kwargs, message):
 
 def test_contract_reports_missing_year_and_wrong_grid(world, cfg):
     with pytest.raises(ContractError, match="is missing"):
-        check_contract(world / "rf25", [1989], cfg.grid)
+        check_contract(world / "rf25", [1988], cfg.grid)
     real = load_config(world / "test.yaml", ["grid.n_lat=129"])
     with pytest.raises(ContractError, match="LATITUDE"):
         check_contract(world / "rf25", [1990], real.grid)

@@ -56,6 +56,7 @@ def world(tmp_path_factory):
     rng = np.random.default_rng(0)
     for y in YEARS:
         write_year(rf / f"RF25_ind{y}_rfp25.nc", y, rng)
+    write_year(rf / "RF25_ind1989_rfp25.nc", 1989, np.random.default_rng(1989))     # the stress year; its own stream keeps the others unchanged
     save_client_map(root / "client_map.json", _client_map(), 3, 0)
     (root / "test.yaml").write_text(f"""
 extends: base.yaml
