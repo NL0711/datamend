@@ -1,5 +1,3 @@
-import pytest
-
 from training.paths import resolve_data_dir, resolve_out_dir
 
 

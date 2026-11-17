@@ -68,7 +68,7 @@ Set `DATAMEND_DATA_DIR` to a folder with the same layout as `data/` (in the shel
 python -m pytest training -q
 ```
 
-57 tests, under a minute. They use generated data, so they pass without RF25.
+57 tests, under a minute (`python -m pytest -q` runs all 89, including the metric and rule tests). They use generated data, so they pass without RF25.
 
 Then a short training run on the real data:
 

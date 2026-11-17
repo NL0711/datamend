@@ -1,376 +1,31 @@
-````markdown
 # ml-service
 
-FastAPI anomaly-detection service using TSDB datasets and trained rainfall anomaly detectors.
+Rainfall anomaly-detection training and evaluation on RF25 gridded daily rainfall (India), and the home of the planned precipitation QC system.
 
-**Setting up the rainfall training and QC work on a new machine (environment, data, checks): see [`SETUP.md`](SETUP.md).** Data folder layout: [`data/README.md`](data/README.md).
+- **New machine?** Start with [`SETUP.md`](SETUP.md) (environment, data, checks). Data layout: [`data/README.md`](data/README.md).
+- **What is planned:** [`../docs/qc-system-spec.md`](../docs/qc-system-spec.md). The QC system in that spec (`ml-service/qc/`) is not built yet.
 
-## Setup
+## What is here
 
-```bash
-uv sync
-````
+| folder | what it holds |
+| --- | --- |
+| `training/` | models, sampling, fault injection, training loop, CLI (`python -m training ...`) |
+| `ensemble/` | rule and statistical branches, score normalization, label-free fusion |
+| `detectors/` | wrappers that load a trained artifact and score a series (`rainfall_ae`, ensemble) |
+| `evaluation/` | rainfall metrics (point-wise, event, affiliation, breakdowns) |
+| `validation/` | cross-scale consistency rules (daily against monthly or pentad totals) |
+| `scripts/` | `kaggle_train.sh`, `download_midas.py` |
+| `notebooks/` | `datamend_training.ipynb` for Kaggle |
+| `data/` | data folder skeleton; the data itself is not in git |
 
-Start the API:
+Models are trained from scratch on rainfall in mm; nothing is downloaded or run zero-shot at inference time.
 
-```bash
-uv run uvicorn main:app --reload
-```
-
-API:
-
-```text
-http://localhost:8000
-```
-
-## Endpoints
-
-* `POST /api/v1/analyze` — detect anomalies above a threshold.
-* `POST /api/v1/scores` — return anomaly scores for every timestamp.
-* `POST /api/v1/datasets/live` — fetch a fresh dataset from a live public API
-  (`source: "weather"` via Open-Meteo, `source: "crypto"` via CoinGecko) and
-  ingest it as a normal dataset, ready for profiling/validation/analysis.
-* `POST /api/v1/validate/suggest` — auto-detect a dataset's columns and
-  propose default rule-based validation rules (range/not-null/data-type).
-* `POST /api/v1/validate` — run rule-based validation (Objective #2: range
-  check, not-null, data type, uniqueness, cross-field) against a dataset and
-  return a `ValidationReport` with a 0–100 quality score.
-
-See `validation/rule_based.py` and `datasets/live_api_loader.py` for details.
-
-## Detectors (trained models)
-
-Detectors are **trained from scratch** on rainfall data (see `training/`); nothing is run
-zero-shot or downloaded at inference time. The API resolves `detector` through
-`detectors/registry.py`:
-
-| Name | Needs | What it is |
-| --- | --- | --- |
-| `rainfall_ae` | `RAINFALL_AE_ARTIFACT=<artifact dir>` | one trained model (`rainnet`, multi-granularity `msnet`, or the `lstm_ae` baseline) |
-| `rainfall_ensemble` | `RAINFALL_ENSEMBLE_ARTIFACTS=<dir>,<dir>,...` | late-fusion ensemble of several trained artifacts |
-
-The API score is in `[0, 1]`, monotone in the model's calibrated score, with the model's own
-threshold mapped to `0.8` (the default API threshold). Thresholding stays in the API layer:
-`anomaly = score >= threshold`. A known detector with no artifact configured returns HTTP 503;
-an unknown name returns 400. Detectors expect rainfall in mm.
+## Tests
 
 ```bash
-uv run python -m training train --preset smoke --epochs 2 --max-train-years 3 --out artifacts/smoke
-RAINFALL_AE_ARTIFACT=artifacts/smoke uv run uvicorn main:app
+python -m pytest -q            # everything (89 tests, under a minute, no RF25 needed)
+python -m pytest training -q   # training package only
 ```
-
-See `../docs/ARCHITECTURE.md` for the model, the multi-granularity design and the GPU runbook.
-
-TSDB downloads and caches datasets automatically.
-
-## Missing Value Handling
-
-The detectors do not support NaN values, so missing values must be handled explicitly.
-
-Supported strategies:
-
-* `reject` — default; returns HTTP 400 if NaNs are present.
-* `ffill` — forward-fill, then back-fill leading NaNs.
-* `bfill` — backward-fill, then forward-fill trailing NaNs.
-* `mean` — per-column mean.
-* `interpolate` — linear interpolation with edge filling.
-
-No missing-value handling is performed automatically.
-
-Example:
-
-```json
-{
-  "missingValueHandling": {
-    "strategy": "ffill"
-  }
-}
-```
-
-## PyGrinder Corruption
-
-[PyGrinder](https://github.com/WenjieDu/PyGrinder) can optionally introduce synthetic missing values.
-
-Supported methods:
-
-```text
-mcar
-mar_logistic
-mnar_x
-mnar_t
-mnar_nonuniform
-rdo
-seq_missing
-block_missing
-```
-
-Example:
-
-```json
-{
-  "corruption": {
-    "enabled": true,
-    "method": "mcar",
-    "params": {
-      "p": 0.1
-    }
-  },
-  "missingValueHandling": {
-    "strategy": "ffill"
-  }
-}
-```
-
-The response reports the actual missing rate:
-
-```json
-{
-  "missingRate": 0.1003,
-  "missingValueHandling": "ffill"
-}
-```
-
-Original TSDB data is never modified.
-
-## Example Request
-
-```bash
-curl -X POST http://localhost:8000/api/v1/analyze \
-  -H "Content-Type: application/json" \
-  -d '{
-    "analysisId": "ett-001",
-    "datasetName": "ETTh1",
-    "columns": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL", "OT"],
-    "detector": "rainfall_ae",
-    "threshold": 0.8,
-    "corruption": {
-      "enabled": true,
-      "method": "mcar",
-      "params": {"p": 0.1}
-    },
-    "missingValueHandling": {
-      "strategy": "ffill"
-    }
-  }'
-```
-
-## Evaluation
-
-A basic evaluation can be run with (`--detector` picks a registry detector; it needs a trained artifact):
-
-```bash
-uv run python -m evaluation.experiment_runner \
-  --dataset ETTh1 \
-  --anomaly-rate 0.01 \
-  --seed 0
-```
-
-With 10% MCAR missingness:
-
-```bash
-uv run python -m evaluation.experiment_runner \
-  --dataset ETTh1 \
-  --anomaly-rate 0.01 \
-  --seed 0 \
-  --missingness mcar \
-  --p 0.10 \
-  --strategy ffill
-```
-
-The evaluation reports:
-
-```text
-Precision
-Recall
-F1
-PR-AUC
-ROC-AUC
-```
-
-## Testing
-
-Run all tests:
-
-```bash
-uv run pytest -q
-```
-
-Run unit tests:
-
-```bash
-uv run pytest tests/unit/ -q
-```
-
-Run integration tests:
-
-```bash
-uv run pytest tests/integration/ -q
-```
-
-Run evaluation tests:
-
-```bash
-uv run pytest tests/unit/metrics/ -q
-```
-
-Run API and corruption tests:
-
-```bash
-uv run pytest tests/integration/api/ tests/unit/corruption/ -q
-```
-
-Run the training pipeline, detector and registry tests:
-
-```bash
-uv run pytest training detectors -q
-```
-
-## Synthetic Dataset Generation
-
-The `datasets/synthetic` module provides synthetic and semi-synthetic dataset generation for controlled evaluation with ground-truth labels.
-
-### Quick Start
-
-```bash
-# Generate univariate synthetic dataset
-uv run python scripts/generate_synthetic.py generate \
-  --num-samples 100 \
-  --seq-len 1000 \
-  --anomaly-ratio 1.0 \
-  --output synthetic_univariate.pkl
-
-# Generate multivariate synthetic dataset (5 features)
-uv run python scripts/generate_synthetic.py generate \
-  --num-samples 50 \
-  --seq-len 1000 \
-  --anomaly-ratio 1.0 \
-  --multivariate \
-  --num-features 5 \
-  --output synthetic_multivariate.pkl
-
-# Generate with specific anomaly types
-uv run python scripts/generate_synthetic.py generate \
-  --num-samples 100 \
-  --metrics spike,drift,trend_break \
-  --output synthetic_spike_drift.pkl
-```
-
-### Semi-Synthetic Evaluation (TSDB + Injected Anomalies)
-
-```bash
-# Inject anomalies into ETTh1 with clean window detection
-uv run python scripts/generate_synthetic.py inject-tsdb ETTh1 \
-  --intensity 3.0 \
-  --count 5 \
-  --placement random \
-  --output semi_synthetic_etth1.pkl
-
-# Target specific sensors
-uv run python scripts/generate_synthetic.py inject-tsdb ETTh1 \
-  --sensors HUFL,MUFL \
-  --metrics spike,drift \
-  --output semi_synthetic_targeted.pkl
-```
-
-### Benchmarking
-
-```bash
-# Run benchmark on synthetic data
-uv run python scripts/generate_synthetic.py benchmark \
-  --type synthetic \
-  --multivariate \
-  --num-features 5 \
-  --strategy best_f1
-
-# Run benchmark on semi-synthetic data
-uv run python scripts/generate_synthetic.py benchmark \
-  --type semi_synthetic \
-  --tsdb-dataset ETTh1 \
-  --strategy best_f1
-
-# Run with fixed threshold
-uv run python scripts/generate_synthetic.py benchmark \
-  --type synthetic \
-  --threshold 0.8
-
-# Save baseline for regression testing
-uv run python scripts/generate_synthetic.py benchmark \
-  --type synthetic \
-  --save-baseline rainfall_ae_synthetic_baseline
-```
-
-### CI/CD Regression Testing
-
-```bash
-# Run CI benchmarks (compares against baselines)
-uv run python scripts/generate_synthetic.py ci-benchmark
-
-# Update baselines after verified improvements
-uv run python scripts/generate_synthetic.py ci-benchmark --update-baselines
-
-# Generate markdown report
-uv run python scripts/generate_synthetic.py ci-benchmark --output-report ci_report.md
-```
-
-### Evaluation with Synthetic Data
-
-```bash
-# Run evaluation on synthetic data
-uv run python -m evaluation.experiment_runner \
-  --dataset-type synthetic \
-  --num-samples 100 \
-  --seq-len 1000 \
-  --anomaly-rate 1.0 \
-  --seed 42
-
-# Run evaluation on multivariate synthetic data
-uv run python -m evaluation.experiment_runner \
-  --dataset-type synthetic \
-  --multivariate \
-  --num-features 5 \
-  --num-samples 50 \
-  --seq-len 1000 \
-  --anomaly-rate 1.0
-
-# Run evaluation on semi-synthetic data
-uv run python -m evaluation.experiment_runner \
-  --dataset-type semi_synthetic \
-  --dataset ETTh1 \
-  --injection-intensity 3.0 \
-  --injection-count 5
-```
-
-### Supported Anomaly Types
-
-```bash
-uv run python scripts/generate_synthetic.py list-anomalies
-```
-
-Output:
-- `spike` - Point anomaly (instantaneous)
-- `drop` - Point drop anomaly
-- `drift` - Gradual drift
-- `trend_break` - Trend slope change
-- `seasonality_break` - Seasonality disruption
-- `noise_increase` - Increased variance
-- `level_shift` - Permanent step change
-- `pattern_change` - Frequency/phase shift
-
-### Supported Pattern Types
-
-```bash
-uv run python scripts/generate_synthetic.py list-patterns
-```
-
-Output:
-- `stationary` - No trend, no seasonality
-- `linear_trend` - Linear trend
-- `quadratic_trend` - Quadratic trend
-- `single_seasonal` - Single seasonality
-- `multi_seasonal` - Multiple seasonalities
-- `trend_and_seasonal` - Trend + seasonality
-- `high_noise` - High noise AR process
-- `low_noise` - Low noise AR process
 
 ## Multi-scale, label-free ensemble
 
@@ -449,9 +104,9 @@ No station data, no elevation file and no monthly/pentad totals ship with the re
 plus a logging stub; elevation is optional and marked unavailable when absent; the cross-scale rules need totals
 passed in and otherwise fire nothing. Pentad = `(day_of_year - 1) // 5`. The rule branch in the ensemble uses the daily
 rules (negative, implausibly large, stuck runs) because windows carry no aggregate totals; the cross-scale rules
-are meant for the API/real-data path. Normalizers are fit on clean training-year windows, but the models were
+are meant for real data that comes with such totals. Normalizers are fit on clean training-year windows, but the models were
 trained on those years, so their training-year scores are optimistic; the validation-year threshold absorbs that.
-Region breakdown uses latitude bands (no shapefile). The ensemble is not yet exposed through the API registry.
+Region breakdown uses latitude bands (no shapefile).
 
 ### On the training machine
 
@@ -462,7 +117,7 @@ cd ml-service
 uv sync
 uv pip install torch --index-url https://download.pytorch.org/whl/cu124
 uv run python -c "import torch; print(torch.cuda.is_available())"   # must print True
-uv run pytest training ensemble validation detectors evaluation/tests/test_rainfall_metrics.py -q
+uv run pytest -q
 ```
 
 Sanity run (CPU, about a minute; proves wiring only):
