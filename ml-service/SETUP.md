@@ -92,6 +92,8 @@ Other commands (`sweep`, `ensemble`, other presets) are listed at the top of `tr
 
 ## 6. Running on Kaggle
 
+**The QC system:** use `notebooks/datamend_qc_kaggle.ipynb`. Paste the Kaggle link of the RF25 dataset into `DATASET_LINK`, attach the dataset (Add Input), turn on a GPU and Internet. It pulls the latest commit of the branch from git, runs the whole pipeline in two phases (the budgets are yours to choose between them), and can push the small results to the `kaggle-results` branch. Start with `SMOKE = True`. `datamend_qc_kaggle.ipynb` has not been run on Kaggle yet. The steps below are for the older `training` package.
+
 1. Upload the RF25 files as a Kaggle dataset and attach it to the notebook. It is found automatically under `/kaggle/input`.
 2. Either open `notebooks/datamend_training.ipynb`, or run in a cell:
    ```

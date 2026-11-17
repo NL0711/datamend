@@ -32,6 +32,10 @@ Each step is its own command; add `--config qc/configs/base.yaml` and optionally
 
 Timing run and compute caps: spec section 14, gate 0. UK study: `qc/configs/uk.yaml` (run order in its header); `python -m qc paper --config qc/configs/uk.yaml` writes the UK table with its caveats.
 
+## Running on Kaggle
+
+`notebooks/datamend_qc_kaggle.ipynb` runs the pipeline above on Kaggle from a dataset link (`qc/kaggle_data.py` finds the mounted RF25 files; `qc/kaggle_sync.py` pushes the small results to the `kaggle-results` git branch when asked). Phase 1 runs through the fusion step; you choose the budgets, then phase 2 runs the single test pass and the paper outputs. Not yet run on Kaggle.
+
 ## Layout
 
 `config`, `paths`, `grid`, `clients`, `splits`, `stats`, `prepare` (data and splits); `faults`, `extremes`, `benchmark` (benchmark); `baselines`, `untrained`, `neighbours`, `scoring`, `metrics`, `evaluate` (untrained scores, metrics); `models`, `batches`, `trained` (components); `fusion`, `fusion_eval` (fusion, budgets); `federated`; `testscore`; `uk/` (MIDAS study); `paper` (tables, figures, claims); `tests/` (one file per gate).
