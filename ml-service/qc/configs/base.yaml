@@ -56,7 +56,7 @@ benchmark:
   kinds_seen: [spike, stuck, scale, phantom_rain, zeroed, drift, combination]
   kinds_test_only: [repeat, edge]
   seeds: {val: 1001, test: 2002, stress: 3003}
-  expected_hash: 3558013881231b2c   # hash of the frozen benchmark; scoring refuses a different one
+  expected_hash: 442851b03d5f95a4   # hash of the frozen benchmark; scoring refuses a different one. Re-pinned when the test years were extended from 2023 to 2025 (previous value 3558013881231b2c, for test 2018-2023), before any real scoring
   allow_unpinned: false
 
 components:
@@ -130,4 +130,10 @@ era5:
     fusion_fit: [2013, 2015]
     threshold: [2016, 2017]
   fault_rate: 0.01
+  nn:                        # neural masked-target experts (qc/multivar_nn.py): GPU if available, else CPU
+    enabled: false
+    trials: 0                # >0: try that many settings (width, learning rate, patch radius) and keep the best clean validation NLL
+    steps: 3000              # training steps (batch 1024)
+    max_years: 8             # evenly spaced training years held in memory
+    time_cap_hours: null
   budgets: [0.5, 1, 2, 5]
