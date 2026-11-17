@@ -1,0 +1,60 @@
+# Base configuration for the precipitation QC system. Experiments extend this file.
+# Decisions behind every value: docs/qc-system-spec.md.
+
+name: base
+seed: 0
+
+paths:
+  rf25: null      # RF25 folder; null = auto-detect ($DATAMEND_RF25_DIR, $DATAMEND_DATA_DIR/rf25, ml-service/data/rf25, /kaggle/input)
+  work: null      # where splits/, benchmarks/ and cache/ live; null = $DATAMEND_DATA_DIR or ml-service/data
+  out: artifacts/qc   # run folders; relative paths go under $DATAMEND_OUT_DIR, /kaggle/working, or the current folder
+
+# Data contract: what the RF25 files must look like. A mismatch stops the run.
+grid:
+  n_lat: 129
+  n_lon: 135
+  lat0: 6.5
+  lon0: 66.5
+  step: 0.25
+  land_cells: 4964
+  fill_value: -999.0
+  units: mm
+
+years:            # inclusive ranges
+  train: [1951, 2012]
+  val: [2013, 2017]
+  test: [2018, 2023]
+  fusion_fit: [2013, 2015]   # fusion is fitted on synthetic faults in these validation years
+  threshold: [2016, 2017]    # false-alarm budgets are set on clean data from these validation years
+  stress: [1901, 1950]       # evaluation-only stress test; never used for fitting
+
+clients:
+  k: 8
+  seed: 0
+  heldout: [3, 6]     # unseen clients, numbered as in qc/assets/client_map.json
+  buffer_cells: 6     # training cells within this many cells of a held-out client are not used
+
+normalization:
+  wet_mm: 0.1
+  wet_quantile: 99.9  # scale = log1p of this percentile of training wet days; rescales, never clips
+
+extremes:
+  quantile: 99.0      # heavy-rain threshold: this percentile of the cell's wet days in training years
+  min_cells: 4        # connected cells (8-neighbour) all above their threshold = protected extreme
+
+compute:
+  profile: single-gpu
+
+# Corruption benchmark (frozen for validation, test and stress years). Synthetic faults are a stress
+# test, not real QC labels.
+benchmark:
+  name: v1
+  rate: 0.01                 # share of land cell-days carrying a fault
+  footprint_share: 0.5       # share of faults with a footprint (radius > 0)
+  radius: {min: 1.5, max_seen: 4.0, max: 6.0}   # cells; radii above max_seen appear in test only
+  min_strength_seen: 0.25    # strengths below this appear in test only
+  kinds_seen: [spike, stuck, scale, phantom_rain, zeroed, drift, combination]
+  kinds_test_only: [repeat, edge]
+  seeds: {val: 1001, test: 2002, stress: 3003}
+  expected_hash: 3558013881231b2c   # hash of the frozen benchmark; scoring refuses a different one
+  allow_unpinned: false
