@@ -2,6 +2,7 @@
 through git (used by ``notebooks/datamend_qc_kaggle.ipynb``, opt-in).
 
 Rules this module keeps:
+  * The notebook's own checkout is never switched: the commit is built in a temporary git worktree.
   * Results go to their own branch (default ``kaggle-results``) under ``docs/results/<run>/``. The branch that holds the
     code (``ml-training``) is never written to.
   * Never a force push. If the remote branch exists it is fetched first and the new commit is built on top of it.
@@ -46,34 +47,41 @@ def sync_results(repo: Path, remote_url: str, run: str, files: Dict[Path, str], 
     for src in files:
         if Path(src).stat().st_size > max_mb * 1e6:
             raise SyncError(f"{src} is larger than {max_mb} MB: not adding it to git")
-    _git(repo, ["config", "user.name", IDENTITY[0]])
-    _git(repo, ["config", "user.email", IDENTITY[1]])
-    # fetch the results branch if it already exists, so the new commit sits on top of it
-    exists = _git(repo, ["ls-remote", "--heads", remote_url, branch], secret, check=False).strip() != ""
-    saved = {rel: text for rel, text in (tracked_text or {}).items()}
-    if exists:
-        _git(repo, ["fetch", remote_url, branch], secret)
-        _git(repo, ["checkout", "-f", "-B", branch, "FETCH_HEAD"], secret)
-    else:
-        _git(repo, ["checkout", "-f", "-B", branch], secret)
-    dest_root = repo / "docs" / "results" / run
-    added = []
-    for src, rel in files.items():
-        dst = dest_root / rel
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(src, dst)
-        added.append(str(dst.relative_to(repo)))
-    for rel, text in saved.items():
-        dst = repo / rel
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        dst.write_text(text, encoding="utf-8")
-        added.append(rel)
-    if not added:
-        return None
-    _git(repo, ["add", "--", *added], secret)
-    if not _git(repo, ["status", "--porcelain"], secret, check=False).strip():
-        return None
-    _git(repo, ["commit", "-m", message or f"results: notebook run {run}"], secret)
-    sha = _git(repo, ["rev-parse", "--short", "HEAD"], secret)
-    _git(repo, ["push", remote_url, f"HEAD:refs/heads/{branch}"], secret)        # never --force
-    return sha
+    # Work in a separate worktree: the notebook's own checkout (the code that is running) is never switched or modified.
+    wt = repo.parent / f".results_worktree_{branch.replace('/', '_')}"
+    if wt.exists():
+        _git(repo, ["worktree", "remove", "--force", str(wt)], secret, check=False)
+        shutil.rmtree(wt, ignore_errors=True)
+    _git(repo, ["worktree", "prune"], secret, check=False)
+    _git(repo, ["worktree", "add", "--detach", str(wt), "HEAD"], secret)
+    try:
+        exists = _git(wt, ["ls-remote", "--heads", remote_url, branch], secret, check=False).strip() != ""
+        if exists:
+            _git(wt, ["fetch", remote_url, branch], secret)                  # build on top of what is already there
+            _git(wt, ["checkout", "-f", "-B", branch, "FETCH_HEAD"], secret)
+        else:
+            _git(wt, ["checkout", "-f", "-B", branch], secret)
+        dest_root = wt / "docs" / "results" / run
+        added = []
+        for src, rel in files.items():
+            dst = dest_root / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(src, dst)
+            added.append(str(dst.relative_to(wt)))
+        for rel, text in (tracked_text or {}).items():
+            dst = wt / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_text(text, encoding="utf-8")
+            added.append(rel)
+        if not added:
+            return None
+        _git(wt, ["add", "--", *added], secret)
+        if not _git(wt, ["status", "--porcelain"], secret, check=False).strip():
+            return None
+        _git(wt, ["-c", f"user.name={IDENTITY[0]}", "-c", f"user.email={IDENTITY[1]}", "commit", "-m",
+                  message or f"results: notebook run {run}"], secret)
+        sha = _git(wt, ["rev-parse", "--short", "HEAD"], secret)
+        _git(wt, ["push", remote_url, f"HEAD:refs/heads/{branch}"], secret)        # never --force
+        return sha
+    finally:
+        _git(repo, ["worktree", "remove", "--force", str(wt)], secret, check=False)

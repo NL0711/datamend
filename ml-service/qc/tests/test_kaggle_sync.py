@@ -45,6 +45,11 @@ def test_results_go_to_their_own_branch_and_the_code_branch_is_untouched(remote_
     assert "code.py" in tree                                                                  # built on the code, not an orphan
     assert "budgets chosen" in git(bare, "show", "kaggle-results:docs/qc-evaluation-protocol.md")
     assert git(bare, "log", "-1", "--format=%an %ae", "kaggle-results") == "datamend-notebook datamend-notebook@users.noreply.github.com"
+    # the running checkout is untouched: same branch, and the budget log edit is still sitting there uncommitted
+    assert git(work, "branch", "--show-current") == "ml-training"
+    assert "budgets chosen" in (work / "docs" / "qc-evaluation-protocol.md").read_text()
+    assert "M docs/qc-evaluation-protocol.md" in git(work, "status", "--short")
+    assert not (tmp_path / ".results_worktree_kaggle-results").exists()
 
 
 def test_second_sync_builds_on_the_first_and_nothing_new_is_a_no_op(remote_and_clone, tmp_path):
