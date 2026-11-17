@@ -82,3 +82,6 @@ ml-service/*.nc
 *.grib
 *.grib.part
 *.idx
+
+# notebooks with credentials written into them
+*.local.ipynb

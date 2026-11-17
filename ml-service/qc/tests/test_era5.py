@@ -109,6 +109,18 @@ def test_hourly_files_are_kept_unless_asked_and_deleted_only_when_every_year_the
     assert {p.name for p in hourly3.glob("*.nc")} == before
 
 
+def test_an_incomplete_year_is_rebuilt_when_more_hourly_data_arrives(tmp_path):
+    h = tmp_path / "h"
+    f = lambda t: 10.0 + 0 * t
+    _range_file(h / "first_half.nc", "2015-01-01T00:00", 181 * 24, f)
+    rep = build_daily(h, tmp_path / "d", [2015], SPEC, Alignment(0.0))[0]
+    assert rep.complete_days == 181
+    _range_file(h / "second_half.nc", "2015-07-01T00:00", 184 * 24, f)
+    rep = build_daily(h, tmp_path / "d", [2015], SPEC, Alignment(0.0))[0]                  # same output folder: rebuilt, not skipped
+    assert rep.complete_days == 365 and era5._year_complete(tmp_path / "d", 2015)
+    assert build_daily(h, tmp_path / "d", [2015], SPEC, Alignment(0.0)) == []                # complete now: skipped
+
+
 def test_wrong_grid_is_refused(tmp_path):
     _hourly(tmp_path / "h", 2016, 3, lambda h: 10.0 + 0 * h)
     bad = SimpleNamespace(n_lat=4, n_lon=5, lat0=11.0, lon0=70.0, step=0.25)

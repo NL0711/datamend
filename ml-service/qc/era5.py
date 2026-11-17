@@ -323,7 +323,7 @@ def _deletable(info: FileInfo, align: Alignment, daily_dir: Path) -> bool:
 def build_daily(hourly_dir: Path, daily_dir: Path, years: Sequence[int], spec, align: Alignment,
                 stats: Optional[Dict[str, Sequence[str]]] = None, delete_consumed: bool = False,
                 overwrite: bool = False) -> List[YearBuild]:
-    """Build ``ERA5D_<year>.nc`` for each year from whatever files cover it. Skips years already built.
+    """Build ``ERA5D_<year>.nc`` for each year from whatever files cover it. Skips years already built and complete; an incomplete one is rebuilt.
     ``delete_consumed`` deletes a hourly file only when every year its hours fall in has a complete daily file, and
     only after the requested years were processed. Default: nothing is deleted."""
     stats = {**DEFAULT_STATS, **(stats or {})}
@@ -332,9 +332,9 @@ def build_daily(hourly_dir: Path, daily_dir: Path, years: Sequence[int], spec, a
     reports = []
     for year in sorted(years):
         path = daily_path(daily_dir, year)
-        if path.is_file() and not overwrite:
-            log.info("ERA5 daily %d exists", year)
-            continue
+        if path.is_file() and not overwrite and _year_complete(daily_dir, year):
+            log.info("ERA5 daily %d exists and is complete", year)
+            continue                                                   # an incomplete year is rebuilt: more hourly data may have arrived
         fields, rep = build_year(infos, year, spec, align, stats)
         if rep.complete_days == 0:
             log.warning("ERA5 %d: no complete day (files missing?)", year)
