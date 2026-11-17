@@ -149,7 +149,7 @@ Full decision: [run recording](https://github.com/NL0711/datamend/issues/28).
 Full decisions: [labelled region](https://github.com/NL0711/datamend/issues/23), [study setup](https://github.com/NL0711/datamend/issues/25), [flags and counts](https://github.com/NL0711/datamend/issues/24). Facts: `docs/research/uk-midas-open-daily-rain-qc-flags-and-counts.md`.
 
 - **Role:** a separate study with real "original versus hand-corrected" labels. Reported in its own table; never pooled with India. It is not evidence that the method finds real errors in RF25.
-- **Data:** UK Met Office MIDAS Open daily rainfall (CEDA, Open Government Licence). Download needs a CEDA access token supplied through the `CEDA_TOKEN` environment variable.
+- **Data:** UK Met Office MIDAS Open daily rainfall (CEDA, Open Government Licence). Downloaded with `ml-service/scripts/download_midas.py`, which reads a CEDA access token from the `CEDA_TOKEN` environment variable or `ml-service/.env` (template: `ml-service/.env.example`).
 - **Gridding:** grid the original station values with the same inverse-distance method as RF25. A cell-day is bad if a hand-corrected station value fed it.
 - **Errors:** only manual corrections after a failed neighbour check. Automatic estimates, split multi-day totals, flag-only changes and unmatched originals are excluded from scoring and counted separately.
 - **Circularity:** the labels come from a neighbour check, so the spatial component's score is reported with that caveat and beside the neighbour-average baseline.
@@ -172,7 +172,7 @@ Each gate ends with its tests passing and a short report of what ran. A later ga
 
 | gate | work | exit check |
 |---|---|---|
-| 0. Setup | Create `ml-service/qc/`, the config loader and the two compute profiles. Decide, with the owner, whether to discard the uncommitted footprint-injector edit in `ml-service/training/` (superseded by field-level faults). Run the timing run and set the budget caps. | Existing training tests pass; timing numbers recorded. |
+| 0. Setup | Create `ml-service/qc/`, the config loader and the two compute profiles. (The uncommitted footprint-injector edit in `ml-service/training/` was discarded on 2026-11-17 by the owner's decision; field-level faults replace it.) Run the timing run and set the budget caps. | Existing training tests pass; timing numbers recorded. |
 | 1. Data and splits | Data-contract check, client map, split manifest, per-client normalization, leakage audit. | Contract and leakage tests pass; map and manifest hashed. |
 | 2. Benchmark | Fault library, protected and ambiguous extremes, frozen validation and test files. | Faults reproduce from seed; no protected cell is corrupted; test-only settings absent from training and validation. |
 | 3. Untrained scores and metrics | Rules, slow component, neighbour-average baseline, the metrics module. | Metrics match hand-computed values on a toy field; first validation numbers reported. |
