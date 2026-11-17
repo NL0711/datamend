@@ -19,7 +19,7 @@ current value, nor its other variables); the score is the residual over its robu
 Synthetic faults (``inject``): spike, stuck, drift, amplitude error ("scale"), single cell, one variable at a time,
 values clipped to the physical range so the bound rule is not trivially perfect. Not frozen or hashed.
 
-NOT IMPLEMENTED here (listed in every output): neural heads (the gradient-boosted regressors above are the learned part), spatial
+NOT IMPLEMENTED here (listed in every output): footprint faults of more than one cell, spatial
 footprint faults, per-variable false-removal protection for genuine extremes (the rain "protected extreme" idea has no
 counterpart yet for heat waves or cold spells), the federated variants, and a frozen benchmark with a single-use test
 pass. ERA5 is modelled, not measured, so every recall here is optimistic relative to real station faults.
@@ -46,7 +46,7 @@ KINDS = ("spike", "stuck", "drift", "scale")
 LIMITS = [
     "ERA5 is a reanalysis (modelled), not a measurement: injected faults are easier to detect than real sensor faults.",
     "Synthetic faults only; no real labels exist. Faults are single-cell, one variable at a time, and the benchmark is not frozen.",
-    "NOT IMPLEMENTED: neural heads (the gradient-boosted regressors are the learned part), spatial footprint faults, protection of genuine extremes (heat waves, cold spells), "
+    "NOT IMPLEMENTED: footprint faults of more than one cell, protection of genuine extremes (heat waves, cold spells), "
     "federated variants, a single-use test pass.",
     "Consistency covariance is pooled over all cells; regional differences in the relationship are not modelled.",
 ]
@@ -336,10 +336,12 @@ class Scorer:
     experts when ``gbm`` is given."""
     ex: Experts
     gbm: Optional[GbmExperts] = None
+    nn: Optional[object] = None                      # qc.multivar_nn.NnExperts
 
     @property
     def names(self) -> Tuple[str, ...]:
-        return NAMES + ("consistency",) + (GBM_NAMES if self.gbm else ())
+        from qc.multivar_nn import NN_NAMES
+        return NAMES + ("consistency",) + (GBM_NAMES if self.gbm else ()) + (NN_NAMES if self.nn else ())
 
     @property
     def st(self) -> Stats:
@@ -349,6 +351,8 @@ class Scorer:
         out = self.ex.scores(fields)
         if self.gbm:
             out.update(self.gbm.scores(fields))
+        if self.nn:
+            out.update(self.nn.scores(fields))
         return out
 
 
@@ -407,7 +411,8 @@ def _recall(score: np.ndarray, label: np.ndarray, thr: float) -> Optional[float]
 
 
 def run_validation(data: Era5Daily, years: Dict[str, Sequence[int]], rate: float = 0.01, seed: int = 0,
-                   budgets: Sequence[float] = (0.5, 1.0, 2.0, 5.0), out_path: Optional[Path] = None, gbm: bool = True) -> Dict:
+                   budgets: Sequence[float] = (0.5, 1.0, 2.0, 5.0), out_path: Optional[Path] = None, gbm: bool = True,
+                   nn: Optional[Dict] = None) -> Dict:
     """Fit on ``years['train']`` (statistics and, with ``gbm``, the neighbour regression experts), ``years['fusion_fit']``
     (fusion); thresholds from clean and evaluation on corrupted ``years['threshold']``. Years must not overlap across
     roles: train < fusion_fit, and threshold is disjoint."""
@@ -417,7 +422,12 @@ def run_validation(data: Era5Daily, years: Dict[str, Sequence[int]], rate: float
     st = fit_stats(data, tr)
     ex = fit_experts(data, st, th)
     gbm_years = tr[::max(1, len(tr) // 12)]                       # at most about 12 evenly spaced training years: plenty for the regressors, and fast
-    scorer = Scorer(ex, fit_gbm(data, st, gbm_years, th, seed=seed) if gbm else None)
+    nn_experts = None
+    if nn:                                           # neural experts (GPU if there is one): tuned on clean fusion-fit years, never on faults
+        from qc.multivar_nn import NnConfig, fit_nn
+        nn_experts = fit_nn(data, st, tr, ff, NnConfig(steps=int(nn.get("steps", 3000))), trials=int(nn.get("trials", 0)),
+                            max_years=int(nn.get("max_years", 8)), seed=seed, time_cap_hours=nn.get("time_cap_hours"))
+    scorer = Scorer(ex, fit_gbm(data, st, gbm_years, th, seed=seed) if gbm else None, nn_experts)
     fu = fit_fusion(scorer, data, ff, rate, seed)
     clean_scores: Dict[str, List[np.ndarray]] = {k: [] for k in scorer.names + ("fusion", "fusion_max")}
     clean_years = []
@@ -459,6 +469,7 @@ def run_validation(data: Era5Daily, years: Dict[str, Sequence[int]], rate: float
     res = {"years": {"train": tr, "fusion_fit": ff, "threshold_and_evaluation": th}, "rate": rate, "seed": seed,
            "budgets": list(budgets), "label_tier": "synthetic faults on ERA5 daily means (modelled data)", "limits": LIMITS,
            "references": ex.ref, "consistency_cov": st.cov.tolist(), "gbm": bool(gbm),
+           "nn": None if nn_experts is None else nn_experts.history,
            "fusion": {"names": list(fu.names), "coef": fu.coef.tolist()}, "scores": {}}
     for k in thr:
         res["scores"][k] = {}

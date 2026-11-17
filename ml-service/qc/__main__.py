@@ -113,6 +113,21 @@ def cmd_untrained(cfg, args) -> int:
     return 0
 
 
+def shard_units(units, spec):
+    """The units of work this process takes. ``spec`` is "I/N": unit k goes to shard k % N, so N processes (for example one
+    per GPU) split the work with no overlap. None = everything."""
+    units = list(units)
+    if not spec:
+        return units
+    try:
+        i, n = (int(x) for x in str(spec).split("/"))
+    except ValueError:
+        raise ConfigError(f"--shard must look like 0/2, not {spec!r}") from None
+    if n < 1 or not 0 <= i < n:
+        raise ConfigError(f"--shard {spec}: need 0 <= I < N")
+    return [u for k, u in enumerate(units) if k % n == i]
+
+
 def cmd_train(cfg, args) -> int:
     from qc.prepare import load_prepared
     from qc.trained import run_component
@@ -120,15 +135,14 @@ def cmd_train(cfg, args) -> int:
     p = load_prepared(cfg)
     seeds = args.seeds if args.seeds is not None else [int(s) for s in cfg.train.seeds]
     results = []
-    for comp in args.components:
-        for seed in seeds:
-            out = run_component(p, comp, seed, tuple(args.splits), args.max_train_years, args.time_cap_hours, args.overwrite)
-            tr = out["train"]
-            print(f"{tr.name}: {tr.status}, {tr.years_done}/{tr.years_total} year-steps, last loss {tr.last_loss}, {tr.seconds:.0f} s")
-            if tr.status != "done":
-                print("  stopped at the time cap; run the same command again to resume")
-                return 3
-            results.extend(out["metrics"].values())
+    for comp, seed in shard_units([(c, s) for c in args.components for s in seeds], args.shard):
+        out = run_component(p, comp, seed, tuple(args.splits), args.max_train_years, args.time_cap_hours, args.overwrite)
+        tr = out["train"]
+        print(f"{tr.name}: {tr.status}, {tr.years_done}/{tr.years_total} year-steps, last loss {tr.last_loss}, {tr.seconds:.0f} s")
+        if tr.status != "done":
+            print("  stopped at the time cap; run the same command again to resume")
+            return 3
+        results.extend(out["metrics"].values())
     for split in args.splits:
         print()
         print(f"== {split}")
@@ -178,17 +192,16 @@ def cmd_federated(cfg, args) -> int:
     p = load_prepared(cfg)
     seeds = args.seeds if args.seeds is not None else [int(s) for s in cfg.train.seeds]
     results = []
-    for variant in args.variants:
-        for comp in args.components:
-            for seed in seeds:
-                out = run_federated(p, comp, variant, seed, ("val",), args.max_train_years, args.time_cap_hours, args.overwrite)
-                tr = out["train"]
-                print(f"{tr.name}: {tr.status}, round {tr.rounds_done}/{tr.rounds_total}, {tr.gradient_steps} gradient steps "
-                      f"(centralized {tr.centralized_steps}), {tr.seconds:.0f} s")
-                if tr.status != "done":
-                    print("  stopped at the time cap; run the same command again to resume")
-                    return 3
-                results.extend(out["metrics"].values())
+    units = [(v, c, s) for v in args.variants for c in args.components for s in seeds]
+    for variant, comp, seed in shard_units(units, args.shard):
+        out = run_federated(p, comp, variant, seed, ("val",), args.max_train_years, args.time_cap_hours, args.overwrite)
+        tr = out["train"]
+        print(f"{tr.name}: {tr.status}, round {tr.rounds_done}/{tr.rounds_total}, {tr.gradient_steps} gradient steps "
+              f"(centralized {tr.centralized_steps}), {tr.seconds:.0f} s")
+        if tr.status != "done":
+            print("  stopped at the time cap; run the same command again to resume")
+            return 3
+        results.extend(out["metrics"].values())
     print()
     for b in args.show_budgets:
         print_table(results, b)
@@ -339,6 +352,8 @@ def main(argv=None) -> int:
                    help="validation only: test years are scored once, at gate 7")
     t.add_argument("--max-train-years", type=int, default=None, help="train on the earliest N training years (smoke runs)")
     t.add_argument("--time-cap-hours", type=float, default=None)
+    t.add_argument("--shard", default=None, metavar="I/N", help="take every Nth (component, seed) unit starting at I, so N processes "
+                   "(one per GPU, each with --set compute.devices=[cuda:I]) split the work: 0/2 and 1/2")
     t.add_argument("--overwrite", action="store_true", help="recompute saved scores")
     t.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
     sub.choices["uk-labels"].add_argument("--overwrite", action="store_true")
@@ -360,6 +375,7 @@ def main(argv=None) -> int:
     g.add_argument("--seeds", nargs="+", type=int, default=None, help="default: train.seeds from the config")
     g.add_argument("--max-train-years", type=int, default=None)
     g.add_argument("--time-cap-hours", type=float, default=None)
+    g.add_argument("--shard", default=None, metavar="I/N", help="as for train: every Nth (variant, component, seed) unit starting at I")
     g.add_argument("--overwrite", action="store_true")
     g.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
     f = sub.choices["fusion"]
