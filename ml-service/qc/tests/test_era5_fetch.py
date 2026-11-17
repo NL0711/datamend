@@ -72,3 +72,32 @@ def test_years_are_converted_as_they_arrive_and_one_failure_does_not_stop_the_re
         raise ValueError("incomplete year")
     status = fetch_and_convert(lambda: FakeClient(), [2020], tmp_path / "y", bad, workers=1, wait=0)
     assert status == {2020: "failed: convert: incomplete year"}
+
+
+def test_a_full_cds_queue_is_waited_out_not_hammered(tmp_path):
+    class Busy:
+        def __init__(self):
+            self.calls = 0
+
+        def retrieve(self, dataset, request, target):
+            self.calls += 1
+            if self.calls <= 3:
+                raise RuntimeError("400 Client Error: The job has been rejected. Maximum number queued requests for this dataset has been "
+                                   "reached. Please configure your scripts to request data sequentially")
+            Path(target).write_bytes(b"data")
+
+    from qc.era5_fetch import _retrieve, build_request
+    c = Busy()
+    target = tmp_path / "x.grib"
+    _retrieve(c, build_request(2016, range(1, 13)), target, retries=0, wait=0, queue_wait=0, queue_tries=5)
+    assert target.is_file() and c.calls == 4                        # three rejections waited out although retries=0
+    c2 = Busy()
+    with pytest.raises(RuntimeError, match="queued requests"):
+        _retrieve(c2, build_request(2016, range(1, 13)), tmp_path / "y.grib", retries=0, wait=0, queue_wait=0, queue_tries=2)
+    assert c2.calls == 3                                            # gives up after queue_tries waits
+
+
+def test_downloads_are_sequential_by_default(tmp_path):
+    import inspect
+    from qc.era5_fetch import fetch_and_convert
+    assert inspect.signature(fetch_and_convert).parameters["workers"].default == 1
