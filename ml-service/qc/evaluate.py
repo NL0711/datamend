@@ -70,11 +70,12 @@ def load_years(p: Prepared, component: str, split: str, years: Optional[Sequence
 
 
 def evaluate_component(p: Prepared, component: str, split: str, budgets: Sequence[float], groups: Sequence[str] = ("seen",),
-                       store: Optional[ScoreStore] = None, pinned: bool = True) -> Dict:
-    """Metrics for one component on one split. ``pinned=False`` allows an unpinned benchmark (validation only)."""
+                       store: Optional[ScoreStore] = None, pinned: bool = True, years: Optional[Sequence[int]] = None) -> Dict:
+    """Metrics for one component on one split. ``pinned=False`` allows an unpinned benchmark (validation only).
+    ``years`` limits the evaluation to some benchmark years of the split (e.g. the years a fusion was not fitted on)."""
     bench = check_benchmark(p, require_pinned=pinned)
     thr = thresholds_for(p, component, budgets, store)
-    years = load_years(p, component, split, store=store)
+    years = load_years(p, component, split, years, store)
     out: Dict = {"component": component, "split": split, "years": [years[0].bench.year, years[-1].bench.year],
                  "label_tier": "synthetic faults", "benchmark_hash": bench["hash"],
                  "thresholds_from": {"years": p.split.years["threshold"], "cells": "training clients, clean data"},

@@ -4,6 +4,8 @@
   python -m qc prepare    --config qc/configs/base.yaml      # data contract, splits, training statistics
   python -m qc benchmark  --config qc/configs/base.yaml      # frozen validation, test and stress fault benchmark
   python -m qc untrained  --config qc/configs/base.yaml      # rules, slow component, neighbour baseline: scores and metrics
+  python -m qc fusion     --config qc/configs/base.yaml      # gate 5: fit the fusion, validation curves, comparison
+  python -m qc set-budgets --final 1 --review 5              # gate 5: fix the two budgets (once, before test scoring)
   python -m qc train      --config qc/configs/base.yaml --components spatial temporal plain_gru   # gate 4, seeds from train.seeds
 
 Common options: ``--profile kaggle|single-gpu`` and ``--set key.sub=value`` (repeatable).
@@ -126,7 +128,50 @@ def cmd_train(cfg, args) -> int:
     return 0
 
 
-COMMANDS = {"client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
+def cmd_fusion(cfg, args) -> int:
+    from qc.evaluate import score_store
+    from qc.fusion import VARIANTS, apply_fusion, component_names, fit_fusion
+    from qc.fusion_eval import holdout_years, run_fusion_validation
+    from qc.prepare import load_prepared
+    from qc.runs import RunDir
+
+    p = load_prepared(cfg)
+    store = score_store(p)
+    seeds = args.seeds if args.seeds is not None else [int(s) for s in cfg.train.seeds]
+    out = RunDir(paths.out_dir(cfg) / str(cfg.name), "fusion")
+    out.start(cfg, int(cfg.seed), {"split_manifest_hash": p.manifest["hash"], "seeds": seeds})
+    for seed in seeds:
+        missing = [n for n in component_names(seed) for tag, y in [("val", p.split.years["fusion_fit"][0])] if not store.has(n, tag, y)]
+        if missing:
+            print(f"error: seed {seed}: missing validation scores for {missing}. Run `python -m qc untrained` and "
+                  "`python -m qc train` first.", file=sys.stderr)
+            return 2
+        fit = fit_fusion(p, seed, store)
+        fit.save(out.path / "models")
+        apply_fusion(p, fit, ("val",), VARIANTS, store, args.overwrite)
+        res = run_fusion_validation(p, fit, out.path / "validation", store)
+        print(f"== seed {seed}: fit on {fit.fit_years[0]}-{fit.fit_years[-1]} ({fit.n_positive} fault rows of {fit.n_rows}); "
+              f"evaluated on {holdout_years(p)[0]}-{holdout_years(p)[-1]}; ECE {res['calibration']['expected_calibration_error']:.4f}")
+        for b in args.show_budgets:
+            print_table(list(res["comparison"].values()), b)
+        print(f"curves: {out.path / 'validation' / f'curves_s{seed}.png'}")
+    out.mark_done("fusion")
+    return 0
+
+
+def cmd_set_budgets(cfg, args) -> int:
+    from qc.fusion_eval import set_budgets
+    from qc.prepare import load_prepared
+
+    p = load_prepared(cfg)
+    curves = paths.out_dir(cfg) / str(cfg.name) / "fusion" / "validation" / f"curves_s{args.seed}.json"
+    doc = set_budgets(p, args.final, args.review, curves)
+    print(json.dumps(doc, indent=1))
+    print("logged in docs/qc-evaluation-protocol.md: commit that file now, before any test-year scoring.")
+    return 0
+
+
+COMMANDS = {"fusion": cmd_fusion, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
             "train": cmd_train}
 
 
@@ -155,6 +200,14 @@ def main(argv=None) -> int:
     t.add_argument("--time-cap-hours", type=float, default=None)
     t.add_argument("--overwrite", action="store_true", help="recompute saved scores")
     t.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
+    f = sub.choices["fusion"]
+    f.add_argument("--seeds", nargs="+", type=int, default=None, help="default: train.seeds from the config")
+    f.add_argument("--overwrite", action="store_true")
+    f.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
+    b = sub.choices["set-budgets"]
+    b.add_argument("--final", type=float, required=True, help="false alerts per 1,000 clean cell-days for the final flag")
+    b.add_argument("--review", type=float, required=True, help="the same for the review flag (larger)")
+    b.add_argument("--seed", type=int, default=0, help="whose validation curves the choice was made from")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     try:

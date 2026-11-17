@@ -91,6 +91,13 @@ train:
   corruption: true           # corrupt the inputs on the fly with the seen fault settings; targets stay clean
   seeds: [0, 1, 2]
 
+# Fusion (gate 5): fitted on synthetic faults of years.fusion_fit; thresholds from clean years.threshold.
+fusion:
+  max_rows: 3000000          # fit rows (all fault cell-days kept; clean ones subsampled and reweighted)
+  C: 1.0                     # inverse L2 strength of the logistic regression
+  boosted_iter: 100
+  curve_budgets: [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50]   # false alerts per 1,000 clean cell-days, for the validation curves
+
 evaluation:
   # Candidate false-alarm budgets (false alerts per 1,000 clean cell-days) for curves. The two operating
   # points are chosen from validation curves at gate 5 and logged in docs/qc-evaluation-protocol.md.
