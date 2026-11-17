@@ -126,7 +126,8 @@ era5:
     RH: [mean, min, max]
     PRES: [mean, min, max]
   years:                     # roles for the multivariate validation (disjoint)
-    train: [1951, 2012]
+    train: [1979, 2012]      # from 1979: ERA5 before the satellite era has far fewer observations and land temperature and humidity biases
+                             # (Soci et al. 2024; Simmons et al. 2021); see docs/research/era5-methodology-verification-20261117.md
     fusion_fit: [2013, 2015]
     threshold: [2016, 2017]
   fault_rate: 0.01

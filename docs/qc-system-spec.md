@@ -221,4 +221,6 @@ Separate from the rainfall system: `qc/era5.py` (data) and `qc/multivar.py` (exp
 
 **Honest limit:** ERA5 is a reanalysis (modelled), not a measurement. It is smooth and spatially consistent by construction, so injected faults are easier to detect than real sensor faults. Every ERA5 number must carry this.
 
-**Volume:** one month of the three hourly variables is about 78 MB, so 1951-2023 would be about 68 GB if the hourly files were kept. Use `--delete-hourly` once a year is verified.
+**Training years:** the ERA5 path trains from 1979 (train 1979-2012, fusion fit 2013-2015, thresholds 2016-2017), not from 1951 like the rainfall path. ERA5 before the satellite era assimilated far fewer observations and shows land temperature and humidity biases; see `docs/research/era5-methodology-verification-20261117.md`. ERA5 and RF25 therefore no longer share a training period.
+
+**Volume:** one month of the three hourly variables is about 78 MB, so 1979-2017 is about 37 GB if the hourly files were kept. Use `--delete-hourly` once a year is verified.
