@@ -524,3 +524,20 @@ The repo contains code only; the RF25 `.nc` files (~870 MB) and run outputs are 
    The data dir is auto-detected (`--data-dir`, `$DATAMEND_DATA_DIR`, `../data`, `/kaggle/input/**`);
    outputs land in `/kaggle/working/` (or `$DATAMEND_OUT_DIR`), so Kaggle's "Output" tab keeps the artifact.
 3. Any `python -m training ...` command from the CLI docstring works unchanged from `ml-service/`.
+
+## Downloading UK MIDAS Open daily rainfall
+
+`scripts/download_midas.py` downloads the UK Met Office MIDAS Open daily rainfall files from the CEDA archive (used by the separate real-label study; see `docs/qc-system-spec.md`, section 12). It uses the standard library only.
+
+1. Create a free CEDA account and generate an access token at <https://services.ceda.ac.uk/account/token/>.
+2. Copy `.env.example` to `.env` in `ml-service/` and paste the token after `CEDA_TOKEN=`. `.env` is ignored by git. Setting `CEDA_TOKEN` in the shell works too.
+3. From `ml-service/`:
+   ```bash
+   python scripts/download_midas.py --check                      # test the token
+   python scripts/download_midas.py --county devon --dry-run     # count files
+   python scripts/download_midas.py --county devon cornwall      # download
+   ```
+
+- `--mode pairs` (default) fetches the original records that QC changed and the QC'd file for the same station-year. `--mode full` fetches every file, which gridding needs.
+- Files go to `$DATAMEND_DATA_DIR/midas-open/uk-daily-rain-obs/`, or `ml-service/data/midas-open/uk-daily-rain-obs/` by default; `--out` overrides it.
+- Existing files are skipped, so an interrupted run can be restarted. Tokens expire after a few days; the script says so when CEDA rejects one.
