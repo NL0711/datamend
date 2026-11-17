@@ -9,13 +9,17 @@ Per variable (``VARIABLES``) there is one expert: the largest of four rule score
   stuck     number of exactly repeated values in a row              reference: 2 (three equal days in a row)
 Plus ONE cross-variable consistency expert: the Mahalanobis distance of the day's standardized anomaly vector
 (temperature, humidity, pressure) under a covariance fitted on training years, pooled over cells.
-The fusion is a logistic regression on log1p of the four expert scores, fitted on synthetic faults of the fusion-fit
+The fusion is a logistic regression on log1p of the expert scores, fitted on synthetic faults of the fusion-fit
 years. Climatology, day-to-day sd, covariance and references use training or threshold years only.
+
+Neighbour regression experts (``fit_gbm``, on by default): per variable, a gradient-boosted regressor predicts the cell's anomaly
+from its neighbours, its own last two days, the neighbours' other variables, season and position (never the cell's own
+current value, nor its other variables); the score is the residual over its robust spread. CPU only, minutes to train.
 
 Synthetic faults (``inject``): spike, stuck, drift, amplitude error ("scale"), single cell, one variable at a time,
 values clipped to the physical range so the bound rule is not trivially perfect. Not frozen or hashed.
 
-NOT IMPLEMENTED here (listed in every output): learned heads (Gaussian / neural spatial and temporal experts), spatial
+NOT IMPLEMENTED here (listed in every output): neural heads (the gradient-boosted regressors above are the learned part), spatial
 footprint faults, per-variable false-removal protection for genuine extremes (the rain "protected extreme" idea has no
 counterpart yet for heat waves or cold spells), the federated variants, and a frozen benchmark with a single-use test
 pass. ERA5 is modelled, not measured, so every recall here is optimistic relative to real station faults.
@@ -30,6 +34,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 from scipy.ndimage import uniform_filter1d
+from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.linear_model import LogisticRegression
 
 from qc.era5 import Era5Daily
@@ -41,7 +46,7 @@ KINDS = ("spike", "stuck", "drift", "scale")
 LIMITS = [
     "ERA5 is a reanalysis (modelled), not a measurement: injected faults are easier to detect than real sensor faults.",
     "Synthetic faults only; no real labels exist. Faults are single-cell, one variable at a time, and the benchmark is not frozen.",
-    "NOT IMPLEMENTED: learned heads, spatial footprint faults, protection of genuine extremes (heat waves, cold spells), "
+    "NOT IMPLEMENTED: neural heads (the gradient-boosted regressors are the learned part), spatial footprint faults, protection of genuine extremes (heat waves, cold spells), "
     "federated variants, a single-use test pass.",
     "Consistency covariance is pooled over all cells; regional differences in the relationship are not modelled.",
 ]
@@ -219,13 +224,139 @@ def inject(fields: Dict[str, np.ndarray], st: Stats, rng_seed: Sequence[int], ra
     return out, labels
 
 
+# ---------------------------------------------------------------------------------------------- neighbour regression experts
+
+GBM_NAMES = tuple(f"gbm_{n}" for n in NAMES)
+
+
+_RING1 = [(i, j) for i in (-1, 0, 1) for j in (-1, 0, 1) if (i, j) != (0, 0)]
+_RING2 = [(i, j) for i in range(-2, 3) for j in range(-2, 3) if max(abs(i), abs(j)) == 2]
+
+
+def _ring_median(a: np.ndarray, offsets, chunk: int = 48) -> np.ndarray:
+    """Median over the cells at the given (row, column) offsets, per day, with the grid edge replicated. A median, not a
+    mean, so that one faulty neighbour does not drag the prediction of its healthy neighbours."""
+    T, H, W = a.shape
+    pad = np.pad(a, ((0, 0), (2, 2), (2, 2)), mode="edge")
+    out = np.empty_like(a)
+    for t0 in range(0, T, chunk):
+        blk = pad[t0:t0 + chunk]
+        stack = np.stack([blk[:, 2 + i:2 + i + H, 2 + j:2 + j + W] for i, j in offsets])
+        out[t0:t0 + chunk] = np.median(stack, axis=0)
+    return out
+
+
+def _neighbour_means(a: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Median of the 8 cells around each cell (centre excluded) and of the 16 cells in the ring after that, per day."""
+    return _ring_median(a, _RING1), _ring_median(a, _RING2)
+
+
+def _lag(a: np.ndarray, k: int) -> np.ndarray:
+    out = np.full_like(a, np.nan)
+    out[k:] = a[:-k]
+    return out
+
+
+def _gbm_features(A: Dict[str, np.ndarray], v: str, plane: Tuple[np.ndarray, np.ndarray]) -> np.ndarray:
+    """(T, H, W, F) features for predicting the anomaly of variable ``v`` at a cell WITHOUT using its own current value:
+    the median anomaly of the ring-1 and ring-2 neighbours, the cell's own previous two days, the ring-1 neighbour anomaly
+    of the other two variables, season (sin, cos of day of year) and position. The other variables at the cell itself
+    are left out on purpose: a fault in one variable then cannot move another variable's prediction (smearing)."""
+    T = A[v].shape[0]
+    nb1, nb2 = _neighbour_means(A[v])
+    others = [u for u in NAMES if u != v]
+    doy = 2 * np.pi * np.arange(T, dtype=np.float32) / 365.25
+    sh = (T, A[v].shape[1], A[v].shape[2])
+    feats = [nb1, nb2, _lag(A[v], 1), _lag(A[v], 2), _neighbour_means(A[others[0]])[0], _neighbour_means(A[others[1]])[0],
+             np.broadcast_to(np.sin(doy)[:, None, None], sh), np.broadcast_to(np.cos(doy)[:, None, None], sh),
+             np.broadcast_to(plane[0][None], sh), np.broadcast_to(plane[1][None], sh)]
+    return np.stack(feats, axis=-1).astype(np.float32)
+
+
+@dataclass
+class GbmExperts:
+    """One gradient-boosted regressor per variable: predict the cell's anomaly from its neighbours, its own recent days,
+    the neighbours' other variables, season and position; the score is the residual divided by its robust spread
+    (median absolute deviation on clean threshold years). Trains in minutes on a CPU; no GPU, no tuning."""
+    st: Stats
+    models: Dict[str, object]
+    mad: Dict[str, float]
+    plane: Tuple[np.ndarray, np.ndarray]
+
+    def scores(self, fields: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+        A = anomalies(self.st, fields)
+        out = {}
+        for v in NAMES:
+            X = _gbm_features(A, v, self.plane)
+            pred = self.models[v].predict(X.reshape(-1, X.shape[-1])).reshape(A[v].shape)
+            s = np.abs(A[v] - pred) / self.mad[v]
+            out[f"gbm_{v}"] = np.where(np.isfinite(A[v]), s, np.nan).astype(np.float32)
+        return out
+
+
+def fit_gbm(data: Era5Daily, st: Stats, train_years: Sequence[int], threshold_years: Sequence[int], rows_per_year: int = 20000,
+            seed: int = 0, max_iter: int = 150) -> GbmExperts:
+    """Fit on a random sample of cell-days of the training years; set the residual scale on the clean threshold years."""
+    lat, lon = data.grid(train_years[0])
+    la = (lat - lat.min()) / max(float(np.ptp(lat)), 1e-6)
+    lo = (lon - lon.min()) / max(float(np.ptp(lon)), 1e-6)
+    plane = (np.broadcast_to(la[:, None], (lat.size, lon.size)).astype(np.float32),
+             np.broadcast_to(lo[None, :], (lat.size, lon.size)).astype(np.float32))
+    rng = np.random.default_rng([seed, 7])
+    xs: Dict[str, List[np.ndarray]] = {v: [] for v in NAMES}
+    ys: Dict[str, List[np.ndarray]] = {v: [] for v in NAMES}
+    for y in train_years:
+        A = anomalies(st, _fields(data, y))
+        for v in NAMES:
+            X = _gbm_features(A, v, plane)
+            flat, tgt = X.reshape(-1, X.shape[-1]), A[v].reshape(-1)
+            ok = np.nonzero(np.isfinite(tgt))[0]
+            pick = rng.choice(ok, min(rows_per_year, ok.size), replace=False)
+            xs[v].append(flat[pick])
+            ys[v].append(tgt[pick])
+    models = {v: HistGradientBoostingRegressor(max_iter=max_iter, learning_rate=0.1, max_depth=6, early_stopping=False,
+                                               random_state=seed).fit(np.concatenate(xs[v]), np.concatenate(ys[v])) for v in NAMES}
+    g = GbmExperts(st, models, {v: 1.0 for v in NAMES}, plane)
+    resid: Dict[str, List[np.ndarray]] = {v: [] for v in NAMES}
+    for y in threshold_years:
+        A = anomalies(st, _fields(data, y))
+        for v in NAMES:
+            X = _gbm_features(A, v, plane)
+            r = np.abs(A[v] - models[v].predict(X.reshape(-1, X.shape[-1])).reshape(A[v].shape))
+            resid[v].append(r[np.isfinite(r)][::7])
+    g.mad = {v: max(float(1.4826 * np.median(np.concatenate(resid[v]))), 1e-3) for v in NAMES}
+    return g
+
+
 # ---------------------------------------------------------------------------------------------- fusion and evaluation
+
+@dataclass
+class Scorer:
+    """The experts that feed the fusion: the rule experts and the consistency expert, plus the neighbour regression
+    experts when ``gbm`` is given."""
+    ex: Experts
+    gbm: Optional[GbmExperts] = None
+
+    @property
+    def names(self) -> Tuple[str, ...]:
+        return NAMES + ("consistency",) + (GBM_NAMES if self.gbm else ())
+
+    @property
+    def st(self) -> Stats:
+        return self.ex.st
+
+    def scores(self, fields: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+        out = self.ex.scores(fields)
+        if self.gbm:
+            out.update(self.gbm.scores(fields))
+        return out
+
 
 SCORE_NAMES = NAMES + ("consistency",)
 
 
-def _stack(sc: Dict[str, np.ndarray]) -> np.ndarray:
-    return np.log1p(np.stack([sc[n] for n in SCORE_NAMES], axis=-1))
+def _stack(sc: Dict[str, np.ndarray], names: Sequence[str] = SCORE_NAMES) -> np.ndarray:
+    return np.log1p(np.stack([sc[n] for n in names], axis=-1))
 
 
 @dataclass
@@ -234,26 +365,28 @@ class Fusion:
     sd: np.ndarray
     coef: np.ndarray
     intercept: float
+    names: Tuple[str, ...] = SCORE_NAMES
 
     def score(self, sc: Dict[str, np.ndarray]) -> np.ndarray:
-        x = _stack(sc)
+        x = _stack(sc, self.names)
         z = np.nan_to_num((x - self.mu) / self.sd, nan=0.0)
         out = z @ self.coef + self.intercept
         return np.where(np.isfinite(x).all(axis=-1), out, np.nan).astype(np.float32)
 
 
-def fit_fusion(experts: Experts, data: Era5Daily, years: Sequence[int], rate: float, seed: int, max_rows: int = 600000) -> Fusion:
+def fit_fusion(scorer, data: Era5Daily, years: Sequence[int], rate: float, seed: int, max_rows: int = 600000) -> Fusion:
+    names = tuple(getattr(scorer, "names", SCORE_NAMES))
     xs, ys = [], []
     rng = np.random.default_rng([seed, 99])
     for y in years:
         clean = _fields(data, y)
-        bad, labels = inject(clean, experts.st, [seed, y], rate)
-        sc = experts.scores(bad)
+        bad, labels = inject(clean, scorer.st, [seed, y], rate)
+        sc = scorer.scores(bad)
         any_fault = np.zeros(next(iter(bad.values())).shape, bool)
         for n in NAMES:
             for k in KINDS:
                 any_fault |= labels[n][k]
-        x = _stack(sc)
+        x = _stack(sc, names)
         ok = np.isfinite(x).all(axis=-1)
         pos, neg = np.nonzero((ok & any_fault).ravel())[0], np.nonzero((ok & ~any_fault).ravel())[0]
         neg = rng.choice(neg, min(neg.size, max(max_rows // max(len(years), 1) - pos.size, 1)), replace=False)
@@ -265,7 +398,7 @@ def fit_fusion(experts: Experts, data: Era5Daily, years: Sequence[int], rate: fl
         raise RuntimeError("no fault cell-days in the fusion fit years")
     mu, sd = X.mean(0), X.std(0) + 1e-6
     m = LogisticRegression(C=1.0, max_iter=500, class_weight="balanced").fit((X - mu) / sd, Y)
-    return Fusion(mu, sd, m.coef_[0], float(m.intercept_[0]))
+    return Fusion(mu, sd, m.coef_[0], float(m.intercept_[0]), names)
 
 
 def _recall(score: np.ndarray, label: np.ndarray, thr: float) -> Optional[float]:
@@ -274,28 +407,43 @@ def _recall(score: np.ndarray, label: np.ndarray, thr: float) -> Optional[float]
 
 
 def run_validation(data: Era5Daily, years: Dict[str, Sequence[int]], rate: float = 0.01, seed: int = 0,
-                   budgets: Sequence[float] = (0.5, 1.0, 2.0, 5.0), out_path: Optional[Path] = None) -> Dict:
-    """Fit on ``years['train']`` (statistics), ``years['fusion_fit']`` (fusion); thresholds from clean and evaluation on
-    corrupted ``years['threshold']``. Years must not overlap across roles: train < fusion_fit, and threshold is disjoint."""
+                   budgets: Sequence[float] = (0.5, 1.0, 2.0, 5.0), out_path: Optional[Path] = None, gbm: bool = True) -> Dict:
+    """Fit on ``years['train']`` (statistics and, with ``gbm``, the neighbour regression experts), ``years['fusion_fit']``
+    (fusion); thresholds from clean and evaluation on corrupted ``years['threshold']``. Years must not overlap across
+    roles: train < fusion_fit, and threshold is disjoint."""
     tr, ff, th = list(years["train"]), list(years["fusion_fit"]), list(years["threshold"])
     if set(tr) & set(ff) or set(tr) & set(th) or set(ff) & set(th):
         raise ValueError("train, fusion_fit and threshold years must be disjoint")
     st = fit_stats(data, tr)
     ex = fit_experts(data, st, th)
-    fu = fit_fusion(ex, data, ff, rate, seed)
-    clean_scores: Dict[str, List[np.ndarray]] = {k: [] for k in SCORE_NAMES + ("fusion",)}
+    gbm_years = tr[::max(1, len(tr) // 12)]                       # at most about 12 evenly spaced training years: plenty for the regressors, and fast
+    scorer = Scorer(ex, fit_gbm(data, st, gbm_years, th, seed=seed) if gbm else None)
+    fu = fit_fusion(scorer, data, ff, rate, seed)
+    clean_scores: Dict[str, List[np.ndarray]] = {k: [] for k in scorer.names + ("fusion", "fusion_max")}
+    clean_years = []
     for y in th:
-        sc = ex.scores(_fields(data, y))
+        sc = scorer.scores(_fields(data, y))
         sc["fusion"] = fu.score(sc)
+        clean_years.append(sc)
         for k, v in sc.items():
             clean_scores[k].append(v[np.isfinite(v)])
+    # "fusion_max": no fitting. Each expert is standardized on the clean threshold years and the largest value wins, so a
+    # fault that only one expert sees (a temperature fault seen by the temperature expert) is not diluted by the others.
+    zmu = {k: float(np.mean(np.log1p(np.concatenate(clean_scores[k])))) for k in scorer.names}
+    zsd = {k: float(np.std(np.log1p(np.concatenate(clean_scores[k])))) + 1e-6 for k in scorer.names}
+    maxz = lambda sc: np.max([(np.log1p(sc[k]) - zmu[k]) / zsd[k] for k in scorer.names], axis=0).astype(np.float32)
+    for sc in clean_years:
+        v = maxz(sc)
+        clean_scores["fusion_max"].append(v[np.isfinite(v)])
+    del clean_years
     thr = {k: budget_thresholds(np.concatenate(v), list(budgets)) for k, v in clean_scores.items()}
     hits = {k: {b: {n: {kk: [0, 0] for kk in KINDS} for n in NAMES} for b in budgets} for k in thr}
     false = {k: {b: [0, 0] for b in budgets} for k in thr}
     for y in th:
         bad, labels = inject(_fields(data, y), st, [seed, 1000 + y], rate)
-        sc = ex.scores(bad)
+        sc = scorer.scores(bad)
         sc["fusion"] = fu.score(sc)
+        sc["fusion_max"] = maxz(sc)
         anyf = np.zeros(sc["fusion"].shape, bool)
         for n in NAMES:
             for kk in KINDS:
@@ -310,8 +458,8 @@ def run_validation(data: Era5Daily, years: Dict[str, Sequence[int]], rate: float
                 false[k][b][0] += int((sc[k][cl] > thr[k][b]).sum()); false[k][b][1] += int(cl.sum())
     res = {"years": {"train": tr, "fusion_fit": ff, "threshold_and_evaluation": th}, "rate": rate, "seed": seed,
            "budgets": list(budgets), "label_tier": "synthetic faults on ERA5 daily means (modelled data)", "limits": LIMITS,
-           "references": ex.ref, "consistency_cov": st.cov.tolist(), "fusion": {"names": list(SCORE_NAMES), "coef": fu.coef.tolist()},
-           "scores": {}}
+           "references": ex.ref, "consistency_cov": st.cov.tolist(), "gbm": bool(gbm),
+           "fusion": {"names": list(fu.names), "coef": fu.coef.tolist()}, "scores": {}}
     for k in thr:
         res["scores"][k] = {}
         for b in budgets:

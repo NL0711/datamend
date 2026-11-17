@@ -285,9 +285,9 @@ def cmd_era5_validate(cfg, args) -> int:
     yrs = {k: list(range(v[0], v[1] + 1)) for k, v in d["years"].items()}
     out = paths.out_dir(cfg) / str(cfg.name) / "era5" / "validation.json"
     res = run_validation(Era5Daily(daily), yrs, float(d["fault_rate"]), int(cfg.seed), [float(b) for b in d["budgets"]], out)
-    for b, row in res["scores"]["fusion"].items():
+    for b, row in res["scores"]["fusion_max"].items():
         rec = {n: {k: (None if v is None else round(v, 3)) for k, v in r.items()} for n, r in row["recall"].items()}
-        print(f"fusion at budget {b}: false alerts/1000 clean {row['false_per_1000_clean']:.2f}; recall {rec}")
+        print(f"fusion_max at budget {b}: false alerts/1000 clean {row['false_per_1000_clean']:.2f}; recall {rec}")
     print("LIMITS:"); [print(" -", x) for x in res["limits"]]
     print(f"wrote {out}")
     return 0

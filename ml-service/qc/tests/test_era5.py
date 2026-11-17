@@ -14,7 +14,8 @@ from qc import era5
 from qc.config import load_config
 from qc.era5 import Alignment, Era5Daily, build_daily, relative_humidity
 from qc.grid import ContractError
-from qc.multivar import KINDS, NAMES, VARIABLES, fit_experts, fit_stats, inject, run_validation
+from qc.multivar import (KINDS, NAMES, VARIABLES, _RING1, _RING2, _ring_median, fit_experts, fit_gbm, fit_stats, inject,
+                         run_validation)
 
 SPEC = SimpleNamespace(n_lat=4, n_lon=5, lat0=10.0, lon0=70.0, step=0.25)
 
@@ -242,7 +243,8 @@ def test_validation_detects_spikes_and_reports_limits(daily, tmp_path):
     row = res["scores"]["fusion"]["5.0"]
     assert row["recall"]["temperature"]["spike"] > 0.8 and row["recall"]["pressure"]["spike"] > 0.8
     assert 0 <= row["false_per_1000_clean"] < 40
-    assert set(res["scores"]) == {"temperature", "humidity", "pressure", "consistency", "fusion"}
+    assert set(res["scores"]) == {"temperature", "humidity", "pressure", "consistency", "gbm_temperature", "gbm_humidity",
+                                  "gbm_pressure", "fusion", "fusion_max"}
     assert (tmp_path / "v.json").is_file()
     assert any("modelled" in s for s in res["limits"]) and any("NOT IMPLEMENTED" in s for s in res["limits"])
     with pytest.raises(ValueError, match="disjoint"):
@@ -261,3 +263,64 @@ def test_consistency_expert_prefers_the_inconsistent_combination(daily):
         return {k: float(np.nanmean(s[100])) for k, s in ex.scores(f).items()}
     consistent, inconsistent = score(2.0, -2.0), score(2.0, +2.0)
     assert inconsistent["consistency"] > consistent["consistency"]
+
+
+# ---------------------------------------------------------------------------------------------- neighbour regression experts
+
+def _smooth_world(folder: Path, years, seed=0, H=16, W=18):
+    """Like _daily_world but with spatially smooth anomalies, as real temperature and pressure fields are."""
+    from scipy.ndimage import gaussian_filter
+    rng = np.random.default_rng(seed)
+    lat, lon = 10.0 + 0.25 * np.arange(H), 70.0 + 0.25 * np.arange(W)
+    for y in years:
+        T = 366 if y % 4 == 0 else 365
+        doy = np.arange(T)[:, None, None]
+        smooth = lambda sd: gaussian_filter(rng.normal(0, 1.0, (T, H, W)), sigma=(0, 2.5, 2.5)) * sd
+        a = smooth(4.0)
+        temp = 25 + 6 * np.sin(2 * np.pi * doy / 365) + 2.0 * a
+        rh = np.clip(60 - 6 * a + smooth(6.0) + 10 * np.cos(2 * np.pi * doy / 365), 5, 99)
+        pres = 950 + 3 * np.sin(2 * np.pi * doy / 365) + smooth(4.5)
+        ds = xr.Dataset({k: (("TIME", "LATITUDE", "LONGITUDE"), v.astype(np.float32)) for k, v in
+                         (("TEMP_MEAN", temp), ("RH_MEAN", rh), ("PRES_MEAN", pres))},
+                        coords={"TIME": np.datetime64(f"{y}-01-01") + np.arange(T), "LATITUDE": lat, "LONGITUDE": lon})
+        folder.mkdir(parents=True, exist_ok=True)
+        ds.to_netcdf(folder / f"ERA5D_{y}.nc", engine="scipy")
+
+
+@pytest.fixture(scope="module")
+def smooth(tmp_path_factory):
+    d = tmp_path_factory.mktemp("era5smooth")
+    _smooth_world(d, range(1990, 2000))
+    return Era5Daily(d)
+
+
+def test_neighbour_median_is_not_dragged_by_one_faulty_neighbour():
+    a = np.zeros((2, 6, 6), np.float32)
+    a[:, 3, 3] = 500.0                                   # one faulty cell
+    r1, r2 = _ring_median(a, _RING1), _ring_median(a, _RING2)
+    assert float(np.abs(r1).max()) == 0.0 and float(np.abs(r2).max()) == 0.0
+    b = np.arange(36, dtype=np.float32).reshape(1, 6, 6)
+    assert _ring_median(b, _RING1)[0, 2, 2] == b[0, 2, 2]                              # symmetric neighbours: the median is the centre value
+    assert len(_RING1) == 8 and len(_RING2) == 16
+
+
+def test_regression_expert_never_reads_the_cells_own_other_variables(smooth):
+    st = fit_stats(smooth, YEARS["train"])
+    g = fit_gbm(smooth, st, YEARS["train"][:3], YEARS["threshold"], rows_per_year=8000)
+    x = {n: smooth.year(1998, v.field) for n, v in VARIABLES.items()}
+    base = g.scores(x)
+    y = {n: v.copy() for n, v in x.items()}
+    y["humidity"][100, 7, 9] += 40.0                                                   # a humidity fault at one cell and day
+    moved = g.scores(y)
+    assert moved["gbm_temperature"][100, 7, 9] == base["gbm_temperature"][100, 7, 9]   # its own temperature score does not move
+    assert moved["gbm_pressure"][100, 7, 9] == base["gbm_pressure"][100, 7, 9]
+    assert moved["gbm_humidity"][100, 7, 9] > 3 * base["gbm_humidity"][100, 7, 9]      # while its own humidity score jumps
+
+
+def test_neighbour_regression_improves_drift_and_scale_detection_on_smooth_fields(smooth):
+    rows = {}
+    for use in (False, True):
+        r = run_validation(smooth, YEARS, rate=0.01, seed=0, budgets=(2.0,), gbm=use)
+        rec = r["scores"]["fusion_max"]["2.0"]["recall"]
+        rows[use] = float(np.mean([rec[v][k] for v in NAMES for k in ("drift", "scale")]))
+    assert rows[True] > rows[False] + 0.15, rows
