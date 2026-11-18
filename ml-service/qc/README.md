@@ -51,3 +51,17 @@ STATUS: the data layer is built and unit-tested on generated arrays (`qc/tests/t
 - `corrupt_periods(...)` makes synthetic faults that only exist at period level (a whole month or year scaled, or lost). Labelled only if the total changed.
 - `yearly_to_decades(...)` gives decade means for the decadal change-point tests. Missing years are not interpolated.
 
+Built on top of it (all unit-tested on generated data only; nothing has run on real RF25; spec `docs/qc-multires-pipeline-spec.md`):
+
+| module | what it is | command |
+| --- | --- | --- |
+| `period_benchmark.py` | frozen synthetic benchmark per scale from the daily benchmark plus period-level faults | `python -m qc period-benchmark` |
+| `scale_scorers.py` | baselines `gamma_zero`, `loo_median`; candidates `gbm_neighbour`, `mlp_neighbour` | |
+| `scale_select.py` | trains every candidate, scores validation years, keeps the simplest within one standard error, writes a table for the protocol log | `python -m qc scale-select --scales monthly yearly` |
+| `changepoint.py` | SNHT and Pettitt with simulated critical values (decadal scale) | |
+| `crossscale.py` | fixed cross-scale fusion (max or noisy-OR) with the coherent-extreme discount | |
+| `regions.py` | regional share of suspect cells; area-share cell assignment; unions of regions; client regions as the labelled stand-in | |
+| `imd_regions.py` | loads IMD's own boundary JSON (36 sub-divisions, 4 regions) and runs the known-place acceptance checks | `python scripts/fetch_imd_regions.py` fetches the file (not committed) |
+| `bridge.py` | lag, agreement and model-shift check of a live product against RF25 (array level); frozen acceptance rule in the `bridge:` config block | |
+| `imd_merged.py` | reader for IMD's merged GPM grid files and the RF25 orientation check; the row order is NOT established until `verify_orientation` has run on a machine with RF25 | |
+

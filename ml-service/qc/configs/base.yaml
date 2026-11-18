@@ -109,9 +109,24 @@ evaluation:
   # Candidate false-alarm budgets (false alerts per 1,000 clean cell-days) for curves. The two operating
   # points are chosen from validation curves at gate 5 and logged in docs/qc-evaluation-protocol.md.
   budgets: [0.5, 1, 2, 5, 10]
-  bootstrap: 200             # resamples of whole fault events and whole years for confidence intervals
+  bootstrap: 200             # resamples of WHOLE YEARS (regions fixed) for confidence intervals; none are given for fewer than 5 years (docs/research/bootstrap-unit-check.md)
 
 # Offline comparison (qc/offline.py): existing rainnet / scalenet / msnet / lstm_ae artifacts, non-causal references.
 # Set offline.artifacts.<arch> to an artifact folder. None ship with the repo; unset ones are listed as NOT RUN.
 offline:
   artifacts: {}
+
+# Bridge check of a live daily product against RF25 (qc/bridge.py). Limits confirmed by the owner on 2026-11-18, to be logged in
+# docs/qc-evaluation-protocol.md and committed BEFORE the check is run. Pass/fail is at primary_rain_mm; report_rain_mm only reported.
+bridge:
+  min_pss: 0.5
+  max_far: 0.5
+  max_abs_bias_pct: 20.0
+  max_pct_rmse: 150.0
+  min_corr: 0.8                # cell-level pooled correlation; the area-mean correlation is reported beside it
+  p99_ratio_band: [0.8, 1.25]  # outside it is a WARNING: recalibrate the standardisation reference on the product's clean days
+  primary_rain_mm: 0.5
+  report_rain_mm: [2.5]
+  allowed_years: [2016, 2017]  # validation years of the product's overlap with RF25; never a test year
+  confirmed_by_owner: true
+  frozen_on: "2026-11-18"

@@ -290,6 +290,31 @@ def cmd_set_budgets(cfg, args) -> int:
     return 0
 
 
+def cmd_period_benchmark(cfg, args) -> int:
+    from qc.period_benchmark import build_period_benchmark
+    from qc.prepare import load_prepared
+
+    m = build_period_benchmark(load_prepared(cfg), scales=args.scales, splits=args.splits, overwrite=args.overwrite)
+    for k, v in m["summary"].items():
+        print(f"{k}: years {v['years'][0]}-{v['years'][1]}, {v['fault_periods']} faulty of {v['valid_periods']} periods ({100 * v['fault_share']:.2f}%)")
+    print(f"period benchmark hash: {m['hash']} (daily benchmark {m['daily_benchmark_hash']}); SYNTHETIC faults")
+    return 0
+
+
+def cmd_scale_select(cfg, args) -> int:
+    from qc import paths
+    from qc.prepare import load_prepared
+    from qc.scale_select import run_for_prepared, selection_markdown
+
+    p = load_prepared(cfg)
+    out = paths.out_dir(cfg) / str(cfg.name) / "scales"
+    for scale in args.scales:
+        res = run_for_prepared(p, scale, args.candidates, out, seeds=args.seeds)
+        print(selection_markdown(res))
+    print(f"wrote {out}. Paste the tables into docs/qc-evaluation-protocol.md and commit them before any test year is scored.")
+    return 0
+
+
 def cmd_paper(cfg, args) -> int:
     from qc import paper
     from qc.prepare import load_prepared
@@ -310,7 +335,8 @@ def cmd_paper(cfg, args) -> int:
 
 
 COMMANDS = {"uk-grid": cmd_uk_grid, "uk-labels": cmd_uk_labels, "test-score": cmd_test_score, "federated": cmd_federated, "fusion": cmd_fusion, "ablate": cmd_ablate, "calibrate": cmd_calibrate, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
-            "train": cmd_train, "paper": cmd_paper}
+            "train": cmd_train, "paper": cmd_paper,
+            "period-benchmark": cmd_period_benchmark, "scale-select": cmd_scale_select}
 
 
 def main(argv=None) -> int:
@@ -345,6 +371,15 @@ def main(argv=None) -> int:
     ts.add_argument("--seeds", nargs="+", type=int, default=None, help="default: train.seeds from the config")
     ts.add_argument("--splits", nargs="+", default=["test", "stress"], choices=["test", "stress"])
     ts.add_argument("--resume", action="store_true", help="continue an unfinished test pass; a finished one cannot be repeated")
+    pb = sub.choices["period-benchmark"]
+    pb.add_argument("--scales", nargs="+", default=["monthly", "seasonal", "yearly"], choices=["monthly", "seasonal", "yearly"])
+    pb.add_argument("--splits", nargs="+", default=["val", "test", "stress"], choices=["val", "test", "stress"])
+    pb.add_argument("--overwrite", action="store_true")
+    ss = sub.choices["scale-select"]
+    ss.add_argument("--scales", nargs="+", default=["monthly", "yearly"], choices=["monthly", "seasonal", "yearly"])
+    ss.add_argument("--candidates", nargs="+", default=["gamma_zero", "loo_median", "gbm_neighbour", "mlp_neighbour"],
+                    choices=["gamma_zero", "loo_median", "gbm_neighbour", "mlp_neighbour"])
+    ss.add_argument("--seeds", nargs="+", type=int, default=None, help="default: train.seeds from the config")
     pp = sub.choices["paper"]
     pp.add_argument("--out", default=None, help="default: <run folder>/paper")
     pp.add_argument("--seed", type=int, default=0, help="seed whose alerts and validation curves are drawn")

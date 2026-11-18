@@ -237,10 +237,11 @@ class PeriodFaults:
 
 
 def corrupt_periods(periods: Periods, rng: np.random.Generator, rate: float = 0.01,
-                    kinds: Sequence[str] = PERIOD_KINDS) -> Tuple[Periods, PeriodFaults]:
+                    kinds: Sequence[str] = PERIOD_KINDS, forbidden: Optional[np.ndarray] = None) -> Tuple[Periods, PeriodFaults]:
     """Single-cell faults on whole periods: ``scale`` multiplies a period's total (and largest day) by a factor drawn
     from 0.4-0.8 or 1.25-2.5; ``dropout`` sets it to zero. A fault is labelled only if the total changed, so a
-    dropout on a period that was already dry is not a fault. The input is not modified. SYNTHETIC."""
+    dropout on a period that was already dry is not a fault. ``forbidden`` (P, n_land) bool marks periods that must never be
+    corrupted (protected genuine extremes). The input is not modified. SYNTHETIC."""
     bad = [k for k in kinds if k not in PERIOD_KINDS]
     if bad or not kinds:
         raise ValueError(f"unknown or empty fault kinds {list(kinds)}; choose from {PERIOD_KINDS}")
@@ -249,6 +250,10 @@ def corrupt_periods(periods: Periods, rng: np.random.Generator, rate: float = 0.
     out = periods.copy()
     shape = periods.total.shape
     pick = periods.valid & (rng.random(shape) < rate)
+    if forbidden is not None:
+        if forbidden.shape != shape:
+            raise ValueError("forbidden must have the shape of the period totals")
+        pick &= ~forbidden
     which = np.asarray(rng.integers(0, len(kinds), shape))
     mag = np.where(rng.random(shape) < 0.5, rng.uniform(0.4, 0.8, shape), rng.uniform(1.25, 2.5, shape))
     factor = np.full(shape, np.nan, np.float32)
