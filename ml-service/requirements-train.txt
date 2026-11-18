@@ -11,3 +11,4 @@ pytest
 matplotlib
 pyyaml
 pyarrow
+kagglehub

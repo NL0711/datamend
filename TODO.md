@@ -544,6 +544,8 @@ Spec: `docs/qc-system-spec.md` section 14. Status as of 2026-11-17: gates 0-9 bu
 - [ ] Verify the UK reader on real MIDAS files; confirm the OPEN UK choices
 - [ ] Verify the Kerala August 2018 case-study values before citing them
 - ERA5 temperature, humidity and pressure work was removed from the project on 2026-11-18; the project now covers rainfall only.
+- [x] Time-resolution data layer `qc/resolution.py` (monthly, seasonal, yearly periods, per-scale training statistics, period-level synthetic faults, decade means); 11 unit tests on generated arrays, none on real RF25
+- [ ] Models per scale (monthly/seasonal net, yearly pooled model, decadal change-point tests), per-scale evaluation, regional output, live daily input: PROPOSED, NOT BUILT
 
 ---
 

@@ -40,3 +40,14 @@ Timing run and compute caps: spec section 14, gate 0. UK study: `qc/configs/uk.y
 ## Layout
 
 `config`, `paths`, `grid`, `clients`, `splits`, `stats`, `prepare` (data and splits); `faults`, `extremes`, `benchmark` (benchmark); `baselines`, `untrained`, `neighbours`, `scoring`, `metrics`, `evaluate` (untrained scores, metrics); `models`, `batches`, `trained` (components); `fusion`, `fusion_eval` (fusion, budgets); `federated`; `testscore`; `uk/` (MIDAS study); `paper` (tables, figures, claims); `tests/` (one file per gate).
+
+## Time resolutions (`qc/resolution.py`)
+
+STATUS: the data layer is built and unit-tested on generated arrays (`qc/tests/test_resolution.py`). No model uses it yet, and nothing has run on real RF25. The monthly, seasonal, yearly and decadal models are PROPOSED, NOT BUILT.
+
+- `aggregate(block, year, scale)` turns one calendar year of daily mm into monthly (12), seasonal (June-September) or yearly periods: total, wet-day count and largest day. A period is never filled: too few finite days gives NaN. A block with the wrong number of days for its year is refused.
+- `aggregate_labels(...)` turns daily fault labels into period labels: `present` (a faulty day is inside) and `visible` (the period total actually moved).
+- `fit_scale_stats(...)` fits the climatological mean, a robust spread and a per-client normalisation on training years only, and refuses other years.
+- `corrupt_periods(...)` makes synthetic faults that only exist at period level (a whole month or year scaled, or lost). Labelled only if the total changed.
+- `yearly_to_decades(...)` gives decade means for the decadal change-point tests. Missing years are not interpolated.
+
