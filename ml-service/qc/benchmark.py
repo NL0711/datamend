@@ -136,6 +136,23 @@ def build_benchmark(p: Prepared, splits=SPLITS, overwrite: bool = False) -> Dict
     return manifest
 
 
+def reusable_benchmark(p: Prepared) -> Optional[Dict]:
+    """The manifest of an existing frozen benchmark if it was built for these splits with these exact benchmark and extremes
+    settings (so building it again would give the same files), else None. Lets a second phase1 run, for example after a smoke run,
+    carry on instead of stopping at `benchmark`."""
+    import json
+    path = bench_dir(p.cfg) / "manifest.json"
+    if not path.is_file():
+        return None
+    m = read_json(path)
+    cur = p.cfg.to_dict()
+    same = lambda a, b: json.dumps(a, sort_keys=True, default=str) == json.dumps(b, sort_keys=True, default=str)
+    if (m.get("split_manifest_hash") == p.manifest["hash"] and same(m.get("config"), cur["benchmark"])
+            and same(m.get("extremes"), cur["extremes"]) and set(m.get("splits", [])) >= set(SPLITS)):
+        return m
+    return None
+
+
 def check_benchmark(p: Prepared, require_pinned: bool = True) -> Dict:
     """Load the manifest and refuse to continue if the benchmark is not the one the config expects."""
     cfg = p.cfg

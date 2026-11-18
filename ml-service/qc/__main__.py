@@ -100,10 +100,15 @@ def cmd_prepare(cfg, args) -> int:
 
 
 def cmd_benchmark(cfg, args) -> int:
-    from qc.benchmark import build_benchmark
+    from qc.benchmark import build_benchmark, reusable_benchmark
     from qc.prepare import load_prepared
 
-    m = build_benchmark(load_prepared(cfg), overwrite=args.overwrite)
+    p = load_prepared(cfg)
+    m = None if args.overwrite else reusable_benchmark(p)
+    if m is not None:
+        print("a frozen benchmark with identical splits and settings already exists: reusing it (nothing regenerated)")
+    else:
+        m = build_benchmark(p, overwrite=args.overwrite)
     for split, s in m["summary"].items():
         print()
         print(f"== {split} {s['years'][0]}-{s['years'][1]}: {s['events']} faults, {s['cell_days']} fault cell-days "
