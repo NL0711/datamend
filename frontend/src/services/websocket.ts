@@ -23,7 +23,8 @@ export class TelemetryStreamClient {
 
   public connect(): void {
     this.shouldReconnect = true;
-    const wsUrl = liveWebSocketUrl();
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/live`;
 
     try {
       this.ws = new WebSocket(wsUrl);
@@ -90,17 +91,10 @@ export class TelemetryStreamClient {
   }
 }
 
-// Same-origin by default; with VITE_BACKEND_URL set (Vercel) it targets the backend host directly,
-// because Vercel rewrites cannot proxy WebSockets.
-function liveWebSocketUrl(): string {
-  const backend = (((import.meta as any).env?.VITE_BACKEND_URL as string | undefined) ?? '').replace(/\/+$/, '');
-  if (backend) return `${backend.replace(/^http/, 'ws')}/ws/live`;
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${window.location.host}/ws/live`;
-}
-
 export function createTelemetryWebSocket(onMessage: (data: any) => void): WebSocket {
-  const ws = new WebSocket(liveWebSocketUrl());
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws/live`;
+  const ws = new WebSocket(wsUrl);
 
   ws.onmessage = (event) => {
     try {
