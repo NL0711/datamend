@@ -9,13 +9,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# CPU-only torch first (the default Linux wheel bundles CUDA, ~2.5 GB); the pinned range in
+# requirements.txt is then already satisfied.
+RUN pip install --no-cache-dir "torch>=2.2.0,<2.6.0" --index-url https://download.pytorch.org/whl/cpu \
+    && pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ ./backend/
 COPY scripts/ ./scripts/
+COPY models/ ./models/
+COPY data/ ./data/
+# backend/app/locations/grid.py reads the land mask and client regions from here
+COPY ml-service/qc/assets/ ./ml-service/qc/assets/
 
 ENV PYTHONPATH=/app
 
 EXPOSE 8000
 
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Render/Railway inject $PORT; fall back to 8000 locally
+CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

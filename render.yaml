@@ -1,0 +1,25 @@
+# Render Blueprint for the DataMend backend (Docker web service + persistent disk for SQLite).
+# The frontend is deployed separately on Vercel (see frontend/vercel.json).
+services:
+  - type: web
+    name: datamend-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile.backend
+    dockerContext: .
+    plan: standard            # torch + shap need ~2 GB RAM; the 512 MB free/starter tiers will run out of memory
+    healthCheckPath: /docs
+    disk:
+      name: datamend-db
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "False"
+      - key: DEFAULT_DATA_SOURCE
+        value: SIMULATED
+      - key: DATABASE_URL
+        value: sqlite+aiosqlite:////var/data/skyguard.db
+      - key: CORS_ORIGINS
+        sync: false           # set in the dashboard, JSON list: ["https://<your-app>.vercel.app"]
