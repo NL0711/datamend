@@ -47,7 +47,7 @@ RF25 files (Kaggle dataset, 125 files, 1901-2025)         scripts/fetch_rf25.py 
 - `fit(train_periods, stats, rng) -> artifact` uses training years only.
 - `score(periods, artifact) -> (P, n_land)`; higher means more suspicious; NaN where the period is not valid.
 - Inputs it may use: the target cell's own history and its neighbours' values with the target and a hidden radius removed, climatology, season. Never the target period's own value, never a later period.
-- Outputs are standardised on clean threshold years, as the daily components are.
+- Outputs are standardised on clean threshold years, as the daily components are (ratio to the clean 99.9th percentile). A fused daily score (`fusion_*`) is a log-odds value that is negative on clean days, so it is read as softplus(z) = log(1 + exp(z)) before standardising (`crossscale_run.load_part`); found when the first real `cross-scale` run stopped on "the clean reference is not positive" (2026-11-18, before any result was frozen). Other scores are read as stored.
 
 Seam placement: between the resolution layer and the scorers, and between the scorers and fusion. Each scale has a baseline and at least one candidate, so the seam is real.
 

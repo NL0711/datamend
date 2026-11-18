@@ -105,7 +105,7 @@ def fit_learned_weights(p, parts: Dict[str, str], refs: Dict[str, float], store:
     for y in fit_years:
         by = load_bench_year(p, "val", y)
         lab = by.faults.labels()
-        arrays = [store.load(comp, "val", y) for comp in parts.values()]
+        arrays = [load_part(store, comp, "val", y) for comp in parts.values()]
         ratios = np.stack([a / refs[k] for a, k in zip(arrays, parts)], axis=0)
         anyv = np.isfinite(ratios).any(axis=0) & cells[None, :]
         feat = np.nan_to_num(learned_features(ratios), nan=0.0)
@@ -123,6 +123,14 @@ def fit_learned_weights(p, parts: Dict[str, str], refs: Dict[str, float], store:
             "positive_rows": int(yv.sum()), "parts": list(parts)}
 
 
+def load_part(store, comp: str, tag: str, year: int) -> np.ndarray:
+    """A stored score as the cross-scale fusion reads it. Fused daily scores (names starting `fusion_`) are log-odds, negative on clean days,
+    which the clean-percentile standardisation cannot use, so they are mapped to softplus(z) = log(1 + exp(z)) = -log(1 - p): positive,
+    increasing, and equal to z in the tail. Every other score is already positive and is read as stored. NaN stays NaN."""
+    a = store.load(comp, tag, year)
+    return np.logaddexp(0.0, a).astype(np.float32) if comp.startswith("fusion_") else a
+
+
 def fuse_cross_scale(p, daily: str, scales: Dict[str, str], mode: str = "max", factor: float = 0.5,
                      store: Optional[ScoreStore] = None, overwrite: bool = False, seed: int = 0) -> Dict:
     """``scales`` maps a scale to the scorer name whose scores ``compute_scale_scores`` stored. Returns the new component name, the
@@ -137,7 +145,7 @@ def fuse_cross_scale(p, daily: str, scales: Dict[str, str], mode: str = "max", f
     ext_clean = {y: find_extremes(p.store.year(y), p.stats.heavy_mm, p.grid, p.cfg.extremes.min_cells) for y in thr_years}
     refs = {}
     for part, comp in parts.items():
-        vals = np.concatenate([clean_reference(store.load(comp, "clean", y), ext_clean[y].protected, ext_clean[y].ambiguous, cells)
+        vals = np.concatenate([clean_reference(load_part(store, comp, "clean", y), ext_clean[y].protected, ext_clean[y].ambiguous, cells)
                                for y in thr_years])
         refs[part] = reference(vals)
     learned = fit_learned_weights(p, parts, refs, store, seed) if mode == "learned" else None
@@ -146,7 +154,7 @@ def fuse_cross_scale(p, daily: str, scales: Dict[str, str], mode: str = "max", f
     for tag, y in jobs:
         if not overwrite and store.has(name, tag, y):
             continue
-        loaded = {part: store.load(comp, tag, y) for part, comp in parts.items()}
+        loaded = {part: load_part(store, comp, tag, y) for part, comp in parts.items()}
         shapes = {a.shape for a in loaded.values()}
         if len(shapes) != 1:
             raise ValueError(f"scores of year {y} ({tag}) have different shapes: {sorted(shapes)}")
@@ -174,7 +182,7 @@ def fuse_frozen(p, info: Dict, split: str, store: Optional[ScoreStore] = None, o
     for y in p.split.years[split]:
         if not overwrite and store.has(info["name"], split, y):
             continue
-        loaded = {part: store.load(comp, split, y) for part, comp in parts.items()}
+        loaded = {part: load_part(store, comp, split, y) for part, comp in parts.items()}
         protected = load_bench_year(p, split, y).extremes.protected
         f = fuse_scales(loaded, refs, mode, protected=protected, protected_factor=float(info["protected_factor"]), weights=weights)
         store.save(info["name"], split, y, f.score)
