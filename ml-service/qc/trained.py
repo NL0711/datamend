@@ -24,6 +24,7 @@ from typing import Callable, Dict, List, Optional, Sequence
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 from qc import paths
 from qc.batches import View, mask_unreadable, to_torch
@@ -104,10 +105,16 @@ def train_block(p: Prepared, year: int, pad: int):
     return obs, doy
 
 
-def corrupt(p: Prepared, gen: FaultGenerator, obs: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+def corrupt_labelled(p: Prepared, gen: FaultGenerator, obs: np.ndarray, rng: np.random.Generator):
+    """(corrupted block, fault labels (same shape, bool), protected-extreme mask). Faults never touch protected extremes."""
     st = settings_from_config(p.cfg, "seen")
     ex = find_extremes(obs, p.stats.heavy_mm, p.grid, int(p.cfg.extremes.min_cells))
-    return gen.generate(obs, st, rng, forbidden=ex.protected).apply(obs)
+    fs = gen.generate(obs, st, rng, forbidden=ex.protected)
+    return fs.apply(obs), fs.labels(), ex.protected
+
+
+def corrupt(p: Prepared, gen: FaultGenerator, obs: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+    return corrupt_labelled(p, gen, obs, rng)[0]
 
 
 # ---------------------------------------------------------------------------------------------- loop
@@ -123,12 +130,29 @@ class TrainResult:
     checkpoint: Path
 
 
-def _loss(component: str, model, batch, mm, unit, scale, wet_mm) -> torch.Tensor:
+def fault_term(raw: torch.Tensor, obs_mm: torch.Tensor, unit: torch.Tensor, fault: torch.Tensor, protected: torch.Tensor,
+               wet_mm: float, center: float, scale: float, protected_weight: float) -> torch.Tensor:
+    """Fault-supervised term. The negative log likelihood of the *observed* (possibly corrupted) value under the predicted
+    distribution is turned into a fault logit ``(nll - center) / scale`` and trained with binary cross-entropy against the injected
+    fault labels. Genuine protected extremes are clean (label 0) and weighted ``protected_weight`` times, so the model is pushed to keep
+    a heavy enough tail there that a real extreme is not surprising. Differentiable in the distribution parameters."""
+    logit = (nll(raw, obs_mm, unit, wet_mm) - center) / scale
+    y = fault.float()
+    bce = F.softplus(-logit) * y + F.softplus(logit) * (1.0 - y)
+    w = 1.0 + (protected_weight - 1.0) * protected.float()
+    return (w * bce).mean()
+
+
+def _loss(component: str, model, batch, mm, unit, scale, wet_mm, fault: Optional[Dict] = None) -> torch.Tensor:
     out = forward(model, component, batch)
     if component == "plain_gru":
         target = torch.log1p(mm.clamp_min(0)) / scale
         return torch.mean((out.float() - target) ** 2)
-    return nll(out, mm, unit, wet_mm).mean()
+    loss = nll(out, mm, unit, wet_mm).mean()
+    if fault is not None:
+        loss = loss + float(fault["weight"]) * fault_term(out, fault["obs_mm"], unit, fault["label"], fault["protected"], wet_mm,
+                                                            float(fault["center"]), float(fault["scale"]), float(fault["protected_weight"]))
+    return loss
 
 
 def year_steps(p: Prepared, component: str, model: torch.nn.Module, opt, scaler, amp: bool, device: torch.device, year: int,
@@ -140,25 +164,56 @@ def year_steps(p: Prepared, component: str, model: torch.nn.Module, opt, scaler,
     cfg, tr = p.cfg, p.cfg.train
     clean, doy = train_block(p, year, pad)
     clean = mask_unreadable(clean, readable, p.grid)
-    seen = corrupt(p, gen, clean, rng) if tr.corruption else clean
+    fw = float(tr.get("fault_weight", 0.0)) if component != "plain_gru" else 0.0
+    if fw > 0 and not tr.corruption:
+        raise RuntimeError("train.fault_weight needs train.corruption (the fault labels come from the injected faults)")
+    lab = prot = None
+    if tr.corruption:
+        seen, lab, prot = corrupt_labelled(p, gen, clean, rng)
+    else:
+        seen = clean
     view = make_view(p, component, seen, doy, pad)
     T = clean.shape[0] - pad
     wet = float(cfg.normalization.wet_mm)
+    pos_pool = prot_pool = None
+    if fw > 0:
+        in_targets = np.zeros(clean.shape[1], bool)
+        in_targets[targets] = True
+        body = np.isfinite(clean[pad:]) & in_targets[None, :]
+        pos_pool = np.argwhere(lab[pad:] & body)                              # (m, 2): day, cell of injected faults
+        prot_pool = np.argwhere(prot[pad:] & ~lab[pad:] & body)               # genuine protected extremes
     losses = []
     for _ in range(steps):
         t = rng.integers(0, T, bs)
         cell = targets[rng.integers(0, targets.size, bs)]
+        if fw > 0:                                                            # oversample the rare cell-days the terms are about
+            n_pos = int(bs * float(tr.get("fault_pos_frac", 0.25))) if len(pos_pool) else 0
+            n_prot = int(bs * float(tr.get("protected_frac", 0.125))) if len(prot_pool) else 0
+            if n_pos:
+                pick = pos_pool[rng.integers(0, len(pos_pool), n_pos)]
+                t[:n_pos], cell[:n_pos] = pick[:, 0], pick[:, 1]
+            if n_prot:
+                pick = prot_pool[rng.integers(0, len(prot_pool), n_prot)]
+                t[n_pos:n_pos + n_prot], cell[n_pos:n_pos + n_prot] = pick[:, 0], pick[:, 1]
         mm = clean[pad + t, cell]
-        ok = np.isfinite(mm)
+        obs_mm = seen[pad + t, cell]
+        ok = np.isfinite(mm) & (np.isfinite(obs_mm) if fw > 0 else True)
         if not ok.any():
             continue
-        t, cell, mm = t[ok], cell[ok], mm[ok]
+        t, cell, mm, obs_mm = t[ok], cell[ok], mm[ok], obs_mm[ok]
         batch = to_torch(get_batch(view, component, cfg, t, cell), device)
         mm_t = torch.from_numpy(mm).to(device)
         unit = torch.from_numpy(view.unit(cell)).to(device)
         scale = torch.from_numpy(p.stats.scale[cell]).to(device)
+        fault = None
+        if fw > 0:
+            fl = lab[pad + t, cell]
+            fault = {"weight": fw, "obs_mm": torch.from_numpy(obs_mm).to(device), "label": torch.from_numpy(fl).to(device),
+                     "protected": torch.from_numpy(prot[pad + t, cell] & ~fl).to(device),
+                     "center": tr.get("fault_center", 6.0), "scale": tr.get("fault_scale", 2.0),
+                     "protected_weight": tr.get("protected_weight", 1.0)}
         with torch.autocast(device.type, enabled=amp):
-            loss = _loss(component, model, batch, mm_t, unit, scale, wet)
+            loss = _loss(component, model, batch, mm_t, unit, scale, wet, fault)
         if prox_mu > 0 and prox_ref is not None:
             loss = loss + 0.5 * prox_mu * sum(((q - prox_ref[n]) ** 2).sum() for n, q in model.named_parameters())
         opt.zero_grad(set_to_none=True)
