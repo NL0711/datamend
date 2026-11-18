@@ -547,7 +547,7 @@ Spec: `docs/qc-system-spec.md` section 14. Status as of 2026-11-17: gates 0-9 bu
 - [x] Time-resolution data layer `qc/resolution.py` (monthly, seasonal, yearly periods, per-scale training statistics, period-level synthetic faults, decade means); 11 unit tests on generated arrays, none on real RF25
 - [x] Per-scale code, unit-tested on generated data only: period benchmark, scorers (baselines and candidates), selection harness, change-point tests, cross-scale fusion, regional summary, bridge check (`qc/period_benchmark.py`, `scale_scorers.py`, `scale_select.py`, `changepoint.py`, `crossscale.py`, `regions.py`, `bridge.py`)
 - [x] IMD boundary loader, known-place acceptance check (10 of 10 places by polygon, 9 of 10 by cell; one coastal cell is sea in RF25) and merged-grid reader (`qc/imd_regions.py`, `qc/imd_merged.py`, `scripts/fetch_imd_regions.py`); bridge acceptance rule frozen in the `bridge:` config block and `docs/qc-evaluation-protocol.md` (commit that file before the check is run)
-- [ ] Not done: any run on real RF25; the merged-grid ROW ORDER (run `verify_orientation` against RF25); wiring cross-scale fusion to the stored daily scores and a cross-scale test pass; score export; switching the regional output to IMD's map; kriging variant of the leave-one-out baseline; the live daily path (parked until IMD's terms are known)
+- [ ] Not done: any run on real RF25; the merged-grid ROW ORDER (run `verify_orientation` against RF25); wiring cross-scale fusion to the stored daily scores and a cross-scale test pass; score export; a command that writes the regional output with IMD's map (loader and checks exist); kriging variant of the leave-one-out baseline; the live daily path (parked until IMD's terms are known)
 
 ---
 

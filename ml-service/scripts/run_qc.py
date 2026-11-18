@@ -4,6 +4,7 @@ From ml-service/:
     python scripts/run_qc.py check                       # GPU, packages, data download and the 125-file check; no training
     python scripts/run_qc.py phase1 --smoke              # tiny end-to-end wiring run (3 training years, 15 min caps, one seed)
     python scripts/run_qc.py phase1                      # prepare, benchmark, untrained, train, federated, fusion, ablate
+    python scripts/run_qc.py scales                      # period benchmark (validation years) and monthly/yearly candidate selection; needs phase1's benchmark
     python scripts/run_qc.py budgets --final 1.0 --review 5.0
                                                          # fixes and logs the budgets; then commit the protocol log
     python scripts/run_qc.py test --confirm-test-score   # scores the test years ONCE, builds the paper outputs
@@ -62,7 +63,7 @@ def hardware() -> str:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__.split("\n\n", 1)[1])
-    ap.add_argument("phase", choices=["check", "phase1", "budgets", "test"])
+    ap.add_argument("phase", choices=["check", "phase1", "scales", "budgets", "test"])
     ap.add_argument("--slug", default="nathashalewis/majorproj-rainfall", help="Kaggle dataset owner/name")
     ap.add_argument("--expected", type=int, default=125, help="RF25 files that must be present (1901-2025 = 125)")
     ap.add_argument("--copy-to", default=None, help="copy the dataset here instead of using the kagglehub cache")
@@ -105,6 +106,14 @@ def main(argv=None) -> int:
             qc("ablate", "--seed", str((a.seeds or [0])[0]), **k)
         print(f"\nPhase 1 done. Look at artifacts/qc/{run}/fusion/validation/ (curves_s0.png and curves_s0.json), choose the two "
               "budgets, then run the 'budgets' phase. The budgets cannot be changed after the test years are scored.")
+        return 0
+
+    if a.phase == "scales":
+        # needs the daily benchmark from phase1 (prepare, benchmark); validation years only, no test year is read
+        qc("period-benchmark", "--splits", "val", **k)
+        qc("scale-select", "--scales", "monthly", "yearly", *(["--seeds"] + [str(s) for s in a.seeds] if a.seeds else (["--seeds", "0"] if a.smoke else [])), **k)
+        print(f"\nScales done. Tables are in artifacts/qc/{run}/scales/ (selection_monthly.md, selection_yearly.md): all numbers are on SYNTHETIC "
+              "faults. Paste them into docs/qc-evaluation-protocol.md and commit before any test year is scored.")
         return 0
 
     if a.smoke:
