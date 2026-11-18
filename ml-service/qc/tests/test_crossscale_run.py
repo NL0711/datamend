@@ -54,6 +54,29 @@ def test_fusion_is_the_max_of_the_standardised_parts_and_discounts_protected_cel
         assert np.isnan(f[~ok]).all()
 
 
+def test_a_logit_scale_daily_score_is_fused_through_softplus(ready):
+    """A fused logistic score is a log-odds value: negative for clean days (the real run's clean 99.9th percentile was -1.5).
+    It must not stop the fusion; it is mapped to log(1 + exp(z)), positive and equal to z in the tail, in every place it is read."""
+    p = ready
+    store = score_store(p)
+    CR.compute_scale_scores(p, "monthly", "gamma_zero")
+    for tag, years in (("val", p.split.years["val"]), ("clean", p.split.years["threshold"])):
+        for y in years:
+            r = store.load("rules", tag, y)
+            store.save("fusion_logistic_s7", tag, y, (r * 4.0 - 6.0).astype(np.float32))      # mostly negative, as in the real run
+    info = CR.fuse_cross_scale(p, "fusion_logistic_s7", {"monthly": "gamma_zero"}, "max", 1.0, overwrite=True)
+    assert info["references"]["daily"] > 0
+    y = p.split.years["val"][0]
+    z, m = store.load("fusion_logistic_s7", "val", y), store.load("scale_monthly_gamma_zero", "val", y)
+    f = store.load(info["name"], "val", y)
+    expect = np.fmax(np.logaddexp(0.0, z) / info["references"]["daily"], m / info["references"]["monthly"])
+    ok = np.isfinite(expect)
+    assert np.allclose(f[ok], expect[ok], rtol=1e-4)
+    # a frozen fusion applied to the same split reads the parts the same way
+    CR.fuse_frozen(p, info, "val", overwrite=True)
+    assert np.allclose(store.load(info["name"], "val", y)[ok], expect[ok], rtol=1e-4)
+
+
 def test_noisy_or_adds_the_ratios(ready):
     p = ready
     store = score_store(p)
