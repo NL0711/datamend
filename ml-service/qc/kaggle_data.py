@@ -81,7 +81,7 @@ def locate_rf25(link: str, input_root: Path = KAGGLE_INPUT, expected_files: Opti
     Order: a local path given as the link; folders named after the dataset under ``input_root``; any other folder under
     ``input_root`` holding RF25 files (only if exactly one such folder exists, so another attached dataset is never
     picked by accident); then ``download(slug)`` if given (for example ``kagglehub.dataset_download``).
-    ``expected_files`` (for example 123 for 1901-2023) only produces a clear error when fewer files are present.
+    ``expected_files`` (for example 125 for 1901-2025) only produces a clear error when fewer files are present.
     """
     input_root = Path(input_root)
     handle = parse_dataset_link(link)
@@ -120,7 +120,7 @@ def locate_rf25(link: str, input_root: Path = KAGGLE_INPUT, expected_files: Opti
     n = _count(found)
     if expected_files is not None and n < expected_files:
         raise DatasetNotFound(f"{found} holds {n} RF25 files, expected {expected_files}. The dataset must contain every year "
-                              "of the configured ranges (1901-2023 is 123 files); attach the full dataset.")
+                              "of the configured ranges (1901-2025 is 125 files); attach the full dataset.")
     return found
 
 

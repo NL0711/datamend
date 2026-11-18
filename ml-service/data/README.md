@@ -24,7 +24,6 @@ ml-service/data/
 | folder | how it is filled | used by |
 |---|---|---|
 | `rf25/` | Copy the 123 `RF25_ind<year>_rfp25.nc` files in by hand. On Kaggle, attach them as a dataset instead; nothing is copied. | `python -m training ...` today; the QC build later |
-| `era5/` | Download by hand from the CDS web form (any file names, any span, GRIB or NetCDF; settings in `../qc/README.md`), or `python scripts/download_era5.py` if you can use the API (about 78 MB a month) | ERA5 temperature, humidity, pressure extension (hourly GRIB; daily files go to `<work>/era5_daily`) |
 | `midas-open/` | `python scripts/download_midas.py --county <names>` (needs a CEDA token, see `../.env.example`) | the UK real-label study |
 | `splits/`, `benchmarks/` | Written by the QC build (spec gates 1 and 2). Not built yet. | the QC build |
 

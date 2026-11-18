@@ -1,6 +1,6 @@
 """Gate 7: the single test-scoring pass, the unseen-client and stress evaluations, and the report.
 
-Test years (``years.test``, 2018-2023) are scored ONCE, with the budgets fixed at gate 5. Before anything is
+Test years (``years.test``, 2018-2025) are scored ONCE, with the budgets fixed at gate 5. Before anything is
 scored this module checks that
   * the budgets are fixed (``fusion_budgets.json``) and were made for this benchmark and this split,
   * the benchmark hash is the pinned one,

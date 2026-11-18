@@ -1,39 +1,31 @@
 # Plan: trained-model scores in the Locations feature
 
-Status: plan, 2026-11-17. Nothing here is built. It extends `docs/LOCATIONS_DESIGN.md` (v1 is built: place to cells, live values, weather anomaly, rule-based data-QC, and an empty "trained model" slot).
+Status: plan, rewritten 2026-11-18 for a rainfall-only project (ERA5 temperature, humidity and pressure work was removed). Nothing here is built. It extends `docs/LOCATIONS_DESIGN.md` (v1 is built: place to cells, live values, weather anomaly, rule-based data-QC, and an empty "trained model" slot).
 
 ## 1. Goal
 
-For the cells of a location (Mumbai first), show what the **trained** `ml-service/qc` models say about the data of a date: per-component scores, one fused score, whether it crosses the fixed final or review thresholds, and which component drove it. Every score is shown with where it comes from and what it has and has not been validated on.
+For the cells of a location (Mumbai first), show what the **trained** `ml-service/qc` rainfall models say about the data of a date: per-component scores, one fused score, whether it crosses the fixed final or review thresholds, and which component drove it. Every score is shown with where it comes from and what it has and has not been validated on.
 
 ## 2. Facts that shape the plan
 
-**A. The models only know their own data product.** Rainfall models: RF25 (IMD gauge-based grid, annual files). Temperature, humidity and pressure models: ERA5 daily means on the same 0.25-degree grid. The v1 app shows Open-Meteo values, a different product. Feeding Open-Meteo values to an ERA5-trained model is a distribution shift, not a valid score.
+**A. The models only know RF25.** They are trained on RF25 (IMD gauge-based grid, annual files). The v1 app shows Open-Meteo values, a different product. Feeding Open-Meteo rainfall to an RF25-trained model is a distribution shift, not a valid score.
 
-**B. Measured today (2026-11-17, our January 2016 ERA5 sample against Open-Meteo `models=era5`, 4 cells):**
-- Daily temperature differs by +0.10 to +0.15 degC (correlation 1.000); humidity by under 0.5 % (correlation 0.999 to 1.000).
-- **Pressure has a constant offset of +1.9 to +2.9 hPa** (correlation 0.998 to 1.000). Pressure anomalies are only 1 to 2 hPa wide, so an unadjusted offset would look like a permanent fault.
-- **Cell collision:** asking for 72.75 E returned the 73.0 E point (also for 19.25 N). Two of Mumbai's four cells would return identical data. The returned point must be checked and cells de-duplicated.
+**B. Rainfall score files exist only for some years and only on corrupted data.** The score store holds validation, test and stress years scored on the **benchmark** (injected faults), plus the clean threshold years 2016-2017. Real, uncorrupted scores for other years do not exist and must be produced by a separate scoring run.
 
-**C. Rainfall score files exist only for some years and only on corrupted data.** The score store holds validation, test and stress years scored on the **benchmark** (injected faults), plus the clean threshold years 2016-2017. Real, uncorrupted scores for other years do not exist and must be produced by a separate scoring run.
+**C. Mumbai is in held-out region 6.** The rainfall models never trained on it, so a score there is a genuine unseen-region result. (Pre-2013 years of other regions were trained on; Mumbai's cells never were.)
 
-**D. Mumbai is in held-out region 6.** The rainfall models never trained on it, so a score there is a genuine unseen-region result. (Pre-2013 years of other regions were trained on; Mumbai's cells never were.)
+**D. Test-year discipline.** Scoring any 2018-or-later year on real data must wait until budgets are fixed and the single test pass is done, so the evaluation stays clean.
 
-**E. The ERA5 temperature, humidity and pressure models are not saved.** `era5-validate` fits statistics, the gradient-boosted regressors and the neural network in memory and writes only a results file. There is nothing to load yet.
-
-**F. Test-year discipline.** Scoring any 2018-or-later year on real data must wait until budgets are fixed and the single test pass is done, so the evaluation stays clean.
-
-**G. Coverage is historical, not live.** RF25 comes in yearly files. Model scores will exist for dates the input data covers; "yesterday in Mumbai" will usually have no model score. The UI must say so.
+**E. Coverage is historical, not live.** RF25 comes in yearly files. Model scores will exist for dates the input data covers; "yesterday in Mumbai" will usually have no model score. The UI must say so.
 
 ## 3. Decisions
 
 | # | Decision | Why |
 |---|---|---|
-| D1 | Score each variable only on the product its model was trained on. Never apply ERA5-trained models to Open-Meteo forecast or analysis values. | Fact A. |
+| D1 | Score rainfall only on RF25 values. Never apply RF25-trained models to Open-Meteo values. | Fact A. |
 | D2 | Offline export first. ml-service scripts write per-cell score files; the backend only reads them. Online inference in the backend is later. | Keeps torch out of the web backend; matches the existing `FileScoreProvider`. |
-| D3 | ERA5 scoring input is ERA5 daily files from the CDS pipeline (exact cells). Open-Meteo `models=era5` is allowed only after a gate: pressure offset handled, cell collisions handled, agreement re-measured on 12 months. | Fact B. |
-| D4 | Model scores get their own panel with a date or timeline control. They are not merged into the live verdict. | Different data, different dates. |
-| D5 | Provenance is part of the file: run name, benchmark hash, budgets, split hash, label tier ("synthetic faults"), model version. The UI prints it. | No score without its origin. |
+| D3 | Model scores get their own panel with a date or timeline control. They are not merged into the live verdict. | Different data, different dates. |
+| D4 | Provenance is part of the file: run name, benchmark hash, budgets, split hash, label tier ("synthetic faults"), model version. The UI prints it. | No score without its origin. |
 
 ## 4. Score file format v1 (replaces the v0 sketch in `scores.py`)
 
@@ -41,7 +33,7 @@ For the cells of a location (Mumbai first), show what the **trained** `ml-servic
 
 ```json
 {"schema": 1, "cell": {"row": 50, "col": 25, "lat": 19.0, "lon": 72.75, "client": 6, "held_out": true},
- "domain": "rainfall",                       // or "tphp" (temperature, humidity, pressure)
+ "domain": "rainfall",
  "provenance": {"run": "base", "git_commit": "...", "split_hash": "...", "benchmark_hash": "...",
                 "model": "fusion_logistic (qc)", "seeds": [0,1,2], "label_tier": "synthetic faults",
                 "input": "RF25 clean (no injected faults)", "scored_on": "2026-..."},
@@ -53,52 +45,43 @@ The backend rejects files with an unknown `schema`, a missing `provenance`, or a
 
 ## 5. Phases
 
-**P0. Prerequisites (not code).** (a) Rainfall: budgets fixed and the single test pass done. (b) ERA5: at least the smoke years downloaded and converted. (c) Decide the years to export (see section 7).
+**P0. Prerequisites (not code).** (a) Rainfall: budgets fixed and the single test pass done. (b) Decide the years to export (see section 7).
 
-**P1. Rainfall export (ml-service).** New command `python -m qc export-scores --domain rainfall --cells <rows/cols or place> --years ...`.
+**P1. Rainfall export (ml-service).** New command `python -m qc export-scores --cells <rows/cols or place> --years ...`.
 - Loads the saved checkpoints and fusion fit; scores **clean** real years for the full grid (the normal scoring path) and slices the requested cells.
 - Writes the files of section 4 plus a `thresholds` block from the fixed budgets.
 - Refuses test or stress years if the test lock is not `done`.
 - Tests on the small generated world: cell slicing is correct, no injected fault leaks in, thresholds match `thresholds_for`, refusal before the lock, deterministic output.
 - A notebook cell runs it on Kaggle and pushes the small JSON files through the existing `kaggle-results` branch.
 
-**P2. Temperature, humidity and pressure: persist and export.**
-- `qc.multivar` gets `save` and `load` for the statistics, experts, gradient-boosted models and network weights; `era5-validate --save-models` writes them.
-- New command `era5-export-scores`: needs ERA5 daily fields for the cells plus a 4-cell halo and 2 lag days; writes the same format with `domain: "tphp"`.
-- Gate before any Open-Meteo input (D3): re-measure the offset on a full year, add the correction or refit normals from the same source, resolve cell collisions.
-
-**P3. Backend.**
+**P2. Backend.**
 - `FileScoreProvider` reads schema 1 and validates it.
 - New `GET /api/locations/{id}/model-scores?from=&to=` returning per-cell series with thresholds and provenance; the status call embeds the latest available date with its age.
 - Plain reasons for every "not available": date outside coverage, no file for this cell, sea cell, schema rejected.
 - Tests with fixture files, including a corrupted file and a mismatched client.
 
-**P4. Frontend.** A "Trained model" panel: a timeline of the fused score per cell with the final and review thresholds, a date click showing the component breakdown, a provenance box, and the labels "validated on synthetic faults only" and "model never trained on this region". No colour-only signalling.
+**P3. Frontend.** A "Trained model" panel: a timeline of the fused score per cell with the final and review thresholds, a date click showing the component breakdown, a provenance box, and the labels "validated on synthetic faults only" and "model never trained on this region". No colour-only signalling.
 
-**P5. Real-event check (the part that answers whether it is useful).** Run the Mumbai history through the exported scores and look at known events: the heavy-rain days of July 2005 and the monsoon peaks. Report how often a genuine, widespread event is flagged. All event dates stay "plausible, unverified" until checked against IMD records. Compare with a nearby AWS station where one exists (the first real test of the ERA5-trained detector).
+**P4. Real-event check (the part that answers whether it is useful).** Run the Mumbai history through the exported scores and look at known events: the heavy-rain days of July 2005 and the monsoon peaks. Report how often a genuine, widespread event is flagged. All event dates stay "plausible, unverified" until checked against IMD records.
 
-**P6. Later.** Online inference service, a live gridded rainfall source, alerts and websocket integration, a scheduled export.
+**P5. Later.** Online inference service, a live gridded rainfall source, alerts and websocket integration, a scheduled export.
 
 ## 6. Risks
 
 | Risk | Mitigation |
 |---|---|
-| Pressure offset or product mismatch makes everything look faulty | D1 and D3; the gate re-measures on a year before use |
-| Cell collisions double-count cells | Compare returned points; de-duplicate; prefer CDS files |
-| Showing synthetic-fault performance as if it were real accuracy | Provenance and label tier on every score; wording reviewed in P4 |
+| Product mismatch (Open-Meteo vs RF25) makes everything look faulty | D1; only RF25 values are scored |
+| Showing synthetic-fault performance as if it were real accuracy | Provenance and label tier on every score; wording reviewed in P3 |
 | Test years scored too early | Export refuses before the lock is `done` |
 | Score files drift from the models that made them | `git_commit`, `split_hash`, `benchmark_hash` in each file; backend shows them |
-| ERA5 models never persisted | P2 starts with save and load and a round-trip test |
 
 ## 7. Decisions needed from you
 
 1. Which years to export for Mumbai: the test years 2018-2025, plus chosen historic events (for example 2005)?
-2. ERA5 input for scoring: CDS files only (exact, slow queue), or also the Open-Meteo `models=era5` route once the gate passes?
-3. Where the score files live: committed to the repo (small, simple) or only on the `kaggle-results` branch and pulled?
+2. Where the score files live: committed to the repo (small, simple) or only on the `kaggle-results` branch and pulled?
 
 ## 8. Done when
 
 - A score for a Mumbai cell and date opens with its components, thresholds and provenance, and a date without a score says why.
-- Rainfall and temperature/humidity/pressure files both load through the same schema.
 - The panel states plainly that validation so far is on synthetic faults.
 - Tests cover export, schema validation, refusal rules and the API.

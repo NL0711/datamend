@@ -1,4 +1,4 @@
-"""The 0.25-degree RF25/ERA5 grid used by ml-service/qc, and the mapping from a place to its cells.
+"""The 0.25-degree RF25 grid used by ml-service/qc, and the mapping from a place to its cells.
 
 Grid (same as ml-service/qc/configs/base.yaml): latitude 6.5 + 0.25 * row for row 0..128 (row 0 is the SOUTHERNMOST row),
 longitude 66.5 + 0.25 * col for col 0..134. A cell is the 0.25 x 0.25 degree square centred on that point.

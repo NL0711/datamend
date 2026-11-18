@@ -68,7 +68,7 @@ Set `DATAMEND_DATA_DIR` to a folder with the same layout as `data/` (in the shel
 python -m pytest training -q
 ```
 
-57 tests, under a minute (`python -m pytest -q` runs all 89, including the metric and rule tests). They use generated data, so they pass without RF25.
+The training tests run in under a minute (`python -m pytest -q` runs everything, including the metric and rule tests). They use generated data, so they pass without RF25.
 
 Then a short training run on the real data:
 
@@ -116,6 +116,4 @@ Other commands (`sweep`, `ensemble`, other presets) are listed at the top of `tr
 | Data layout | `ml-service/data/README.md` |
 | Training package | `ml-service/training/` |
 | MIDAS download script | `ml-service/scripts/download_midas.py` |
-| ERA5 download (by hand from the CDS form, or the optional script `ml-service/scripts/download_era5.py`) | `ml-service/qc/README.md`, ERA5 section |
-| ERA5 daily conversion and validation | `python -m qc era5-inventory` / `era5-daily` / `era5-validate`; `docs/qc-system-spec.md` section 16 |
 | Environment template | `ml-service/.env.example` |

@@ -1,7 +1,7 @@
 """Data sources at different granularities, described uniformly.
 
 A *source* is any series that observes the same weather as the target at some other
-scale: a coarser grid (IMD, CHIRPS, IMERG, ERA5-Land), nearby stations, radar. The
+scale: a coarser grid (IMD, CHIRPS, IMERG), nearby stations, radar. The
 multi-scale model never cares what a source is, only its ``SourceSpec`` (resolution,
 distance) and whether it is available for a given window.
 

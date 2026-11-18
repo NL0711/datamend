@@ -1,6 +1,6 @@
 """Data-QC checks on a cell's recent hourly series, and the comparison across the cells of one location.
 
-METHOD "rules+statistics v0": the untrained checks of ml-service/qc/multivar.py (physical range, step, stuck run), applied to
+METHOD "rules+statistics v0": untrained checks (physical range, step, stuck run), applied to
 hourly values, plus a buddy check across the cells of the location. This is NOT the trained gradient-boosted or neural experts;
 their scores arrive through scores.py when saved scores exist. The constants below are rule settings, not fitted values.
 """
@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, Sequence
 import numpy as np
 
 METHOD = "rules+statistics v0"
-PHYSICAL = {"temperature": (-60.0, 65.0), "humidity": (0.0, 100.0), "pressure": (450.0, 1090.0)}   # same ranges as qc.multivar.VARIABLES
+PHYSICAL = {"temperature": (-60.0, 65.0), "humidity": (0.0, 100.0), "pressure": (450.0, 1090.0)}
 STEP_FLOOR = {"temperature": 0.3, "humidity": 2.0, "pressure": 0.2}      # smallest hour-to-hour spread treated as noise (degC, %, hPa)
 STEP_K = 10.0                                                            # flag a jump this many robust spreads above the typical one
 STUCK_HOURS = 6                                                          # identical consecutive hourly values

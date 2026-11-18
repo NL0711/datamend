@@ -4,7 +4,7 @@ Status: design for a first version built inside the existing web app (2026-11-17
 
 ## 1. Goal
 
-A user adds a place (a name, or latitude and longitude). The app maps it to the 0.25-degree RF25/ERA5 grid cells it covers and shows, per cell:
+A user adds a place (a name, or latitude and longitude). The app maps it to the 0.25-degree RF25 grid cells it covers and shows, per cell:
 
 1. recent weather: temperature, relative humidity, pressure, rainfall (last 7 days, hourly);
 2. a **weather anomaly**: is today unusual for this cell and day of the year (against a seasonal normal)?
@@ -32,7 +32,7 @@ First place: **Mumbai**, 4 cells at 19.0 N / 19.25 N and 72.75 E / 73.0 E, all i
 **Constraints**
 - Existing stack: FastAPI, async SQLAlchemy on SQLite, React/Vite/TypeScript with recharts and lucide.
 - No new infrastructure (no queue, no Redis). One process.
-- No trained ERA5 or rainfall model artifacts are available locally yet.
+- No trained rainfall model artifacts are available locally yet.
 
 ## 3. High-level design
 
@@ -78,7 +78,7 @@ First place: **Mumbai**, 4 cells at 19.0 N / 19.25 N and 72.75 E / 73.0 E, all i
 
 **D3. Two separate ideas of "anomaly", always labelled.**
 - *Weather anomaly*: the value is unusual for the cell and day of year. Needs no model.
-- *Data-QC flag*: the value looks like a data fault. v1 uses rule and statistics checks mirroring the "untrained" experts of `qc.multivar` (range, step, stuck), plus a buddy check across the cells of the location. This is explicitly **not** the trained gradient-boosted or neural experts; it says so in `qc.method`.
+- *Data-QC flag*: the value looks like a data fault. v1 uses rule and statistics checks (range, step, stuck), plus a buddy check across the cells of the location. This is explicitly **not** the trained gradient-boosted or neural experts; it says so in `qc.method`.
 
 **D4. Genuine event versus fault by agreement.** A large anomaly seen by most cells of the location together is `genuine_event_likely` (a coherent weather event); the same anomaly in one cell while the others are normal is `possible_data_fault`. With about 4 cells this is a weak check, and the response reports how many cells it compared.
 
@@ -142,7 +142,7 @@ Errors: 404 unknown id; 422 invalid input or a point outside the grid (6.5-38.5 
 ## 10. What I would revisit as it grows
 
 1. Plug in trained-model scores once the Kaggle runs produce them (the interface exists).
-2. Compare cells with real station observations where AWS stations exist nearby; this is the first real test of any ERA5-trained detector.
+2. Compare cells with real station observations where AWS stations exist nearby.
 3. Virtual stations per cell to reuse alerts and the websocket.
 4. A scheduled batch fetch and a data-table read path when more than a few locations are watched.
 5. Neighbourhood resolution: 28 km cells cannot show differences inside a city.

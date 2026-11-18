@@ -115,26 +115,3 @@ evaluation:
 # Set offline.artifacts.<arch> to an artifact folder. None ship with the repo; unset ones are listed as NOT RUN.
 offline:
   artifacts: {}
-
-# ERA5 daily temperature, humidity, pressure (qc/era5.py, qc/multivar.py). A separate path from the rainfall pipeline.
-era5:
-  hourly_dir: null           # monthly files from scripts/download_era5.py; null = $DATAMEND_DATA_DIR/era5 or ml-service/data/era5
-  dir: null                  # daily ERA5D_<year>.nc files; null = <paths.work>/era5_daily
-  label_offset_hours: 0      # day alignment. 0 = UTC calendar day. 21 = 24 h ending 03:00 UTC (08:30 IST). IMD alignment UNVERIFIED
-  stats:                     # daily statistics kept per variable. Which ones to use is OPEN
-    TEMP: [mean, min, max]
-    RH: [mean, min, max]
-    PRES: [mean, min, max]
-  years:                     # roles for the multivariate validation (disjoint)
-    train: [1979, 2012]      # from 1979: ERA5 before the satellite era has far fewer observations and land temperature and humidity biases
-                             # (Soci et al. 2024; Simmons et al. 2021); see docs/research/era5-methodology-verification-20261117.md
-    fusion_fit: [2013, 2015]
-    threshold: [2016, 2017]
-  fault_rate: 0.01
-  nn:                        # neural masked-target experts (qc/multivar_nn.py): GPU if available, else CPU
-    enabled: false
-    trials: 0                # >0: try that many settings (width, learning rate, patch radius) and keep the best clean validation NLL
-    steps: 3000              # training steps (batch 1024)
-    max_years: 8             # evenly spaced training years held in memory
-    time_cap_hours: null
-  budgets: [0.5, 1, 2, 5]

@@ -55,7 +55,7 @@ Note on location: the brief asked for `docs/qc-novelty-research.md`; the existin
 | WMO guidance | WMO-No. 8 (Vol. V, quality management); WMO-No. 485 Vol. I Part II, WMO-No. 305 | General QC responsibilities and standards for observational data | Exact precipitation QC clauses **not confirmed** |
 | Benchmark critique | Wu and Keogh, "Current Time Series Anomaly Detection Benchmarks are Flawed", arXiv 2009.13807 (2020; ICDE 2022) | Argues common benchmark datasets are defective and progress may be illusory; introduces the UCR archive | Opened (abstract) |
 
-ERA5-Land and ERA5 QC: not found in the sources I checked for precipitation fault detection; ERA5 precipitation is a model product, not QC'd station data (not researched further here; see `docs/research/era5-methodology-verification-20261117.md`).
+ERA5-Land and ERA5 QC: not found in the sources I checked for precipitation fault detection; ERA5 precipitation is a model product, not QC'd station data (not researched further here; the ERA5 work was removed from the project on 2026-11-18).
 
 ## 3. Open angles
 

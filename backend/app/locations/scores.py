@@ -4,7 +4,7 @@ v1 has no trained-model scores to show, so the answer is "not available" unless 
 invents a score. A score file is written by the ml-service pipeline (one per grid cell) and looks like:
 
     data/location_scores/<row>_<col>.json
-    {"model": "fusion_max (qc.multivar)", "version": "...", "label_tier": "synthetic faults",
+    {"model": "fusion (qc)", "version": "...", "label_tier": "synthetic faults",
      "scores": {"2026-11-16": {"temperature": 1.2, "humidity": 0.8, "pressure": 0.4, "fused": 1.9, "flag": "none"}}}
 """
 

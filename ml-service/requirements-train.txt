@@ -11,6 +11,3 @@ pytest
 matplotlib
 pyyaml
 pyarrow
-cfgrib
-eccodes
-cdsapi
