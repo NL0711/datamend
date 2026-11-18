@@ -94,6 +94,9 @@ def main(argv=None) -> int:
     cap = (["--max-train-years", "3", "--time-cap-hours", "0.25"] if a.smoke
            else (["--time-cap-hours", str(a.time_cap_hours)] if a.time_cap_hours else []))
     k = dict(profile=profile, run=run, extra=a.set)
+    # The first seed is the one the fused scores, the cross-scale comparison, the budgets and the paper figures are built on.
+    # Give the SAME --seeds to every phase (for example --seeds 42): phases that read stored scores look for names like fusion_logistic_s42.
+    primary = str((a.seeds or [0])[0])
 
     if a.phase == "phase1":
         qc("prepare", **k)
@@ -123,7 +126,7 @@ def main(argv=None) -> int:
     if a.phase == "regions":
         # regional output for the VALIDATION years from stored scores (a development view; the IMD boundary file must have been fetched)
         extra = ["--final", str(a.final), "--review", str(a.review)] if (a.final is not None and a.review is not None) else []
-        qc("regions-report", "--splits", "val", *extra, **k)
+        qc("regions-report", "--splits", "val", "--seed", primary, *extra, **k)
         return 0
 
     if a.phase == "choose":
@@ -139,7 +142,7 @@ def main(argv=None) -> int:
             raise SystemExit("budgets needs --final and --review (false alerts per 1,000 clean cell-days; review larger than final)")
         if not a.review > a.final:
             raise SystemExit("--review must be larger than --final")
-        qc("set-budgets", "--final", str(a.final), "--review", str(a.review), "--seed", "0", **k)
+        qc("set-budgets", "--final", str(a.final), "--review", str(a.review), "--seed", primary, **k)
         print("\nBudgets are logged in docs/qc-evaluation-protocol.md. COMMIT AND PUSH THAT FILE NOW, then run the 'test' phase. "
               "No test year has been scored yet.")
         return 0
@@ -147,9 +150,9 @@ def main(argv=None) -> int:
         raise SystemExit("test scores the test years ONCE with the budgets already fixed. Re-run with --confirm-test-score to go ahead.")
     qc("period-benchmark", "--splits", "test", "stress", **k)           # benchmark data only; nothing is scored by this step
     qc("test-score", *seeds, **k)                                       # the single daily test pass (its lock makes it single use)
-    qc("cross-scale-test", **k)                                         # the chosen architecture and the daily-only baseline, single use too
-    qc("regions-report", "--splits", "test", "stress", **k)             # regional output from the stored scores (IMD sub-divisions and regions)
-    qc("paper", **k)
+    qc("cross-scale-test", "--seed", primary, **k)                      # the chosen architecture and the daily-only baseline, single use too
+    qc("regions-report", "--splits", "test", "stress", "--seed", primary, **k)   # regional output from the stored scores (IMD sub-divisions and regions)
+    qc("paper", "--seed", primary, **k)
     return 0
 
 

@@ -442,7 +442,7 @@ def cmd_cross_scale_test(cfg, args) -> int:
     from qc.prepare import load_prepared
 
     p = load_prepared(cfg)
-    report = run_cross_scale_test(p, tuple(args.splits), resume=args.resume)
+    report = run_cross_scale_test(p, tuple(args.splits), resume=args.resume, seed=args.seed)
     ch = report["chosen"]
     print(f"cross-scale test pass done: chosen architecture daily + {', '.join(ch['scales']) or 'nothing'} ({ch['fusion']}), component {ch['component']}")
     print(f"wrote {report_dir(p) / 'cross_scale_test_report.md'}. SYNTHETIC faults. The test years cannot be scored again.")
@@ -568,6 +568,7 @@ def main(argv=None) -> int:
     ct = sub.choices["cross-scale-test"]
     ct.add_argument("--splits", nargs="+", default=["test", "stress"], choices=["test", "stress"])
     ct.add_argument("--resume", action="store_true", help="continue an unfinished pass; a finished one cannot be repeated")
+    ct.add_argument("--seed", type=int, default=0, help="seed of the monthly/yearly scorers; use the one given to `cross-scale`")
     pp = sub.choices["paper"]
     pp.add_argument("--out", default=None, help="default: <run folder>/paper")
     pp.add_argument("--seed", type=int, default=0, help="seed whose alerts and validation curves are drawn")
