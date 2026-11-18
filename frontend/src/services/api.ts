@@ -22,7 +22,10 @@ import {
   LocationSeriesResponse,
 } from '../types';
 
-export const API_BASE_URL = '/api';
+// Empty/unset = same-origin '/api' (nginx or Vite proxy). On Vercel set VITE_BACKEND_URL
+// to the public backend origin, e.g. https://datamend-api.example.com (no trailing slash).
+const BACKEND_URL = ((import.meta as any).env?.VITE_BACKEND_URL ?? '').replace(/\/+$/, '');
+export const API_BASE_URL = `${BACKEND_URL}/api`;
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
