@@ -66,6 +66,26 @@ def _ci(values: np.ndarray) -> Optional[List[float]]:
     return [float(np.percentile(v, 2.5)), float(np.percentile(v, 97.5))] if v.size else None
 
 
+MIN_YEARS_FOR_CI = 5
+
+
+def year_bootstrap_ci(num: np.ndarray, den: np.ndarray, rng: np.random.Generator, n_boot: int,
+                      min_years: int = MIN_YEARS_FOR_CI) -> Optional[List[float]]:
+    """95% interval of ``sum(num) / sum(den)`` by resampling WHOLE YEARS with replacement (``num`` and ``den`` hold one value per year).
+
+    Events inside one year share the weather and are not independent, so resampling events would give intervals far too narrow
+    (docs/research/bootstrap-unit-check.md). With fewer than ``min_years`` years no interval is reported (None). With 5 to 8 years the
+    interval still undercovers somewhat; say so wherever it is shown."""
+    num, den = np.asarray(num, float), np.asarray(den, float)
+    if num.size != den.size:
+        raise ValueError("num and den must have one entry per year")
+    if not n_boot or num.size < min_years:
+        return None
+    pick = rng.integers(0, num.size, size=(n_boot, num.size))
+    d = den[pick].sum(axis=1)
+    return _ci(np.where(d > 0, num[pick].sum(axis=1) / np.where(d > 0, d, 1), np.nan))
+
+
 def pr_auc(years: List[YearScores], cells: np.ndarray) -> Optional[float]:
     """Area under the precision-recall curve. Positives: fault cell-days. Negatives: every other scored
     cell-day except ambiguous ones (protected extremes count as negatives: flagging them costs precision)."""
@@ -91,7 +111,7 @@ def evaluate(years: List[YearScores], cells: np.ndarray, threshold: float, grid:
     prot = {"cd": 0, "cd_flag": 0, "ev": 0, "ev_flag": 0}
     prot_by: Dict[str, Dict[str, List[int]]] = {"client": {}, "season": {}, "size": {}}
     amb = [0, 0]
-    for y in years:
+    for yi, y in enumerate(years):
         b, f = y.bench, y.bench.faults
         T, n = y.score.shape
         flag = np.nan_to_num(y.score, nan=-np.inf) > threshold
@@ -114,7 +134,7 @@ def evaluate(years: List[YearScores], cells: np.ndarray, threshold: float, grid:
             if n_cd[i] == 0:
                 continue                                   # the fault lies entirely outside this cell group
             row = {"kind": e["kind"], "radius_bin": radius_bin(e["radius"]), "unseen": bool(b.unseen_setting[i]),
-                   "n": int(n_cd[i]), "flagged": int(n_fl[i]), "delay": None, "iou": None}
+                   "n": int(n_cd[i]), "flagged": int(n_fl[i]), "delay": None, "iou": None, "year": yi}
             if n_fl[i]:
                 if e["kind"] in DELAY_KINDS:
                     row["delay"] = int(first[i] - e["start"])
@@ -165,10 +185,15 @@ def evaluate(years: List[YearScores], cells: np.ndarray, threshold: float, grid:
                "recall": _ratio(f_arr[idx].sum(), n_arr[idx].sum()),
                "event_recall": float((f_arr[idx] > 0).mean())}
         if bootstrap:
-            draws = rng.integers(0, idx.size, size=(bootstrap, idx.size))
-            pick = idx[draws]
-            out["recall_ci"] = _ci(f_arr[pick].sum(axis=1) / np.maximum(n_arr[pick].sum(axis=1), 1))
-            out["event_recall_ci"] = _ci((f_arr[pick] > 0).mean(axis=1))
+            yr = np.array([ev_rows[i]["year"] for i in idx])
+            ny = len(years)
+            cd_y = np.bincount(yr, weights=n_arr[idx], minlength=ny)
+            fl_y = np.bincount(yr, weights=f_arr[idx], minlength=ny)
+            ev_y = np.bincount(yr, minlength=ny).astype(float)
+            hit_y = np.bincount(yr, weights=(f_arr[idx] > 0).astype(float), minlength=ny)
+            out["recall_ci"] = year_bootstrap_ci(fl_y, cd_y, rng, bootstrap)
+            out["event_recall_ci"] = year_bootstrap_ci(hit_y, ev_y, rng, bootstrap)
+            out["ci_unit"] = f"whole years ({ny}); regions fixed; none below {MIN_YEARS_FOR_CI} years"
         ious = np.array([ev_rows[i]["iou"] for i in idx if ev_rows[i]["iou"] is not None], float)
         if ious.size:
             out["footprint_iou"] = float(ious.mean())
@@ -195,10 +220,10 @@ def evaluate(years: List[YearScores], cells: np.ndarray, threshold: float, grid:
     rate = _ratio(1000.0 * n_false, n_clean)
     res["false_alerts"] = {"clean_cell_days": n_clean, "false_alerts": n_false, "per_1000_clean": rate,
                            "per_daily_field": None if rate is None else rate / 1000.0 * grid.n_land}
-    if bootstrap and len(per_year) > 1:
+    if bootstrap:
         arr = np.array(per_year, float)
-        pick = rng.integers(0, len(per_year), size=(bootstrap, len(per_year)))
-        res["false_alerts"]["per_1000_clean_ci"] = _ci(1000.0 * arr[pick, 1].sum(axis=1) / np.maximum(arr[pick, 0].sum(axis=1), 1))
+        res["false_alerts"]["per_1000_clean_ci"] = (lambda c: None if c is None else [1000.0 * c[0], 1000.0 * c[1]])(
+            year_bootstrap_ci(arr[:, 1], arr[:, 0], rng, bootstrap))
     res["protected_extremes"] = {
         "label": "plausible, unverified", "cell_days": prot["cd"], "events": prot["ev"],
         "flagged_share_of_cell_days": _ratio(prot["cd_flag"], prot["cd"]),

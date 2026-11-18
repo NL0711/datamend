@@ -238,7 +238,7 @@ which is not the QC split. `SETUP.md` says so.
   detection delay (median and 90th percentile for stuck, repeat, drift), reliability plot with expected calibration error,
   protected-extreme false removal by client, season and event size.
 - ROC-AUC is not a headline number. Three seeds per model, reported as mean and range. Intervals come from resampling
-  whole years and whole fault events (`base.yaml`: 200 resamples).
+  whole years with the regions fixed (`base.yaml`: 200 resamples; none for fewer than 5 years; see `docs/research/bootstrap-unit-check.md`).
 
 **Synthetic faults against real labels:**
 - India: synthetic faults only. Expert-reviewed and historical-flag tiers are reported as "not available". Results are

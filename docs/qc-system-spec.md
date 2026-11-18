@@ -109,7 +109,7 @@ Full decision: [metrics](https://github.com/NL0711/datamend/issues/26).
 
 - ROC AUC is not a headline number.
 - Protected-extreme cell-days are excluded from the clean denominator used for the budget.
-- Three seeds per trained model, reported as mean and range. Intervals come from resampling whole years and whole fault events.
+- Three seeds per trained model, reported as mean and range. Intervals come from resampling whole years with the regions fixed, and none is given for fewer than 5 years (`docs/research/bootstrap-unit-check.md`).
 
 ## 10. Experiments and compute
 
