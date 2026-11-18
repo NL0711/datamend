@@ -504,6 +504,9 @@ COMMANDS = {"uk-grid": cmd_uk_grid, "uk-labels": cmd_uk_labels, "test-score": cm
             "cross-scale-test": cmd_cross_scale_test, "regions-report": cmd_regions_report}
 
 
+SEED_HELP = "default: the first of train.seeds in the config"
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="python -m qc", description=__doc__.split("\n\n")[0])
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -554,13 +557,13 @@ def main(argv=None) -> int:
     cs.add_argument("--daily", default=None, help="stored daily component to fuse with (default: fusion_logistic_s<seed>)")
     cs.add_argument("--mode", default="max", choices=["max", "noisy_or"])
     cs.add_argument("--factor", type=float, default=0.5, help="coherent-extreme discount on protected cells (1 = none)")
-    cs.add_argument("--seed", type=int, default=0)
+    cs.add_argument("--seed", type=int, default=None, help=SEED_HELP)
     cs.add_argument("--overwrite", action="store_true")
     rr = sub.choices["regions-report"]
     rr.add_argument("--splits", nargs="+", default=["val"], choices=["val", "test", "stress"],
                     help="test and stress years are written only after the daily test pass is finished")
     rr.add_argument("--component", default=None, help="stored fused score (default: the chosen architecture, else fusion_logistic_s<seed>)")
-    rr.add_argument("--seed", type=int, default=0)
+    rr.add_argument("--seed", type=int, default=None, help=SEED_HELP)
     rr.add_argument("--final", type=float, default=None, help="development report before the budgets are fixed: final-flag budget")
     rr.add_argument("--review", type=float, default=None, help="development report before the budgets are fixed: review-flag budget")
     rr.add_argument("--imd-file", default=None, help="IMD boundary file (default: <data dir>/regions/sd_boundary_rainfall.json)")
@@ -568,10 +571,10 @@ def main(argv=None) -> int:
     ct = sub.choices["cross-scale-test"]
     ct.add_argument("--splits", nargs="+", default=["test", "stress"], choices=["test", "stress"])
     ct.add_argument("--resume", action="store_true", help="continue an unfinished pass; a finished one cannot be repeated")
-    ct.add_argument("--seed", type=int, default=0, help="seed of the monthly/yearly scorers; use the one given to `cross-scale`")
+    ct.add_argument("--seed", type=int, default=None, help="seed of the monthly/yearly scorers; must equal the one given to `cross-scale`. " + SEED_HELP)
     pp = sub.choices["paper"]
     pp.add_argument("--out", default=None, help="default: <run folder>/paper")
-    pp.add_argument("--seed", type=int, default=0, help="seed whose alerts and validation curves are drawn")
+    pp.add_argument("--seed", type=int, default=None, help="seed whose alerts and validation curves are drawn. " + SEED_HELP)
     g = sub.choices["federated"]
     g.add_argument("--variants", nargs="+", default=["fedpers"], choices=["fedpers", "fedavg", "fedft", "local"],
                    help="priority order: fedpers (main) first, then fedavg, fedft, local; FedProx via --set federated.prox_mu=0.01")
@@ -589,20 +592,22 @@ def main(argv=None) -> int:
     f.add_argument("--overwrite", action="store_true")
     f.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
     ab = sub.choices["ablate"]
-    ab.add_argument("--seed", type=int, default=0)
+    ab.add_argument("--seed", type=int, default=None, help=SEED_HELP)
     ab.add_argument("--budget", type=float, default=1.0, help="false alerts per 1,000 clean cell-days the components are compared at")
     cb = sub.choices["calibrate"]
-    cb.add_argument("--seed", type=int, default=0)
+    cb.add_argument("--seed", type=int, default=None, help=SEED_HELP)
     cb.add_argument("--budget", type=float, default=1.0)
     cb.add_argument("--components", nargs="+", default=None, help="score names (default: the seed's boosted and logistic fusion)")
     b = sub.choices["set-budgets"]
     b.add_argument("--final", type=float, required=True, help="false alerts per 1,000 clean cell-days for the final flag")
     b.add_argument("--review", type=float, required=True, help="the same for the review flag (larger)")
-    b.add_argument("--seed", type=int, default=0, help="whose validation curves the choice was made from")
+    b.add_argument("--seed", type=int, default=None, help="whose validation curves the choice was made from. " + SEED_HELP)
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     try:
         cfg = load_config(args.config, args.set, args.profile)
+        if getattr(args, "seed", 0) is None:      # --seed not given: the first training seed of the config, never a silent 0
+            args.seed = int(cfg.train.seeds[0])
         return COMMANDS[args.cmd](cfg, args)
     except (ConfigError, ContractError, LeakageError, FileNotFoundError) as e:
         print(f"error: {e}", file=sys.stderr)

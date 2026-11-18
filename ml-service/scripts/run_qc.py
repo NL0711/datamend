@@ -63,6 +63,21 @@ def hardware() -> str:
     return "single-gpu"          # the kaggle profile is for two T4s driven by --shard; one machine uses single-gpu
 
 
+REQUIRED = {"numpy": "numpy", "pandas": "pandas", "scipy": "scipy", "sklearn": "scikit-learn", "xarray": "xarray",
+            "netCDF4": "netCDF4", "matplotlib": "matplotlib", "yaml": "pyyaml", "pyarrow": "pyarrow", "kagglehub": "kagglehub",
+            "torch": "torch"}
+
+
+def check_packages() -> None:
+    """Stop at once, naming every missing package, instead of failing inside the first step that needs one."""
+    import importlib.util
+    missing = [pip for mod, pip in REQUIRED.items() if importlib.util.find_spec(mod) is None]
+    if missing:
+        raise SystemExit("missing packages: " + ", ".join(missing) + "\nInstall them for THIS python with:\n  "
+                         f"{sys.executable} -m pip install -r requirements-train.txt\n(torch is not in that file: install the GPU build "
+                         "from pytorch.org if it is the one missing)")
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__.split("\n\n", 1)[1])
@@ -83,6 +98,7 @@ def main(argv=None) -> int:
     ap.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", help="extra config overrides")
     a = ap.parse_args(argv)
 
+    check_packages()
     profile = hardware()
     setup_data(a.slug, a.expected, a.copy_to)
     if a.phase == "check":
@@ -96,7 +112,14 @@ def main(argv=None) -> int:
     k = dict(profile=profile, run=run, extra=a.set)
     # The first seed is the one the fused scores, the cross-scale comparison, the budgets and the paper figures are built on.
     # Give the SAME --seeds to every phase (for example --seeds 42): phases that read stored scores look for names like fusion_logistic_s42.
-    primary = str((a.seeds or [0])[0])
+    if a.seeds:
+        primary = str(a.seeds[0])
+    elif a.smoke:
+        primary = "0"                              # the smoke run trains seed 0 only
+    else:
+        import yaml
+        base = yaml.safe_load((ROOT / "qc" / "configs" / "base.yaml").read_text(encoding="utf-8"))
+        primary = str(int(base["train"]["seeds"][0]))     # the config's first training seed, as `python -m qc` also defaults to
 
     if a.phase == "phase1":
         qc("prepare", **k)
@@ -109,8 +132,8 @@ def main(argv=None) -> int:
         if "fedpers" in a.federated:
             qc("fusion", "--on", "fedpers", *seeds, **k)
         if not a.no_ablate:
-            qc("ablate", "--seed", str((a.seeds or [0])[0]), **k)
-        print(f"\nPhase 1 done. Look at artifacts/qc/{run}/fusion/validation/ (curves_s0.png and curves_s0.json), choose the two "
+            qc("ablate", "--seed", primary, **k)
+        print(f"\nPhase 1 done. Look at artifacts/qc/{run}/fusion/validation/ (curves_s{primary}.png and curves_s{primary}.json), choose the two "
               "budgets, then run the 'budgets' phase. The budgets cannot be changed after the test years are scored.")
         return 0
 
@@ -118,7 +141,7 @@ def main(argv=None) -> int:
         # needs phase1 (prepare, benchmark, untrained, train, fusion); validation years only, no test year is read
         qc("period-benchmark", "--splits", "val", **k)
         qc("scale-select", "--scales", "monthly", "yearly", *(["--seeds"] + [str(s) for s in a.seeds] if a.seeds else (["--seeds", "0"] if a.smoke else [])), **k)
-        qc("cross-scale", "--seed", str((a.seeds or [0])[0]), **k)          # daily fused score alone against daily + monthly + yearly, held-out threshold years
+        qc("cross-scale", "--seed", primary, **k)         # daily fused score alone against daily + monthly + yearly, held-out threshold years
         print(f"\nScales done. Tables are in artifacts/qc/{run}/scales/ (selection_monthly.md, selection_yearly.md, cross_scale_validation.md): "
               "all numbers are on SYNTHETIC faults. Paste them into docs/qc-evaluation-protocol.md and commit before any test year is scored.")
         return 0
