@@ -4,8 +4,10 @@ Usage (from ml-service/):
     python scripts/fetch_rf25.py                       # default dataset, expects 125 files (1901-2025)
     python scripts/fetch_rf25.py --slug owner/name --expected 125
 
-Credentials (the dataset may be private): either set KAGGLE_USERNAME and KAGGLE_KEY, or put ~/.kaggle/kaggle.json in
-place (Kaggle -> Settings -> API -> Create New Token). Nothing is stored in this repository.
+Credentials (needed even for a public dataset): set KAGGLE_API_TOKEN (new-style KGAT_ token), or KAGGLE_USERNAME and
+KAGGLE_KEY, or put ~/.kaggle/kaggle.json in place (Kaggle -> Settings -> API -> Create New Token). They can also be
+written in ml-service/.env (see .env.example); real environment variables win over the file. Nothing is stored in this
+repository.
 
 The files stay in the kagglehub cache; the script prints the folder, and ``scripts/run_qc.py`` sets
 DATAMEND_RF25_DIR to it. Pass --copy-to <dir> to copy them into another folder instead (existing files are kept).
@@ -29,7 +31,29 @@ DEFAULT_SLUG = "nathashalewis/majorproj-rainfall"
 DEFAULT_EXPECTED = 125
 
 
+def load_kaggle_env(env_files: tuple[Path, ...] | None = None) -> list[str]:
+    """Copy KAGGLE_* settings from .env files into os.environ when they are not already set. Returns the names set.
+    Only KAGGLE_ names are read, values are never printed, and a real environment variable always wins."""
+    import os
+    files = env_files if env_files is not None else (Path.cwd() / ".env", ROOT / ".env")
+    done: list[str] = []
+    for f in files:
+        if not f.is_file():
+            continue
+        for raw in f.read_text(encoding="utf-8", errors="replace").splitlines():
+            raw = raw.strip()
+            if not raw or raw.startswith("#") or "=" not in raw:
+                continue
+            name, _, value = raw.partition("=")
+            name, value = name.strip(), value.strip().strip('"').strip("'")
+            if name.startswith("KAGGLE_") and value and not os.environ.get(name):
+                os.environ[name] = value
+                done.append(name)
+    return done
+
+
 def _download(slug: str) -> str:
+    load_kaggle_env()
     try:
         import kagglehub
     except ImportError:
@@ -38,7 +62,8 @@ def _download(slug: str) -> str:
         return kagglehub.dataset_download(slug)
     except Exception as e:                                           # auth, network and 404 errors come in many types
         raise DatasetNotFound(
-            f"could not download {slug}: {e}\nIf the dataset is private, set KAGGLE_USERNAME and KAGGLE_KEY, or create "
+            f"could not download {slug}: {e}\nKaggle needs a login even for a public dataset: set KAGGLE_API_TOKEN (KGAT_ token) "
+            "or KAGGLE_USERNAME and KAGGLE_KEY, in the environment or in ml-service/.env (see .env.example), or create "
             "~/.kaggle/kaggle.json (Kaggle -> Settings -> API -> Create New Token). Check the slug is owner/name.") from None
 
 
