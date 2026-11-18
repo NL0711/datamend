@@ -51,7 +51,7 @@ unverified (`docs/research/qc-novelty-research.md`, sections 1 and 5).
 | Validation | 2013-2017. Fusion fitted on 2013-2015. Budgets set on clean 2016-2017 | `base.yaml`; `docs/qc-evaluation-protocol.md` |
 | Test | 2018-2025, scored once | `base.yaml`; `qc/testscore.py` |
 | Stress | 1901-1950, evaluation only, outside the headline tables | `base.yaml`; `docs/qc-system-spec.md` s3 |
-| Clients | 8 geographic blobs (k-means on lat/lon, fixed map in `qc/assets/client_map.json`). Clients 3 and 6 are held out, behind a 6-cell buffer | `qc/clients.py`; `qc/splits.py`; `base.yaml` |
+| Clients | 8 groups of whole IMD sub-divisions (k-means blobs re-cut on 2026-11-18 so no sub-division is split; fixed map in `qc/assets/client_map.json`, composition in `client_subdivisions.json`). Clients 3 (north-east: Arunachal, Assam & Meghalaya, N M M T, SHWB & Sikkim) and 6 (west-central, includes Konkan & Goa and Mumbai) are held out, behind a 6-cell buffer | `qc/clients.py`; `qc/splits.py`; `base.yaml` |
 | Normalisation | per client, training years only: `log1p(mm) / scale`, scale from the 99.9th percentile of training wet days. It rescales and never clips | `qc/stats.py`; `docs/qc-evaluation-protocol.md` |
 | Second study | UK MIDAS Open daily rain, real hand corrections as labels. Separate, never pooled with India | `docs/qc-system-spec.md` s12; `qc/uk/` |
 
@@ -258,7 +258,7 @@ which is not the QC split. `SETUP.md` says so.
 - If a fault is wider than the hidden disc, the spatial component partly sees it (`CONTEXT.md`).
 
 **Test-pass discipline:**
-- Budgets must be fixed first. `test-score` checks the budgets, the pinned benchmark hash and that every model exists for
+- Budgets must be fixed first. `test-score` checks the budgets, the benchmark hash (recorded; the pin was removed on 2026-11-18, so it is no longer enforced) and that every model exists for
   every seed, then writes `test_scoring.lock.json`.
 - A finished lock makes any later test scoring refuse to run. Only the owner deleting the lock file starts over. An
   unfinished lock can be resumed with `--resume`. The stress split has no lock (`testscore.py`).
@@ -336,8 +336,8 @@ Docs against code or against each other. Code wins.
    check set to 123 files would accept a dataset missing 2024 and 2025.
 2. **Stale local artifacts.** Ignored folders under `ml-service/data/` and `ml-service/artifacts/qc/base/` hold a
    frozen benchmark `v1` (hash `3558013881231b2c`), a split manifest with test 2018-2023, untrained validation
-   scores (commit `ede7e72...+dirty`, 2026-11-17) and a 62-year land cache. The config now pins hash `442851b03d5f95a4`,
-   so a scoring run would refuse the local benchmark. Whether these files came from real or generated data is not recorded;
+   scores (commit `ede7e72...+dirty`, 2026-11-17) and a 62-year land cache. The config pinned hash `442851b03d5f95a4` until the owner removed the pin on 2026-11-18 (the hash is
+   now recorded, not enforced); a fresh machine builds its own benchmark. Whether these files came from real or generated data is not recorded;
    the owner says nothing ran on real data.
 3. **Project identity.** `AGENTS.md`, `GOAL.md`, `ARCHITECTURE.md`, `PROJECT.md`, `README.md`, `docs/evaluation_report.md`
    still describe an AWS temperature, pressure and humidity system. Only `TODO.md` (QC section), `ml-service/` docs and

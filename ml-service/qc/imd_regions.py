@@ -99,6 +99,40 @@ def build_imd_maps(grid: Grid, path: Path, sub: int = 7) -> Tuple[RegionMap, Reg
     return sub_map, region_map
 
 
+DEFAULT_ANCHORS = ("ASSAM & MEGHALAYA", "KONKAN & GOA")      # north-east (wettest) and west-central (Mumbai): the held-out clients
+
+
+def nested_client_map(old_map: np.ndarray, grid: Grid, path: Path, k: int = 8, anchors: Sequence[str] = DEFAULT_ANCHORS,
+                      sub: int = 7) -> Tuple[np.ndarray, Dict]:
+    """New client map in which every client is a union of WHOLE IMD sub-divisions (decided 2026-11-18, before any run). ``old_map`` (H, W)
+    supplies the land mask and the starting partition (the k-means blobs). Land cells that fall in no sub-division polygon take the
+    sub-division of the nearest cell that has one. Returns (map (H, W) int8, report)."""
+    from qc.clients import nest_in_subdivisions, order_clients
+
+    sub_map, _ = build_imd_maps(grid, path, sub=sub)
+    sid = sub_map.cell_region.copy()
+    assigned = np.nonzero(sid > 0)[0]
+    fallback = np.nonzero(sid == 0)[0]
+    for i in fallback:
+        d = np.hypot(grid.rows[assigned] - grid.rows[i], grid.cols[assigned] - grid.cols[i])
+        sid[i] = sid[assigned[d.argmin()]]
+    by_name = {n: i for i, n in sub_map.names.items()}
+    missing = [a for a in anchors if a not in by_name]
+    if missing:
+        raise ValueError(f"anchor sub-divisions {missing} are not in the boundary file")
+    anchor_ids = [by_name[a] for a in anchors]
+    base = old_map[grid.rows, grid.cols].astype(np.int64)
+    lab = nest_in_subdivisions(grid.rows, grid.cols, sid, base, k, anchor_ids)
+    lab = order_clients(lab, grid.lat[grid.rows], grid.lon[grid.cols], k)
+    out = np.zeros(grid.shape, np.int8)
+    out[grid.rows, grid.cols] = lab
+    clients = {int(c): sorted({sub_map.names[int(s)] for s in np.unique(sid[lab == c])}) for c in range(1, k + 1)}
+    report = {"k": k, "cells_per_client": {int(c): int((lab == c).sum()) for c in range(1, k + 1)}, "clients": clients,
+              "anchors": {a: int(lab[np.nonzero(sid == by_name[a])[0][0]]) for a in anchors},
+              "cells_assigned_to_nearest_sub_division": int(fallback.size)}
+    return out, report
+
+
 def acceptance_known_points(grid: Grid, path: Path, sub_map: RegionMap, points: Sequence = KNOWN_POINTS) -> Dict:
     """Two checks of the boundary file and the assignment (decided 2026-11-18, both must pass before any regional output is shown):
     polygon level (the point is in the expected sub-division of the file) and cell level (the grid cell holding the point was assigned to it)."""

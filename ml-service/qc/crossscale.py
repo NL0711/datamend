@@ -25,7 +25,39 @@ import numpy as np
 
 from qc.resolution import SEASON_MONTHS, days_in_year, period_ids
 
-MODES = ("max", "noisy_or")
+MODES = ("max", "noisy_or", "learned")
+
+
+def fit_nonneg_logistic(x: np.ndarray, y: np.ndarray, l2: float = 1e-3, max_iter: int = 200):
+    """Logistic regression with NON-NEGATIVE weights (and a free intercept), by L-BFGS-B. ``x`` (m, d) features, ``y`` (m,) 0/1.
+    Non-negative weights mean a higher score on any scale can only raise the fused score, which stops the fit from using one scale to
+    cancel another (an earlier unconstrained daily fusion diluted single-variable faults). Returns (weights (d,), intercept)."""
+    from scipy.optimize import minimize
+
+    x = np.asarray(x, float)
+    y = np.asarray(y, float)
+    if x.ndim != 2 or x.shape[0] != y.size or x.shape[0] < 10:
+        raise ValueError("need a 2-D feature matrix with one row per label and at least 10 rows")
+    if y.min() == y.max():
+        raise ValueError("the labels are all one class; a logistic fit is impossible")
+    m, d = x.shape
+
+    def loss(theta):
+        w, b = theta[:d], theta[d]
+        z = x @ w + b
+        ll = np.logaddexp(0.0, z) - y * z
+        p = 1.0 / (1.0 + np.exp(-z))
+        g = x.T @ (p - y) / m + l2 * w
+        return ll.mean() + 0.5 * l2 * float(w @ w), np.r_[g, (p - y).mean()]
+
+    res = minimize(loss, np.r_[np.full(d, 0.1), 0.0], jac=True, method="L-BFGS-B", bounds=[(0.0, None)] * d + [(None, None)],
+                   options={"maxiter": max_iter})
+    return res.x[:d], float(res.x[d])
+
+
+def learned_features(ratio: np.ndarray) -> np.ndarray:
+    """log1p of a standardised ratio (clipped at 0), the input of the learned fusion. NaN stays NaN."""
+    return np.log1p(np.clip(ratio, 0.0, None))
 
 
 def reference(clean_scores: np.ndarray, q: float = 99.9, min_count: int = 100) -> float:
@@ -58,10 +90,16 @@ class FusedScores:
 
 
 def fuse_scales(parts: Dict[str, np.ndarray], refs: Dict[str, float], mode: str = "max",
-                protected: Optional[np.ndarray] = None, protected_factor: float = 0.5) -> FusedScores:
-    """``parts[name]`` are (T, n) scores already aligned to days. ``refs`` come from ``reference`` on clean threshold years."""
+                protected: Optional[np.ndarray] = None, protected_factor: float = 0.5,
+                weights: Optional[Sequence[float]] = None) -> FusedScores:
+    """``parts[name]`` are (T, n) scores already aligned to days. ``refs`` come from ``reference`` on clean threshold years.
+    ``mode="learned"`` needs ``weights`` (one non-negative weight per part, in the order of ``parts``) and gives sum_k w_k * log1p(ratio_k);
+    NaN parts count as zero where at least one part is finite; the driver is the part with the largest weighted term."""
     if mode not in MODES:
         raise ValueError(f"mode must be one of {MODES}")
+    if mode == "learned":
+        if weights is None or len(weights) != len(parts) or min(weights) < 0:
+            raise ValueError("learned fusion needs one non-negative weight per part")
     if not parts or set(parts) != set(refs):
         raise ValueError("parts and refs must name the same, non-empty set of scales")
     if not 0.0 <= protected_factor <= 1.0:
@@ -74,8 +112,13 @@ def fuse_scales(parts: Dict[str, np.ndarray], refs: Dict[str, float], mode: str 
     anyv = np.isfinite(ratios).any(axis=0)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
-        score = np.nanmax(ratios, axis=0) if mode == "max" else np.nansum(ratios, axis=0)
-        drv = np.argmax(np.where(np.isfinite(ratios), ratios, -np.inf), axis=0).astype(np.int8)
+        if mode == "learned":
+            terms = np.asarray(weights, np.float32)[:, None, None] * learned_features(ratios)
+            score = np.nansum(terms, axis=0)
+            drv = np.argmax(np.where(np.isfinite(terms), terms, -np.inf), axis=0).astype(np.int8)
+        else:
+            score = np.nanmax(ratios, axis=0) if mode == "max" else np.nansum(ratios, axis=0)
+            drv = np.argmax(np.where(np.isfinite(ratios), ratios, -np.inf), axis=0).astype(np.int8)
     score = np.where(anyv, score, np.nan).astype(np.float32)
     drv = np.where(anyv, drv, -1).astype(np.int8)
     if protected is not None:

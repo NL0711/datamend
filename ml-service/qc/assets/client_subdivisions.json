@@ -1,0 +1,73 @@
+{
+ "map_hash": "aaff7e503e85d9e6",
+ "imd_boundary_url": "https://mausam.imd.gov.in/imd_latest/contents/district_shapefiles/sd_boundary_rainfall.json",
+ "imd_boundary_sha256": "64d5a06eb9d7eec9b085f19362443b3374d89cb704365267533c452083701829",
+ "licence": "not stated by IMD; no polygons are stored here, only which sub-divisions form each client",
+ "cells_per_client": {
+  "1": 652,
+  "2": 630,
+  "3": 493,
+  "4": 628,
+  "5": 587,
+  "6": 665,
+  "7": 662,
+  "8": 647
+ },
+ "anchors": {
+  "ASSAM & MEGHALAYA": 3,
+  "KONKAN & GOA": 6
+ },
+ "cells_assigned_to_nearest_sub_division": 122,
+ "clients": {
+  "1": [
+   "HAR. CHD & DELHI",
+   "HIMACHAL PRADESH",
+   "JAMMU & KASHMIR AND LADAKH",
+   "PUNJAB"
+  ],
+  "2": [
+   "EAST MADHYA PRADESH",
+   "EAST RAJASTHAN",
+   "UTTARAKHAND",
+   "WEST UTTAR PRADESH"
+  ],
+  "3": [
+   "ARUNACHAL PRADESH",
+   "ASSAM & MEGHALAYA",
+   "N M M T",
+   "SHWB & SIKKIM"
+  ],
+  "4": [
+   "GUJARAT REGION",
+   "SAURASHTRA & KUTCH",
+   "WEST RAJASTHAN"
+  ],
+  "5": [
+   "BIHAR",
+   "EAST UTTAR PRADESH",
+   "GANGETIC WEST BENGAL",
+   "JHARKHAND"
+  ],
+  "6": [
+   "KONKAN & GOA",
+   "MADHYA MAHARASHTRA",
+   "MARATHWADA",
+   "N. I. KARNATAKA",
+   "WEST MADHYA PRADESH"
+  ],
+  "7": [
+   "CHHATTISGARH",
+   "CO AP and YANAM",
+   "ORISSA",
+   "VIDARBHA"
+  ],
+  "8": [
+   "COASTAL KARNATAKA",
+   "KERALA & MAHE",
+   "RAYALASEEMA",
+   "S. I. KARNATAKA",
+   "TELANGANA",
+   "TN PUDU and KKL"
+  ]
+ }
+}

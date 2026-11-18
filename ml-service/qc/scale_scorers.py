@@ -17,7 +17,7 @@ sees the target period's own value in its inputs and never a later period.
 
 Baselines (no or almost no training): ``gamma_zero`` (zero probability plus a gamma per cell and period) and ``loo_median``
 (leave-one-out neighbour residual against the MEDIAN of the neighbours' anomalies, so one faulty cell does not flag the healthy
-cells around it; the kriging variant named in the spec is NOT IMPLEMENTED). A first version used an inverse-distance weighted
+cells around it; the kriging variant is ``loo_kriging``, a candidate). A first version used an inverse-distance weighted
 mean; a test showed it smeared a single bad cell into its neighbours (a neighbour scored about half as high as the bad cell),
 so the median was used instead. Candidates: ``gbm_neighbour`` (pooled gradient-boosted regression, no rainfall-QC precedent
 found) and ``mlp_neighbour`` (small pooled scikit-learn MLP, not the Gamma-head network of the spec).
@@ -55,6 +55,8 @@ class ScaleContext:
     far_idx: np.ndarray          # (n, K2) land-cell indices between ``near`` and ``far``
     target_ok: np.ndarray        # (n,) bool: cells that may be fitting targets
     read_ok: np.ndarray          # (n,) bool: cells whose values may be read during fitting
+    rows: Optional[np.ndarray] = None    # (n,) grid row of each land cell (needed by the kriging scorer)
+    cols: Optional[np.ndarray] = None    # (n,) grid column of each land cell
 
 
 def make_context(grid: Grid, cell_client: np.ndarray, stats: ScaleStats, hidden_radius: float = 2.0, near: float = 4.0,
@@ -69,7 +71,8 @@ def make_context(grid: Grid, cell_client: np.ndarray, stats: ScaleStats, hidden_
     fi = ring_index(grid, near, far)
     ones = np.ones(n, bool)
     return ScaleContext(stats.scale, stats, np.asarray(cell_client), grid.lat[grid.rows], grid.lon[grid.cols], ni, w, fi,
-                        ones if target_ok is None else np.asarray(target_ok, bool), ones if read_ok is None else np.asarray(read_ok, bool))
+                        ones if target_ok is None else np.asarray(target_ok, bool), ones if read_ok is None else np.asarray(read_ok, bool),
+                        np.asarray(grid.rows), np.asarray(grid.cols))
 
 
 # ------------------------------------------------------------------------------------------------ helpers
@@ -204,7 +207,7 @@ class GammaZeroScorer(ScaleScorer):
 class LooResidualScorer(ScaleScorer):
     """Leave-one-out neighbour residual: predict the cell's anomaly as the median of its neighbours' anomalies (target and hidden
     disc left out); score = |residual| / robust spread of training-year residuals. The spec's "ratio cut of 3" is applied when
-    thresholds are chosen. Kriging is NOT IMPLEMENTED."""
+    thresholds are chosen. The kriging variant is ``loo_kriging``."""
     name = "loo_median"
     complexity = 1
     default_cut = 3.0
@@ -230,6 +233,147 @@ class LooResidualScorer(ScaleScorer):
         r = an - X[:, :, 0]
         out = np.abs(r) / self.spread
         out[(n_near < MIN_NEIGHBOURS) | ~periods.valid] = np.nan
+        return out.astype(np.float32)
+
+
+class LooKrigingScorer(ScaleScorer):
+    """Leave-one-out ordinary kriging of the cell's anomaly from its neighbours (target and hidden disc left out), after El Hachem et al.
+    (2022); score = |residual| / (kriging standard deviation x a calibration spread), so cells whose neighbours are few or far away are
+    judged more gently. The semivariogram is an exponential model fitted per period to the pooled training-year anomalies of readable cells.
+
+    Approximations, stated: the anomaly is log1p(total) - log1p(climatology) (a Box-Cox lambda of 0 variant, not a fitted Box-Cox); one
+    variogram per period is shared by every cell (no local fit); kriging weights are computed once on the geometry with every neighbour
+    present, and when a neighbour is missing in a given period it is dropped and the remaining weights are renormalised to sum to one."""
+    name = "loo_kriging"
+    complexity = 2
+    default_cut = 3.0
+    MAX_LAG = 8
+
+    def _lag_pairs(self, ctx):
+        k = self.MAX_LAG
+        dr, dc = np.mgrid[-k:k + 1, -k:k + 1]
+        d = np.hypot(dr, dc)
+        half = ((dr > 0) | ((dr == 0) & (dc > 0))) & (d >= 1.0) & (d <= self.MAX_LAG)
+        n = ctx.rows.size
+        index = np.full((int(ctx.rows.max()) + 1, int(ctx.cols.max()) + 1), -1, np.int64)
+        index[ctx.rows, ctx.cols] = np.arange(n)
+        out = []
+        for a, b, dist in zip(dr[half], dc[half], d[half]):
+            rr, cc = ctx.rows + a, ctx.cols + b
+            ok = (rr >= 0) & (rr < index.shape[0]) & (cc >= 0) & (cc < index.shape[1])
+            j = np.full(n, -1, np.int64)
+            j[ok] = index[rr[ok], cc[ok]]
+            i = np.nonzero(j >= 0)[0]
+            out.append((i, j[i], round(float(dist), 6)))
+        return out
+
+    @staticmethod
+    def _model(h, nugget, psill, rng_):
+        return np.where(h > 0, nugget + psill * (1.0 - np.exp(-h / rng_)), 0.0)
+
+    def _fit_variograms(self, train, ctx):
+        from scipy.optimize import curve_fit
+        pairs = self._lag_pairs(ctx)
+        dists = sorted({d for _, _, d in pairs})
+        didx = {d: k for k, d in enumerate(dists)}
+        P = ctx.stats.clim_mean.shape[0]
+        S = np.zeros((P, len(dists)))
+        N = np.zeros((P, len(dists)))
+        for y in sorted(train):
+            an = anomaly(train[y].total, ctx.stats.clim_mean)
+            an = np.where(ctx.read_ok[None, :], an, np.nan)
+            for i, j, d in pairs:
+                diff2 = (an[:, i] - an[:, j]) ** 2
+                fin = np.isfinite(diff2)
+                S[:, didx[d]] += np.where(fin, diff2, 0.0).sum(axis=1)
+                N[:, didx[d]] += fin.sum(axis=1)
+        h = np.array(dists)
+        params = np.zeros((P, 3))
+        for p in range(P):
+            ok = N[p] > 30
+            if ok.sum() < 4:
+                raise ValueError(f"too little data to fit a variogram for period {p}")
+            g = S[p, ok] / N[p, ok] / 2.0
+            top = float(g.max())
+            try:
+                popt, _ = curve_fit(self._model, h[ok], g, p0=[0.3 * g.min(), max(top - 0.3 * g.min(), 1e-6), 3.0],
+                                    bounds=([0.0, 1e-9, 0.3], [np.inf, np.inf, 60.0]), sigma=1.0 / np.sqrt(N[p, ok]), maxfev=4000)
+            except (RuntimeError, ValueError):
+                popt = [0.3 * float(g.min()), max(top, 1e-6), 3.0]
+            params[p] = popt
+        return params, (h, S, N)
+
+    def _weights(self, ctx, params):
+        n, K = ctx.near_idx.shape
+        P = params.shape[0]
+        valid = ctx.near_idx >= 0
+        safe = np.where(valid, ctx.near_idx, 0)
+        nr, nc = ctx.rows[safe].astype(float), ctx.cols[safe].astype(float)
+        dtt = np.hypot(nr - ctx.rows[:, None], nc - ctx.cols[:, None])
+        dnn = np.hypot(nr[:, :, None] - nr[:, None, :], nc[:, :, None] - nc[:, None, :])
+        W = np.zeros((P, n, K), np.float32)
+        SD = np.zeros((P, n), np.float32)
+        for p in range(P):
+            nug, ps, rg = params[p]
+            A = np.zeros((n, K + 1, K + 1))
+            A[:, :K, :K] = self._model(dnn, nug, ps, rg)
+            A[:, :K, K] = 1.0
+            A[:, K, :K] = 1.0
+            b = np.zeros((n, K + 1))
+            b[:, :K] = self._model(dtt, nug, ps, rg)
+            b[:, K] = 1.0
+            inv = ~valid                                        # a neighbour that does not exist gets weight 0: its row and column become the identity
+            invp = np.pad(inv, ((0, 0), (0, 1)))
+            A[invp[:, :, None] | invp[:, None, :]] = 0.0
+            ii, jj = np.nonzero(inv)
+            A[ii, jj, jj] = 1.0
+            A[:, K, K] = 0.0
+            for q in range(K):
+                A[:, q, K] = np.where(inv[:, q], 0.0, 1.0)
+                A[:, K, q] = np.where(inv[:, q], 0.0, 1.0)
+            b[:, :K] = np.where(inv, 0.0, b[:, :K])
+            try:
+                sol = np.linalg.solve(A, b[:, :, None])[:, :, 0]
+            except np.linalg.LinAlgError as e:
+                raise ValueError(f"the kriging system is singular for period {p}: {e}") from None
+            w = sol[:, :K] * valid
+            W[p] = w
+            var = (w * b[:, :K]).sum(axis=1) + sol[:, K]
+            SD[p] = np.sqrt(np.maximum(var, 1e-8))
+        return W, SD
+
+    def _predict(self, ctx, periods, read_ok=None):
+        an = anomaly(periods.total, ctx.stats.clim_mean)
+        an_read = an if read_ok is None else np.where(read_ok[None, :], an, np.nan)
+        near = _gather(an_read, ctx.near_idx)
+        fin = np.isfinite(near)
+        w = np.where(fin, self.W, 0.0)
+        denom = w.sum(axis=2)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            pred = np.where(np.abs(denom) > 1e-6, (w * np.nan_to_num(near)).sum(axis=2) / denom, np.nan)
+        return an, pred, fin.sum(axis=2)
+
+    def fit(self, train, ctx, seed=0):
+        if ctx.rows is None or ctx.cols is None:
+            raise ValueError("the kriging scorer needs cell positions in the context (build it with make_context)")
+        self.params, self.variogram = self._fit_variograms(train, ctx)
+        self.W, self.SD = self._weights(ctx, self.params)
+        res, ok = [], []
+        for y in sorted(train):
+            an, pred, nn = self._predict(ctx, train[y], ctx.read_ok)
+            z = (an - pred) / self.SD
+            res.append(z)
+            ok.append(np.isfinite(z) & (nn >= MIN_NEIGHBOURS) & ctx.target_ok[None, :])
+        z, g = np.stack(res), np.stack(ok)
+        Y, P, n = z.shape
+        self.spread = _client_spread(np.moveaxis(z, 0, 1).reshape(P, Y * n), np.moveaxis(g, 0, 1).reshape(P, Y * n),
+                                     np.tile(ctx.cell_client, Y), ctx.cell_client)
+        return self
+
+    def score(self, periods, prev, ctx):
+        an, pred, nn = self._predict(ctx, periods)
+        out = np.abs(an - pred) / (self.SD * self.spread)
+        out[(nn < MIN_NEIGHBOURS) | ~np.isfinite(out) | ~periods.valid] = np.nan
         return out.astype(np.float32)
 
 
@@ -293,7 +437,7 @@ class GbmNeighbourScorer(_RegressionScorer):
     """Pooled gradient-boosted regression of the cell's anomaly from neighbour, own-lag, climate and position features.
     No rainfall-QC precedent was found for this; it is an experiment kept only if it beats the baselines on validation."""
     name = "gbm_neighbour"
-    complexity = 2
+    complexity = 3
 
     def make_model(self, seed):
         return HistGradientBoostingRegressor(max_iter=150, learning_rate=0.08, max_leaf_nodes=15, random_state=seed)
@@ -302,7 +446,7 @@ class GbmNeighbourScorer(_RegressionScorer):
 class MlpNeighbourScorer(_RegressionScorer):
     """Small pooled MLP on the same features (scikit-learn; not the zero-inflated Gamma head named in the spec)."""
     name = "mlp_neighbour"
-    complexity = 3
+    complexity = 4
 
     def make_model(self, seed):
         return MLPRegressor(hidden_layer_sizes=(32, 16), max_iter=80, early_stopping=True, random_state=seed)
@@ -316,7 +460,7 @@ class MlpNeighbourScorer(_RegressionScorer):
         return np.nan_to_num((X - self._mu) / self._sd, nan=0.0)
 
 
-CANDIDATES: Dict[str, type] = {c.name: c for c in (GammaZeroScorer, LooResidualScorer, GbmNeighbourScorer, MlpNeighbourScorer)}
+CANDIDATES: Dict[str, type] = {c.name: c for c in (GammaZeroScorer, LooResidualScorer, LooKrigingScorer, GbmNeighbourScorer, MlpNeighbourScorer)}
 
 
 def make_scorer(name: str) -> ScaleScorer:

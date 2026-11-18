@@ -56,8 +56,9 @@ benchmark:
   kinds_seen: [spike, stuck, scale, phantom_rain, zeroed, drift, combination]
   kinds_test_only: [repeat, edge]
   seeds: {val: 1001, test: 2002, stress: 3003}
-  expected_hash: 442851b03d5f95a4   # hash of the frozen benchmark; scoring refuses a different one. Re-pinned when the test years were extended from 2023 to 2025 (previous value 3558013881231b2c, for test 2018-2023), before any real scoring
-  allow_unpinned: false
+  expected_hash: null          # the benchmark pin was REMOVED by the owner on 2026-11-18 (it was 442851b03d5f95a4 for test 2018-2025). The hash is still computed and
+                               # recorded in the benchmark manifest, the budgets log and the test report, so a changed benchmark is visible but no longer refused.
+  allow_unpinned: true
 
 components:
   hidden_radius: 2           # cells; the spatial component, slow comparison and neighbour baseline never read inside it
@@ -116,6 +117,12 @@ evaluation:
 offline:
   artifacts: {}
 
+# Architecture decision rule (qc/crossscale_run.py decide_architecture), frozen by the owner on 2026-11-18 in docs/qc-evaluation-protocol.md.
+architecture:
+  final_budget: 1.0            # false alarms per 1,000 clean cell-days at which recall is compared
+  min_recall_gain: 0.02        # a combination replaces daily-only only if recall is at least this much higher (absolute), within the guards
+  frozen_on: "2026-11-18"
+
 # Bridge check of a live daily product against RF25 (qc/bridge.py). Limits confirmed by the owner on 2026-11-18, to be logged in
 # docs/qc-evaluation-protocol.md and committed BEFORE the check is run. Pass/fail is at primary_rain_mm; report_rain_mm only reported.
 bridge:
@@ -127,6 +134,6 @@ bridge:
   p99_ratio_band: [0.8, 1.25]  # outside it is a WARNING: recalibrate the standardisation reference on the product's clean days
   primary_rain_mm: 0.5
   report_rain_mm: [2.5]
-  allowed_years: [2016, 2017]  # validation years of the product's overlap with RF25; never a test year
+  allowed_years: [2013, 2014, 2015, 2016, 2017]   # the validation years (widened from 2016-2017 on 2026-11-18, before any run, for IMERG, which was then dropped; no product is bridged now); never a test year
   confirmed_by_owner: true
   frozen_on: "2026-11-18"

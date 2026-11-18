@@ -117,18 +117,28 @@ def build_period_benchmark(p, scales: Sequence[str] = SCALES, splits: Sequence[s
     daily = check_benchmark(p)
     root = period_dir(bench_dir(p.cfg))
     manifest_path = root / "manifest.json"
-    if manifest_path.is_file() and not overwrite:
-        raise FileExistsError(f"{manifest_path} exists; pass overwrite=True to rebuild it")
     cfg = p.cfg
     pb = cfg.get("period_benchmark")
     if rate is None:
         rate = float(pb.get("rate", 0.02)) if pb is not None else 0.02
     seed = int(p.cfg.seed) if seed is None else int(seed)
-    h = hashlib.sha256()
-    h.update(daily["hash"].encode())
-    h.update(json.dumps({"rate": rate, "scales": list(scales), "schema": SCHEMA}, sort_keys=True).encode())
-    summary: Dict = {}
+    prior: Dict = {}
+    if manifest_path.is_file() and not overwrite:
+        prior = json.loads(manifest_path.read_text(encoding="utf-8"))
+        again = [s for s in splits if s in prior.get("split_hashes", {})]
+        if again:
+            raise FileExistsError(f"{manifest_path} already holds the splits {again}; pass overwrite=True to rebuild them")
+        same = (prior.get("daily_benchmark_hash") == daily["hash"] and prior.get("rate") == rate and prior.get("seed") == seed
+                and prior.get("scales") == list(scales))
+        if not same:
+            raise ValueError("the period benchmark already built used other settings (daily benchmark, rate, seed or scales); "
+                             "rebuild everything with overwrite=True")
+    summary: Dict = dict(prior.get("summary", {}))
+    split_hashes: Dict = dict(prior.get("split_hashes", {}))
     for split in splits:
+        h = hashlib.sha256()
+        h.update(daily["hash"].encode())
+        h.update(json.dumps({"rate": rate, "scales": list(scales), "schema": SCHEMA, "split": split}, sort_keys=True).encode())
         years = p.split.years["stress" if split == "stress" else split]
         for si, scale in enumerate(scales):
             n_fault = n_valid = 0
@@ -143,9 +153,12 @@ def build_period_benchmark(p, scales: Sequence[str] = SCALES, splits: Sequence[s
                 n_valid += int(py.valid.sum())
             summary[f"{split}/{scale}"] = {"years": [int(min(years)), int(max(years))], "fault_periods": n_fault,
                                            "valid_periods": n_valid, "fault_share": n_fault / max(n_valid, 1)}
+        split_hashes[split] = h.hexdigest()[:16]
+    combined = hashlib.sha256("".join(f"{k}:{v};" for k, v in sorted(split_hashes.items())).encode()).hexdigest()[:16]
     manifest = {"schema": SCHEMA, "daily_benchmark_hash": daily["hash"], "rate": rate, "seed": seed, "scales": list(scales),
-                "splits": list(splits), "hash": h.hexdigest()[:16], "summary": summary,
+                "splits": sorted(split_hashes), "split_hashes": split_hashes, "hash": combined, "summary": summary,
                 "note": "SYNTHETIC faults: aggregated daily faults (visible) plus period-level scale and dropout faults"}
+    root.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, indent=1), encoding="utf-8")
     return manifest
 

@@ -8,7 +8,7 @@ Language for the precipitation quality-control work on RF25 gridded daily rainfa
 One grid cell on one day; the unit that gets scored, labelled and flagged.
 
 **Client**:
-A fixed, compact group of grid cells that trains locally in the federated simulation: one of 8 geographic blobs.
+A fixed, compact group of grid cells that trains locally in the federated simulation: one of 8 groups of whole IMD sub-divisions (so a sub-division never mixes trained and unseen cells).
 _Avoid_: site, station, tile, region
 
 **Component**:

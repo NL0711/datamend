@@ -39,7 +39,7 @@ class AcceptanceRule:
     p99_ratio_band: tuple = (0.8, 1.25)
     primary_rain_mm: float = 0.5
     report_rain_mm: tuple = (2.5,)
-    allowed_years: tuple = (2016, 2017)
+    allowed_years: tuple = (2013, 2014, 2015, 2016, 2017)       # the validation years; the caller passes only the years the product covers
     confirmed_by_owner: bool = False
 
 

@@ -20,6 +20,7 @@ from typing import Dict, List, Optional, Sequence
 import numpy as np
 
 from qc import paths
+from qc.benchmark import check_benchmark
 from qc.evaluate import evaluate_component, group_cells, load_years, score_store, thresholds_for
 from qc.fusion import FusionFit, VARIANTS, fused_name, load_features
 from qc.metrics import calibration
@@ -155,8 +156,9 @@ def load_budgets(p: Prepared) -> Dict:
 
 
 def set_budgets(p: Prepared, final: float, review: float, curves_file: Path, protocol: Path = PROTOCOL,
-                store: Optional[ScoreStore] = None, today: Optional[str] = None) -> Dict:
-    """Fix the final-flag and review-flag budgets (false alerts per 1,000 clean cell-days) and log them in the protocol."""
+                store: Optional[ScoreStore] = None, today: Optional[str] = None, component: Optional[str] = None) -> Dict:
+    """Fix the final-flag and review-flag budgets (false alerts per 1,000 clean cell-days) and log them in the protocol.
+    ``component`` names the fused score the budgets apply to (the chosen architecture); it is recorded in the budgets file and the log."""
     if not 0 < final < review:
         raise ValueError("the final-flag budget must be positive and smaller than the review-flag budget")
     late = scored_after_validation(p, store)
@@ -171,8 +173,10 @@ def set_budgets(p: Prepared, final: float, review: float, curves_file: Path, pro
     doc = {"final_per_1000": float(final), "review_per_1000": float(review), "chosen": today,
            "commit": git_commit(), "curves_file": str(curves_file),
            "curves_sha256": hashlib.sha256(Path(curves_file).read_bytes()).hexdigest()[:16],
-           "benchmark_hash": p.cfg.benchmark.expected_hash, "split_manifest_hash": p.manifest["hash"],
+           "benchmark_hash": check_benchmark(p, require_pinned=False)["hash"], "split_manifest_hash": p.manifest["hash"],
            "no_test_scores_at_choice": True}
+    if component:
+        doc["applies_to"] = component
     write_json(budgets_path(p), doc)
     _log_in_protocol(protocol, doc)
     return doc
@@ -181,7 +185,9 @@ def set_budgets(p: Prepared, final: float, review: float, curves_file: Path, pro
 def _log_in_protocol(path: Path, doc: Dict) -> None:
     text = path.read_text(encoding="utf-8")
     row = (f"| {doc['chosen']} | {doc['final_per_1000']:g} / {doc['review_per_1000']:g} | "
-           f"{doc['commit'][:12]} (curves {doc['curves_sha256']}) | yes: no test or stress score files existed |")
+           f"{doc['commit'][:12]} (curves {doc['curves_sha256']}"
+           + (f"; applies to {doc['applies_to']}" if doc.get("applies_to") else "")
+           + ") | yes: no test or stress score files existed |")
     lines = text.splitlines()
     blank = next((i for i, l in enumerate(lines) if l.strip() == "| | | | |"), None)
     if blank is not None:

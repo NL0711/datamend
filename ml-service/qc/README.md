@@ -56,10 +56,13 @@ Built on top of it (all unit-tested on generated data only; nothing has run on r
 | module | what it is | command |
 | --- | --- | --- |
 | `period_benchmark.py` | frozen synthetic benchmark per scale from the daily benchmark plus period-level faults | `python -m qc period-benchmark` |
-| `scale_scorers.py` | baselines `gamma_zero`, `loo_median`; candidates `gbm_neighbour`, `mlp_neighbour` | |
+| `scale_scorers.py` | baselines `gamma_zero`, `loo_median`; candidates `loo_kriging` (ordinary kriging with an exponential variogram), `gbm_neighbour`, `mlp_neighbour` | |
 | `scale_select.py` | trains every candidate, scores validation years, keeps the simplest within one standard error, writes a table for the protocol log | `python -m qc scale-select --scales monthly yearly` |
 | `changepoint.py` | SNHT and Pettitt with simulated critical values (decadal scale) | |
-| `crossscale.py` | fixed cross-scale fusion (max or noisy-OR) with the coherent-extreme discount | |
+| `crossscale.py` | cross-scale fusion: fixed (max or noisy-OR) or learned (non-negative logistic weights), with the coherent-extreme discount | |
+| `crossscale_run.py` | stores each scale's scores in the score store, fuses them, tabulates daily-only against every combination on validation, and applies the frozen architecture rule | `python -m qc cross-scale`, `python -m qc choose-architecture` |
+| `crossscale_test.py` | the single-use cross-scale test pass (own lock; needs the daily test pass finished, the architecture chosen and the budgets fixed) | `python -m qc cross-scale-test` |
+| `regions_report.py` | daily and monthly regional output by IMD sub-division and homogeneous region, from stored scores only | `python -m qc regions-report` |
 | `regions.py` | regional share of suspect cells; area-share cell assignment; unions of regions; client regions stay the unit for training and evaluation, not for the regional output | |
 | `imd_regions.py` | loads IMD's own boundary JSON (36 sub-divisions, 4 regions) and runs the known-place acceptance checks | `python scripts/fetch_imd_regions.py` fetches the file (not committed) |
 | `bridge.py` | lag, agreement and model-shift check of a live product against RF25 (array level); frozen acceptance rule in the `bridge:` config block | |

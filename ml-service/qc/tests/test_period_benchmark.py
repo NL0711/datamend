@@ -79,6 +79,20 @@ def test_save_and_load_round_trip(tmp_path):
     assert np.allclose(back.clean.total, py.clean.total, equal_nan=True)
 
 
+def test_splits_can_be_added_later_without_touching_the_ones_built(prepared, bench):
+    first = PB.build_period_benchmark(prepared, splits=("val",), overwrite=True)
+    assert first["splits"] == ["val"] and set(first["split_hashes"]) == {"val"}
+    both = PB.build_period_benchmark(prepared, splits=("test",))                 # added without overwrite
+    assert both["splits"] == ["test", "val"] and both["split_hashes"]["val"] == first["split_hashes"]["val"]
+    assert both["hash"] != first["hash"] and set(both["summary"]) == {f"{s}/{c}" for s in ("val", "test") for c in PB.SCALES}
+    with pytest.raises(FileExistsError, match="already holds"):
+        PB.build_period_benchmark(prepared, splits=("test",))
+    with pytest.raises(ValueError, match="other settings"):
+        PB.build_period_benchmark(prepared, splits=("stress",), rate=0.5)
+    full = PB.build_period_benchmark(prepared, splits=("val", "test"), overwrite=True)
+    assert full["hash"] == both["hash"]                                           # the same content gives the same hash either way
+
+
 def test_build_on_the_generated_world(prepared, bench, tmp_path):
     m = PB.build_period_benchmark(prepared, splits=("val", "test"), overwrite=True)
     assert m["daily_benchmark_hash"] and len(m["hash"]) == 16

@@ -83,6 +83,34 @@ def test_fusion_input_checks():
 
 
 # ---------------------------------------------------------------------------------------------- regions
+def test_nonnegative_logistic_uses_informative_features_and_never_goes_negative():
+    rng = np.random.default_rng(0)
+    m = 4000
+    good = rng.normal(size=m)
+    anti = rng.normal(size=m)
+    noise = rng.normal(size=m)
+    y = (good - 0.8 * anti + 0.3 * rng.normal(size=m) > 0.5).astype(float)
+    w, b = X.fit_nonneg_logistic(np.column_stack([good, anti, noise]), y)
+    assert (w >= 0).all() and w[0] > 0.5 and w[1] < 0.05 and w[2] < 0.1          # a feature that lowers the odds is not allowed a negative weight
+    with pytest.raises(ValueError, match="one class"):
+        X.fit_nonneg_logistic(np.ones((20, 2)), np.zeros(20))
+    with pytest.raises(ValueError, match="at least 10 rows"):
+        X.fit_nonneg_logistic(np.ones((3, 2)), np.array([0, 1, 0]))
+
+
+def test_learned_fusion_is_a_weighted_sum_of_log_ratios():
+    parts, refs = _parts()
+    f = X.fuse_scales(parts, refs, "learned", weights=[1.0, 2.0, 0.5])
+    expect = 1.0 * np.log1p(1.0 / 10) + 2.0 * np.log1p(2.0 / 20)                    # cell (0, 3): the yearly part is NaN and counts as zero
+    assert f.score[0, 3] == pytest.approx(expect, rel=1e-4)
+    assert f.driver[1, 0] == 0 and f.driver[2, 1] == 1                              # the part with the largest weighted term
+    assert (np.isnan(X.fuse_scales({"a": np.full((2, 2), np.nan, np.float32)}, {"a": 1.0}, "learned", weights=[1.0]).score)).all()
+    with pytest.raises(ValueError, match="non-negative weight"):
+        X.fuse_scales(parts, refs, "learned")
+    with pytest.raises(ValueError, match="non-negative weight"):
+        X.fuse_scales(parts, refs, "learned", weights=[1.0, -1.0, 1.0])
+
+
 def _grid():
     lat, lon = np.linspace(8, 30, 6), np.linspace(70, 90, 8)
     land = np.ones((6, 8), bool)
@@ -225,7 +253,7 @@ def test_bridge_requires_the_owner_to_confirm_the_rule_first():
 def test_bridge_refuses_years_outside_the_validation_window_and_all_test_years():
     ref = _rain()
     rule = B.AcceptanceRule(confirmed_by_owner=True)
-    for bad in ([2015], [2016, 2018], [2025]):
+    for bad in ([2012], [2016, 2018], [2025]):
         with pytest.raises(ValueError, match="not allowed"):
             B.run_bridge(ref, ref, np.ones(ref.shape[1]), rule, bad)
     assert B.run_bridge(ref, ref, np.ones(ref.shape[1]), rule, [2016, 2017])["years"] == [2016, 2017]

@@ -95,7 +95,7 @@ def _inject(p, cell, factor, month=7):
     return q
 
 
-@pytest.mark.parametrize("name", ["gamma_zero", "loo_median"])
+@pytest.mark.parametrize("name", ["gamma_zero", "loo_median", "loo_kriging"])
 def test_baselines_flag_a_scaled_period(world, name):
     grid, periods, ctx, _ = world
     sc = S.make_scorer(name).fit(_train(periods), ctx, seed=0)
@@ -165,5 +165,49 @@ def test_invalid_periods_score_nan(world):
 def test_unknown_scorer_name():
     with pytest.raises(KeyError):
         S.make_scorer("nope")
-    assert sorted(S.CANDIDATES) == ["gamma_zero", "gbm_neighbour", "loo_median", "mlp_neighbour"]
-    assert [S.CANDIDATES[k].complexity for k in ("gamma_zero", "loo_median", "gbm_neighbour", "mlp_neighbour")] == [0, 1, 2, 3]
+    assert sorted(S.CANDIDATES) == ["gamma_zero", "gbm_neighbour", "loo_kriging", "loo_median", "mlp_neighbour"]
+    assert [S.CANDIDATES[k].complexity for k in ("gamma_zero", "loo_median", "loo_kriging", "gbm_neighbour", "mlp_neighbour")] == [0, 1, 2, 3, 4]
+
+
+def test_kriging_variogram_and_weights_are_sane(world):
+    grid, periods, ctx, _ = world
+    sc = S.LooKrigingScorer().fit(_train(periods), ctx)
+    assert sc.params.shape == (12, 3) and (sc.params[:, 0] >= 0).all() and (sc.params[:, 1] > 0).all() and (sc.params[:, 2] >= 0.3).all()
+    h, Ssum, N = sc.variogram
+    g = Ssum[6] / np.maximum(N[6], 1) / 2.0
+    assert g[h >= 6].mean() > g[h <= 2].mean()                      # semivariance grows with distance: the field is spatially coherent
+    valid = ctx.near_idx >= 0
+    full = valid.all(axis=1)
+    assert full.any()
+    assert np.allclose(sc.W[6][full].sum(axis=1), 1.0, atol=1e-4)    # ordinary kriging weights sum to one
+    assert (sc.W[6][~valid] == 0).all() and (sc.SD > 0).all()
+
+
+def test_kriging_flags_a_scaled_period_and_does_not_smear(world):
+    grid, periods, ctx, _ = world
+    sc = S.LooKrigingScorer().fit(_train(periods), ctx)
+    clean = periods[VAL[0]]
+    cell = 90
+    s0 = sc.score(clean, None, ctx)
+    s1 = sc.score(_inject(clean, cell, 8.0), None, ctx)
+    near_d = np.hypot(grid.rows - grid.rows[cell], grid.cols - grid.cols[cell])
+    nbrs = (near_d > 2) & (near_d <= 4)
+    rise_cell = s1[7, cell] - s0[7, cell]
+    rise_nbr = np.nanmax(np.abs(s1[7, nbrs] - s0[7, nbrs]))
+    assert rise_cell > 2.0 and rise_nbr < 0.6 * rise_cell            # kriging weights can be negative, so the bound is looser than the median's
+
+
+def test_kriging_survives_a_missing_neighbour_and_needs_positions(world):
+    grid, periods, ctx, _ = world
+    sc = S.LooKrigingScorer().fit(_train(periods), ctx)
+    p = periods[VAL[0]].copy()
+    nb = ctx.near_idx[60]
+    nb = nb[nb >= 0][:3]
+    p.total[7, nb] = np.nan
+    p.valid[7, nb] = False
+    out = sc.score(p, None, ctx)
+    assert np.isfinite(out[7, 60]) and np.isnan(out[7, nb]).all()
+    import dataclasses
+    bare = dataclasses.replace(ctx, rows=None, cols=None)
+    with pytest.raises(ValueError, match="cell positions"):
+        S.LooKrigingScorer().fit(_train(periods), bare)

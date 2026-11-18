@@ -5,9 +5,12 @@ From ml-service/:
     python scripts/run_qc.py phase1 --smoke              # tiny end-to-end wiring run (3 training years, 15 min caps, one seed)
     python scripts/run_qc.py phase1                      # prepare, benchmark, untrained, train, federated, fusion, ablate
     python scripts/run_qc.py scales                      # period benchmark (validation years) and monthly/yearly candidate selection; needs phase1's benchmark
+    python scripts/run_qc.py choose                      # applies the frozen architecture rule to the validation table; writes the choice once
+    python scripts/fetch_imd_regions.py                  # once: IMD's sub-division boundary file (not committed)
+    python scripts/run_qc.py regions --final 1.0 --review 5.0   # regional output for the validation years (development view)
     python scripts/run_qc.py budgets --final 1.0 --review 5.0
                                                          # fixes and logs the budgets; then commit the protocol log
-    python scripts/run_qc.py test --confirm-test-score   # scores the test years ONCE, builds the paper outputs
+    python scripts/run_qc.py test --confirm-test-score   # scores the test years ONCE (daily pass, then the chosen architecture), builds the paper outputs
 
 Phase 1 stops after the validation curves on purpose. The budgets are fixed from them and cannot change afterwards, and the
 test years can be scored only once. Every step is the same `python -m qc <step>` command the Kaggle notebook runs, with the
@@ -63,7 +66,7 @@ def hardware() -> str:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__.split("\n\n", 1)[1])
-    ap.add_argument("phase", choices=["check", "phase1", "scales", "budgets", "test"])
+    ap.add_argument("phase", choices=["check", "phase1", "scales", "choose", "regions", "budgets", "test"])
     ap.add_argument("--slug", default="nathashalewis/majorproj-rainfall", help="Kaggle dataset owner/name")
     ap.add_argument("--expected", type=int, default=125, help="RF25 files that must be present (1901-2025 = 125)")
     ap.add_argument("--copy-to", default=None, help="copy the dataset here instead of using the kagglehub cache")
@@ -109,11 +112,24 @@ def main(argv=None) -> int:
         return 0
 
     if a.phase == "scales":
-        # needs the daily benchmark from phase1 (prepare, benchmark); validation years only, no test year is read
+        # needs phase1 (prepare, benchmark, untrained, train, fusion); validation years only, no test year is read
         qc("period-benchmark", "--splits", "val", **k)
         qc("scale-select", "--scales", "monthly", "yearly", *(["--seeds"] + [str(s) for s in a.seeds] if a.seeds else (["--seeds", "0"] if a.smoke else [])), **k)
-        print(f"\nScales done. Tables are in artifacts/qc/{run}/scales/ (selection_monthly.md, selection_yearly.md): all numbers are on SYNTHETIC "
-              "faults. Paste them into docs/qc-evaluation-protocol.md and commit before any test year is scored.")
+        qc("cross-scale", "--seed", str((a.seeds or [0])[0]), **k)          # daily fused score alone against daily + monthly + yearly, held-out threshold years
+        print(f"\nScales done. Tables are in artifacts/qc/{run}/scales/ (selection_monthly.md, selection_yearly.md, cross_scale_validation.md): "
+              "all numbers are on SYNTHETIC faults. Paste them into docs/qc-evaluation-protocol.md and commit before any test year is scored.")
+        return 0
+
+    if a.phase == "regions":
+        # regional output for the VALIDATION years from stored scores (a development view; the IMD boundary file must have been fetched)
+        extra = ["--final", str(a.final), "--review", str(a.review)] if (a.final is not None and a.review is not None) else []
+        qc("regions-report", "--splits", "val", *extra, **k)
+        return 0
+
+    if a.phase == "choose":
+        # applies the frozen rule to the validation table and writes architecture_choice.json once; commit it before any test year is scored
+        qc("choose-architecture", **k)
+        print("\nThe architecture is chosen. Log it in docs/qc-evaluation-protocol.md and COMMIT before running 'budgets' and 'test'.")
         return 0
 
     if a.smoke:
@@ -129,7 +145,10 @@ def main(argv=None) -> int:
         return 0
     if not a.confirm_test_score:
         raise SystemExit("test scores the test years ONCE with the budgets already fixed. Re-run with --confirm-test-score to go ahead.")
-    qc("test-score", *seeds, **k)
+    qc("period-benchmark", "--splits", "test", "stress", **k)           # benchmark data only; nothing is scored by this step
+    qc("test-score", *seeds, **k)                                       # the single daily test pass (its lock makes it single use)
+    qc("cross-scale-test", **k)                                         # the chosen architecture and the daily-only baseline, single use too
+    qc("regions-report", "--splits", "test", "stress", **k)             # regional output from the stored scores (IMD sub-divisions and regions)
     qc("paper", **k)
     return 0
 

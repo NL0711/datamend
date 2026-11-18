@@ -24,7 +24,7 @@ Map: [Wayfinder map: precipitation QC system spec](https://github.com/NL0711/dat
 
 ## 3. Clients and splits
 
-- **Clients:** 8 geographic blobs from k-means on latitude/longitude over the land mask. The seed is fixed and the map is saved and hashed ([clients](https://github.com/NL0711/datamend/issues/14)).
+- **Clients:** 8 compact groups of WHOLE IMD meteorological sub-divisions (changed 2026-11-18, before any run). The first version cut k-means blobs on latitude and longitude, which split 17 of the 34 sub-divisions that have cells across several clients; `qc.clients.nest_in_subdivisions` re-cuts them so every sub-division sits in exactly one client, with client sizes of 493 to 665 cells (the blobs gave 451 to 720), each client connected apart from one 3-cell fragment of client 6. The map is fixed, saved and hashed, and `qc/assets/client_subdivisions.json` lists which sub-divisions form each client ([clients](https://github.com/NL0711/datamend/issues/14)).
 - **Time:** train 1951-2012, validation 2013-2017, test 2018-2025 ([splits](https://github.com/NL0711/datamend/issues/16); the test end year was moved from 2023 to 2025 by the owner after RF25 2024 and 2025 became available, before any real run).
 - **Unseen clients:** client 3 (northeast, wettest) and client 6 (west-central) are held out, behind a 6-cell buffer.
 - In federated and local-only training, other clients' cells are masked as missing.
