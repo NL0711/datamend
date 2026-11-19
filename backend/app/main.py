@@ -9,10 +9,10 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.app.api.auth import require_login, router as auth_router
+from backend.app.api.auth import _same as auth_same, require_login, router as auth_router, session_valid as auth_session_valid
 from backend.app.api.pipeline import router as pipeline_router
 from backend.app.api.places import router as places_router
 from backend.app.api.rainfall import router as rainfall_router
@@ -90,8 +90,12 @@ app.include_router(settings_router)
 
 
 @app.get("/", tags=["system"])
-async def root():
-    """Root health check and service metadata endpoint."""
+async def root(request: Request):
+    """Root health check. With REQUIRE_LOGIN on, an unauthenticated caller sees the status only (no project, version or paths)."""
+    if settings.REQUIRE_LOGIN:
+        tok = request.headers.get("x-admin-token")
+        if not (auth_session_valid(tok) or bool(settings.ADMIN_TOKEN and tok and auth_same(tok, settings.ADMIN_TOKEN))):
+            return {"status": "online"}
     return {
         "status": "online",
         "project": settings.PROJECT_NAME,

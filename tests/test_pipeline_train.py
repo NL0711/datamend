@@ -84,12 +84,14 @@ def test_trainer_refuses_too_few_labels_and_too_few_days():
         fusion.train([{**r, "day": "2026-01-01"} for r in labelled_rows(n_days=10)])
 
 
-def test_excluded_corrections_and_unreviewed_rows_never_train():
+def test_unreviewed_rows_never_train_but_excluded_faults_do():
     rows = labelled_rows()
     rows += [{**rows[0], "row_ref": "x", "label": "unlabelled", "checks": ["impossible_value"]}] * 50
-    rows += [{**rows[1], "row_ref": "y", "label": "fault", "excluded_by_correction": True}] * 50
     a, b = fusion.train(labelled_rows()), fusion.train(rows)
     assert a["train"] == b["train"]
+    # a fault confirmed by excluding its value is the clearest fault there is: it is kept (review finding 3)
+    more = labelled_rows() + [{**rows[1], "row_ref": f"y{i}", "label": "fault", "excluded_by_correction": True} for i in range(10)]
+    assert fusion.train(more)["train"]["n_fault"] == a["train"]["n_fault"] + sum(1 for r in more[-10:] if r["day"] <= a["validation"]["train_until"])
 
 
 # ---------------------------------------------------------------------------------------------- server CPU path and the gate

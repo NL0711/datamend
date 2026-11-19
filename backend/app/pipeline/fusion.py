@@ -23,7 +23,8 @@ from scipy.optimize import minimize
 CHECKS: Tuple[str, ...] = ("impossible_value", "repeated_value", "climatology_upper_tail", "neighbour_isolated_wet", "neighbour_isolated_dry", "duplicate_row")
 FIXED_WEIGHTS: Dict[str, float] = {"impossible_value": 0.95, "repeated_value": 0.60, "climatology_upper_tail": 0.30,
                                    "neighbour_isolated_wet": 0.30, "neighbour_isolated_dry": 0.30, "duplicate_row": 0.30}   # the platform's rule weights
-MIN_FAULT, MIN_CLEAN = 20, 100
+MIN_FAULT, MIN_CLEAN = 20, 100                 # labels needed to TRAIN (earlier days)
+MIN_VAL_FAULT, MIN_VAL_CLEAN = 5, 20           # labels needed to JUDGE (later days); the registry gate imports these so the two cannot disagree
 TRAIN_SHARE = 0.7
 BUDGET_PER_1000 = 5.0
 
@@ -101,18 +102,23 @@ def _metrics(score: np.ndarray, rows: Sequence[Dict[str, Any]], thr: float) -> D
 def train(rows: Sequence[Dict[str, Any]], budget_per_1000: float = BUDGET_PER_1000, min_fault: int = MIN_FAULT, min_clean: int = MIN_CLEAN,
           snapshot_sha256: Optional[str] = None) -> Dict[str, Any]:
     """Fit on the earlier days, judge on the later days, and report the candidate and the fixed-weight baseline on the same validation rows."""
-    rows = [r for r in rows if r.get("label") in ("fault", "clean", "genuine_extreme") and not r.get("excluded_by_correction")]
+    # Rows excluded by an accepted correction are KEPT: accepting an exclude_value proposal is exactly how an impossible value is confirmed as a
+    # fault, and the checks that fired on the original value are already in "checks" (mm_original semantics).
+    rows = [r for r in rows if r.get("label") in ("fault", "clean", "genuine_extreme")]
     tr, va, cut = temporal_split(rows)
     trn = [r for r in tr if r["label"] in ("fault", "clean")]
     n_fault, n_clean = sum(r["label"] == "fault" for r in trn), sum(r["label"] == "clean" for r in trn)
     v_fault, v_clean = sum(r["label"] == "fault" for r in va), sum(r["label"] == "clean" for r in va)
-    if n_fault < min_fault or n_clean < min_clean or v_fault < 1 or v_clean < 1:
+    if n_fault < min_fault or n_clean < min_clean or v_fault < MIN_VAL_FAULT or v_clean < MIN_VAL_CLEAN:
         raise NotEnoughLabels(f"too few labels to train or judge: train {n_fault} faults and {n_clean} clean (need {min_fault} and {min_clean}), "
-                              f"validation {v_fault} faults and {v_clean} clean (need at least 1 of each)")
+                              f"validation {v_fault} faults and {v_clean} clean (need {MIN_VAL_FAULT} and {MIN_VAL_CLEAN})")
     X = np.stack([_x(r) for r in trn])
     y = np.array([1.0 if r["label"] == "fault" else 0.0 for r in trn])
     w = np.array([float(r.get("weight", 1.0)) for r in trn])
     coef, bias = _fit(X, y, w)
+    # Rule for a check that never fires in the training rows: it has no evidence, so its learned weight is 0 by construction, NOT because the
+    # check is useless. The artifact keeps the fixed rule weight for it in "effective_rule_weights" and lists it in "never_fired_in_training".
+    never_fired = [c for i, c in enumerate(CHECKS) if not X[:, i].any()]
 
     def cand(rs: Sequence[Dict[str, Any]]) -> np.ndarray:
         return 1.0 / (1.0 + np.exp(-np.clip(np.stack([_x(r) for r in rs]) @ coef + bias, -30, 30)))
@@ -132,7 +138,10 @@ def train(rows: Sequence[Dict[str, Any]], budget_per_1000: float = BUDGET_PER_10
         "train": {"n_fault": n_fault, "n_clean": n_clean},
         "temporal_split": True, "labels_not_ground_truth": True,
         "artifact": {"kind": "label_fusion", "checks": list(CHECKS), "weights": [float(c) for c in coef], "bias": bias, "threshold": thr_c,
-                     "fixed_weights": FIXED_WEIGHTS},
+                     "fixed_weights": FIXED_WEIGHTS, "never_fired_in_training": never_fired,
+                     "effective_rule_weights": {c: (FIXED_WEIGHTS[c] if c in never_fired else None) for c in CHECKS},
+                     "weights_note": "weights are learned logit coefficients; a check in never_fired_in_training has no learned value (0) and keeps its fixed rule weight "
+                                     "(effective_rule_weights), it is not learned to be useless"},
         "note": "Weights learned from one reviewer's labels; validation is the later part of the same snapshot. Not the frozen RF25 protocol and not ground truth.",
     }
 

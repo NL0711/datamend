@@ -3,7 +3,9 @@ anything that writes needs the admin session as well (require_admin). Services h
 """
 from __future__ import annotations
 
+import time
 from datetime import date
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, Query, UploadFile, status
@@ -40,10 +42,23 @@ def _bad(e: Exception, code: int = status.HTTP_400_BAD_REQUEST) -> HTTPException
     return HTTPException(code, str(e))
 
 
+OBS_COUNT_TTL = 30.0
+_obs_count_cache: Dict[str, Any] = {"at": 0.0, "n": 0, "bind": None}
+
+
+async def _observation_count(session: AsyncSession) -> int:
+    """count(*) over the whole raw table is expensive on millions of rows: refresh it at most every 30 seconds (the response says it is cached)."""
+    now = time.monotonic()
+    bind = id(session.bind) if session.bind is not None else None
+    if _obs_count_cache["at"] == 0.0 or _obs_count_cache["bind"] != bind or now - _obs_count_cache["at"] > OBS_COUNT_TTL:
+        _obs_count_cache.update(n=(await session.execute(select(func.count()).select_from(Observation))).scalar_one(), at=now, bind=bind)
+    return int(_obs_count_cache["n"])
+
+
 @router.get("/status")
 async def pipeline_status(session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
-    n_obs = (await session.execute(select(func.count()).select_from(Observation))).scalar_one()
-    return {"observations": n_obs, "stations": (await session.execute(select(func.count()).select_from(PipelineStation))).scalar_one(),
+    n_obs = await _observation_count(session)
+    return {"observations": n_obs, "observations_note": f"cached for up to {int(OBS_COUNT_TTL)} seconds","stations": (await session.execute(select(func.count()).select_from(PipelineStation))).scalar_one(),
             "jobs": (await session.execute(select(func.count()).select_from(IngestJob))).scalar_one(),
             "proposals_pending": (await session.execute(select(func.count()).select_from(Proposal).where(Proposal.status == "pending"))).scalar_one(),
             "snapshots": (await session.execute(select(func.count()).select_from(TrainingSnapshot))).scalar_one(),
@@ -54,20 +69,31 @@ async def pipeline_status(session: AsyncSession = Depends(get_db)) -> Dict[str, 
 # ------------------------------------------------------------------------------------------------ ingest
 @router.post("/ingest", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(require_admin)])
 async def ingest(background: BackgroundTasks, file: UploadFile = File(...), source: str = Form("cwc"), wait: bool = Form(False),
-                 session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+                 session: AsyncSession = Depends(get_db), content_length: Optional[int] = Header(None)) -> Dict[str, Any]:
     """Accept a file and return a job at once; the file is read in chunks in the background (``wait`` runs it before returning, for small files)."""
     if source not in jobs_svc.SOURCES:
         raise _bad(ValueError(f"unknown source {source!r}; available: {sorted(jobs_svc.SOURCES)}"))
+    if content_length is not None and content_length > jobs_svc.MAX_BYTES:         # refuse before reading a byte of it
+        raise _bad(jobs_svc.UploadTooLarge(f"file is larger than {jobs_svc.MAX_BYTES // (1024 * 1024)} MB"), status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
     try:
         saved = await jobs_svc.save_upload(file)
     except jobs_svc.UploadTooLarge as e:
         raise _bad(e, status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
-    job = await jobs_svc.create_job(session, source, file.filename or "upload", saved["sha256"], saved["size"])
-    if wait:
-        await jobs_svc.run_job(job.id, saved["path"])
-        await session.refresh(job)
-    else:
-        background.add_task(jobs_svc.run_job, job.id, saved["path"])
+    handed_over = False
+    _obs_count_cache["at"] = 0.0                        # a new file is about to change the count
+    try:
+        job = await jobs_svc.create_job(session, source, file.filename or "upload", saved["sha256"], saved["size"])
+        if wait:
+            handed_over = True                          # run_job removes the file itself
+            await jobs_svc.run_job(job.id, saved["path"])
+            _obs_count_cache["at"] = 0.0
+            await session.refresh(job)
+        else:
+            background.add_task(jobs_svc.run_job, job.id, saved["path"])
+            handed_over = True
+    finally:
+        if not handed_over:                             # create_job failed: nobody else will remove the saved upload
+            Path(saved["path"]).unlink(missing_ok=True)
     return jobs_svc.job_dict(job)
 
 
@@ -197,7 +223,10 @@ class SnapshotBody(BaseModel):
 
 @router.post("/snapshots", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
 async def make_snapshot(body: SnapshotBody, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
-    snap = await snap_svc.build(session, body.cut_day, body.exclude_years, body.allow_test_years)
+    try:
+        snap = await snap_svc.build(session, body.cut_day, body.exclude_years, body.allow_test_years)
+    except ValueError as e:
+        raise _bad(e)
     return snap_svc.snapshot_dict(snap)
 
 

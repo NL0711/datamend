@@ -161,7 +161,7 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
       </Section>
 
       <Section title="2. Review proposals and audit what the checks called fine"
-               hint={runId === null ? 'Check a finished job, or press Review here on a job, to work on its run.' : `Run ${runId}. Proposals are generated suggestions: they change nothing until you accept one, and the original value is always kept.`}>
+               hint={runId === null ? 'Check a finished job, or press Review here on a job, to work on its run.' : `Run ${runId}. Proposals are generated suggestions: they change nothing until you accept one, and the original value is always kept. Accepting an exclude suggestion records a confirmed fault; a review suggestion only closes it and is not a label.`}>
         {runId !== null && (
           <>
             <div className="flex gap-2 flex-wrap">

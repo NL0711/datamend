@@ -85,7 +85,8 @@ async def generate(session: AsyncSession, run_id: int, generator: str = BASELINE
 async def decide(session: AsyncSession, proposal_id: int, accept: bool, reviewer: Optional[str], note: Optional[str] = None,
                  corrected_mm: Optional[float] = None) -> Proposal:
     """Accept or reject a pending proposal. Accepting an ``exclude_value`` stores a correction (corrected value None = excluded) and a
-    'confirmed_fault' decision; accepting a review_* proposal only records the decision, since it suggests no value."""
+    'confirmed_fault' decision (so does accepting with an explicit corrected value); accepting a review_* proposal only closes it: it suggests
+    no value and is NOT a fault label."""
     p = await session.get(Proposal, proposal_id)
     if p is None:
         raise LookupError("no such proposal")
@@ -99,7 +100,9 @@ async def decide(session: AsyncSession, proposal_id: int, accept: bool, reviewer
         if p.kind == "exclude_value" or corrected_mm is not None:
             session.add(Correction(run_id=p.run_id, row_ref=p.row_ref, station_id=p.station_id, original_mm=p.original_mm,
                                    corrected_mm=corrected_mm, proposal_id=p.id, reviewer=p.decided_by, note=(note or "")[:1000] or None))
-        if result is not None and result.verdict in FLAGGED:
+        # only a proposal that removes or replaces the value confirms a fault; 'review_peak' and 'review_repeat' only say "check this"
+        confirms_fault = p.kind == "exclude_value" or corrected_mm is not None
+        if confirms_fault and result is not None and result.verdict in FLAGGED:
             session.add(Review(run_id=p.run_id, row_ref=p.row_ref, station_id=p.station_id, decision="confirmed_fault",
                                note=f"accepted proposal {p.id} ({p.kind})", reviewer=p.decided_by, verdict_at_review=result.verdict))
     await session.commit()
