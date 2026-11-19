@@ -315,8 +315,13 @@ async def series(session: AsyncSession, run_id: int, station: str, max_points: i
             if chunk:
                 points.append(pt(max(chunk, key=lambda r: max(r.intensity or 0.0, r.mm or 0.0, r.accumulation or 0.0))))
     flagged = sorted((r for r in rows if r.verdict in ("SUSPECT", "UNCERTAIN")), key=lambda r: -r.rule_score)[:2000]
-    return {"station_id": station, "n_total": n, "downsampled": n > max_points, "max_points": max_points,
-            "points": points, "flagged": [pt(r) for r in sorted(flagged, key=lambda r: r.time_key)]}
+    checks_of: Dict[int, List[str]] = defaultdict(list)
+    if flagged:
+        for rid, name in (await session.execute(select(ValidationCheckHit.result_id, ValidationCheckHit.check).where(
+                ValidationCheckHit.run_id == run_id, ValidationCheckHit.result_id.in_([r.id for r in flagged])))).all():
+            checks_of[rid].append(name)
+    return {"station_id": station, "n_total": n, "downsampled": n > max_points, "max_points": max_points, "points": points,
+            "flagged": [{**pt(r), "checks": checks_of.get(r.id, [])} for r in sorted(flagged, key=lambda r: r.time_key)]}
 
 
 # ------------------------------------------------------------------------------------------------ exports

@@ -92,6 +92,7 @@ async def test_series_is_downsampled_on_the_server_but_keeps_flagged_markers(asy
     s = (await async_client.get(f"/api/validation/runs/{run['id']}/series?station=A&max_points=100")).json()
     assert s["n_total"] == 600 and s["downsampled"] is True and len(s["points"]) <= 100
     assert {f["verdict"] for f in s["flagged"]} == {"SUSPECT"} and len(s["flagged"]) == 3
+    assert {c for f in s["flagged"] for c in f["checks"]} >= {"counter_jump", "negative_value"}      # lanes need the fired checks
     full = (await async_client.get(f"/api/validation/runs/{run['id']}/series?station=A&max_points=1000")).json()
     assert full["downsampled"] is False and len(full["points"]) == 600
 
