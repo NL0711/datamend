@@ -1,0 +1,56 @@
+{
+ "expected_calibration_error": 0.004665346067839754,
+ "bins": [
+  {
+   "mean_predicted": 0.0015971305863662288,
+   "observed_fault_rate": 0.0004314389567806025,
+   "n": 278139
+  },
+  {
+   "mean_predicted": 0.0018685655559808755,
+   "observed_fault_rate": 0.00028043733843393726,
+   "n": 278137
+  },
+  {
+   "mean_predicted": 0.001957457866457182,
+   "observed_fault_rate": 0.00011145666672658961,
+   "n": 278135
+  },
+  {
+   "mean_predicted": 0.0020082879172265786,
+   "observed_fault_rate": 9.34767602393005e-05,
+   "n": 278144
+  },
+  {
+   "mean_predicted": 0.00204762108983178,
+   "observed_fault_rate": 6.471654154801968e-05,
+   "n": 278136
+  },
+  {
+   "mean_predicted": 0.0020922530390743562,
+   "observed_fault_rate": 0.00012943122168692026,
+   "n": 278140
+  },
+  {
+   "mean_predicted": 0.00240030790382129,
+   "observed_fault_rate": 0.0023153807435104625,
+   "n": 278140
+  },
+  {
+   "mean_predicted": 0.00435095429247665,
+   "observed_fault_rate": 0.012177408336868749,
+   "n": 278138
+  },
+  {
+   "mean_predicted": 0.007206139425930277,
+   "observed_fault_rate": 0.016466586850459663,
+   "n": 278139
+  },
+  {
+   "mean_predicted": 0.05350002444123065,
+   "observed_fault_rate": 0.07252129331017944,
+   "n": 278139
+  }
+ ],
+ "note": "calibrated to the synthetic fault rate; says nothing about real error probability"
+}
