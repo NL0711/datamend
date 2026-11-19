@@ -30,14 +30,17 @@ async def _register(session: AsyncSession, job: TrainingJob, snap: TrainingSnaps
     return m
 
 
-async def start(session: AsyncSession, snapshot_id: int, target: str, name: str = "label-fusion") -> TrainingJob:
+async def start(session: AsyncSession, snapshot_id: int, target: str, name: str = "label-fusion",
+                creds: Optional[kg.Credentials] = None) -> TrainingJob:
+    """``creds`` are the caller's own Kaggle credentials for this request only (never stored); without them the server's are used."""
     snap = await session.get(TrainingSnapshot, snapshot_id)
     if snap is None:
         raise LookupError("no such snapshot")
     if target not in ("local", "kaggle"):
         raise ValueError("target must be 'local' or 'kaggle'")
-    if target == "kaggle" and not kg.configured():
-        raise PermissionError("Kaggle is not configured: set KAGGLE_USERNAME and KAGGLE_KEY in the server's environment")
+    account = kg.resolve(creds)
+    if target == "kaggle" and account is None:
+        raise PermissionError(kg.NO_CREDENTIALS)
     job = TrainingJob(snapshot_id=snapshot_id, target=target, name=name, status="running")
     session.add(job)
     await session.commit()
@@ -51,26 +54,33 @@ async def start(session: AsyncSession, snapshot_id: int, target: str, name: str 
         return job
     job.slug = kg.slug_for(snapshot_id, job.id)
     try:
-        job.slug = await asyncio.to_thread(kg.push, snap.content, snap.sha256, kg.slug_for(snapshot_id, job.id))
+        job.slug = await asyncio.to_thread(kg.push, snap.content, snap.sha256, kg.slug_for(snapshot_id, job.id), account)
     except kg.KaggleError as e:
         job.status, job.error, job.finished_at = "failed", str(e), datetime.now(timezone.utc)
     await session.commit()
     return job
 
 
-async def refresh(session: AsyncSession, job_id: int) -> TrainingJob:
-    """Ask Kaggle about a running notebook; when it has finished, fetch its result and register the challenger."""
+async def refresh(session: AsyncSession, job_id: int, creds: Optional[kg.Credentials] = None) -> TrainingJob:
+    """Ask Kaggle about a running notebook; when it has finished, fetch its result and register the challenger. The credentials (the
+    caller's, else the server's) must belong to the account that owns the notebook: a different account is refused, never used."""
     job = await session.get(TrainingJob, job_id)
     if job is None:
         raise LookupError("no such training job")
     if job.target != "kaggle" or job.status != "running" or not job.slug:
         return job
+    account = kg.resolve(creds)
+    if account is None:
+        raise PermissionError(kg.NO_CREDENTIALS)
+    if not kg.same_account(job.slug, account):
+        raise PermissionError(f"this notebook belongs to the Kaggle account '{kg.owner_of(job.slug)}', but the credentials supplied are for "
+                              f"'{account.username}'; supply the credentials of '{kg.owner_of(job.slug)}' to check it")
     try:
-        st = await asyncio.to_thread(kg.status, job.slug)
+        st = await asyncio.to_thread(kg.status, job.slug, account)
         if st == "failed":
             job.status, job.error, job.finished_at = "failed", "the Kaggle notebook failed or was cancelled; see it on kaggle.com", datetime.now(timezone.utc)
         elif st == "complete":
-            res = await asyncio.to_thread(kg.fetch_result, job.slug)
+            res = await asyncio.to_thread(kg.fetch_result, job.slug, account)
             snap = await session.get(TrainingSnapshot, job.snapshot_id)
             if res.get("ok") and snap is not None:
                 await _register(session, job, snap, res["metrics"])

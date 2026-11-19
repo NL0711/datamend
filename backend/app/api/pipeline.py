@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, Query, UploadFile, status
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
@@ -258,11 +258,20 @@ class TrainBody(BaseModel):
     name: str = Field("label-fusion", max_length=64)
 
 
-@router.post("/train", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(require_admin)])
-async def train(body: TrainBody, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
-    """Retrain the label-fusion model from a snapshot. A finished run registers a challenger; only the gate can promote it."""
+def kaggle_creds(x_kaggle_username: Optional[str] = Header(None), x_kaggle_key: Optional[str] = Header(None)) -> Optional[kaggle_svc.Credentials]:
+    """The caller's own Kaggle account from the two headers, for this request only (never stored or echoed); None means use the server's."""
     try:
-        job = await train_svc.start(session, body.snapshot_id, body.target, body.name)
+        return kaggle_svc.from_request(x_kaggle_username, x_kaggle_key)
+    except ValueError as e:
+        raise _bad(e)
+
+
+@router.post("/train", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(require_admin)])
+async def train(body: TrainBody, session: AsyncSession = Depends(get_db), creds: Optional[kaggle_svc.Credentials] = Depends(kaggle_creds)) -> Dict[str, Any]:
+    """Retrain the label-fusion model from a snapshot. A finished run registers a challenger; only the gate can promote it. A Kaggle run uses
+    the caller's own Kaggle account when the X-Kaggle-Username and X-Kaggle-Key headers are sent, otherwise the server's."""
+    try:
+        job = await train_svc.start(session, body.snapshot_id, body.target, body.name, creds)
     except LookupError as e:
         raise _bad(e, status.HTTP_404_NOT_FOUND)
     except PermissionError as e:
@@ -275,15 +284,17 @@ async def train(body: TrainBody, session: AsyncSession = Depends(get_db)) -> Dic
 @router.get("/train/jobs")
 async def train_jobs(session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     rows = (await session.execute(select(TrainingJob).order_by(TrainingJob.id.desc()).limit(50))).scalars().all()
-    return {"jobs": [train_svc.job_dict(j) for j in rows], "kaggle_configured": kaggle_svc.configured()}
+    return {"jobs": [train_svc.job_dict(j) for j in rows], "kaggle_configured": kaggle_svc.configured(), "byo_supported": True}
 
 
 @router.post("/train/jobs/{job_id}/refresh", dependencies=[Depends(require_admin)])
-async def refresh_train_job(job_id: int, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+async def refresh_train_job(job_id: int, session: AsyncSession = Depends(get_db), creds: Optional[kaggle_svc.Credentials] = Depends(kaggle_creds)) -> Dict[str, Any]:
     try:
-        job = await train_svc.refresh(session, job_id)
+        job = await train_svc.refresh(session, job_id, creds)
     except LookupError as e:
         raise _bad(e, status.HTTP_404_NOT_FOUND)
+    except PermissionError as e:
+        raise _bad(e, status.HTTP_409_CONFLICT)
     return train_svc.job_dict(job)
 
 

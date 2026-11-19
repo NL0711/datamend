@@ -198,6 +198,120 @@ async def test_kaggle_failures_are_reported_without_the_key(async_client: AsyncC
     assert job2["status"] == "failed" and "not installed" in job2["error"]
 
 
+# ---------------------------------------------------------------------------------------------- bring your own Kaggle account
+BYO = {"X-Kaggle-Username": "visitor.one", "X-Kaggle-Key": "USER-KEY-VALUE-123"}
+
+
+def byo_fake(calls, state):
+    """A mocked kaggle command line that records the account it was given and runs the generated notebook for real on push."""
+    def fake_run(cmd, **kw):
+        calls.append((cmd[1:3], kw["env"]["KAGGLE_USERNAME"], kw["env"]["KAGGLE_KEY"]))
+        if cmd[1:3] == ["kernels", "push"]:
+            folder = Path(cmd[cmd.index("-p") + 1])
+            meta = json.loads((folder / "kernel-metadata.json").read_text())
+            state["meta"] = meta
+            assert "USER-KEY-VALUE-123" not in (folder / "train.py").read_text() + json.dumps(meta)
+            run = REAL_RUN([sys.executable, "train.py"], cwd=folder, capture_output=True, text=True, timeout=120)
+            assert run.returncode == 0, run.stderr
+            state["result"] = json.loads((folder / "result.json").read_text())
+            return subprocess.CompletedProcess(cmd, 0, "Kernel version 1 successfully pushed", "")
+        if cmd[1:3] == ["kernels", "status"]:
+            return subprocess.CompletedProcess(cmd, 0, f'x has status "{state["status"]}"', "")
+        if cmd[1:3] == ["kernels", "output"]:
+            (Path(cmd[cmd.index("-p") + 1]) / "result.json").write_text(json.dumps(state["result"]))
+            return subprocess.CompletedProcess(cmd, 0, "Output file downloaded", "")
+        raise AssertionError(cmd)
+    return fake_run
+
+
+@pytest.mark.asyncio
+async def test_byo_credentials_work_with_the_server_unconfigured(async_client: AsyncClient, monkeypatch):
+    sid = await add_snapshot(labelled_rows())
+    calls, state = [], {"status": "running"}
+    monkeypatch.setattr(kaggle_trigger.subprocess, "run", byo_fake(calls, state))
+    r = await async_client.post("/api/pipeline/train", headers={**H, **BYO}, json={"snapshot_id": sid, "target": "kaggle"})
+    assert r.status_code == 202
+    job = r.json()
+    assert job["status"] == "running" and job["slug"].startswith("visitor.one/datamend-fusion-s")
+    assert state["meta"]["id"] == job["slug"] and state["meta"]["is_private"] == "true" and state["meta"]["enable_gpu"] == "false" and state["meta"]["enable_internet"] == "false"
+    assert calls[0] == (["kernels", "push"], "visitor.one", "USER-KEY-VALUE-123")                   # the command got the visitor's account, not the server's
+    state["status"] = "complete"
+    done = await async_client.post(f"/api/pipeline/train/jobs/{job['id']}/refresh", headers={**H, **BYO})
+    assert done.status_code == 200 and done.json()["status"] == "complete" and done.json()["model_id"]
+    assert all(c[1:] == ("visitor.one", "USER-KEY-VALUE-123") for c in calls)
+    listing = await async_client.get("/api/pipeline/train/jobs", headers=BYO)
+    assert listing.json()["kaggle_configured"] is False and listing.json()["byo_supported"] is True
+    async with async_session_factory() as s:                                                         # the key is not in the database
+        stored = str((await s.execute(TrainingJob.__table__.select())).all())
+        assert "USER-KEY-VALUE-123" not in stored and "visitor.one" in stored                     # only the notebook id (user/slug) is kept
+    for text in (r.text, done.text, listing.text):
+        assert "USER-KEY-VALUE-123" not in text
+
+
+@pytest.mark.asyncio
+async def test_byo_key_never_appears_in_an_error(async_client: AsyncClient, monkeypatch):
+    sid = await add_snapshot(labelled_rows())
+    monkeypatch.setattr(kaggle_trigger.subprocess, "run", lambda cmd, **kw: subprocess.CompletedProcess(cmd, 1, "", "401 Unauthorized for key USER-KEY-VALUE-123"))
+    r = await async_client.post("/api/pipeline/train", headers={**H, **BYO}, json={"snapshot_id": sid, "target": "kaggle"})
+    assert r.status_code == 202 and r.json()["status"] == "failed" and "Unauthorized" in r.json()["error"] and "USER-KEY-VALUE-123" not in r.text
+    assert "USER-KEY-VALUE-123" not in repr(kaggle_trigger.from_request("visitor.one", "USER-KEY-VALUE-123"))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("headers", [
+    {"X-Kaggle-Username": "bad name!", "X-Kaggle-Key": "USER-KEY-VALUE-123"},
+    {"X-Kaggle-Username": "../evil", "X-Kaggle-Key": "USER-KEY-VALUE-123"},
+    {"X-Kaggle-Username": "a" * 61, "X-Kaggle-Key": "USER-KEY-VALUE-123"},
+    {"X-Kaggle-Username": "visitor", "X-Kaggle-Key": "k" * 201},
+    {"X-Kaggle-Username": "visitor"},
+    {"X-Kaggle-Key": "USER-KEY-VALUE-123"},
+])
+async def test_bad_byo_headers_are_rejected_with_400(async_client: AsyncClient, monkeypatch, headers):
+    sid = await add_snapshot(labelled_rows())
+    monkeypatch.setattr(kaggle_trigger.subprocess, "run", lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not run")))
+    r = await async_client.post("/api/pipeline/train", headers={**H, **headers}, json={"snapshot_id": sid, "target": "kaggle"})
+    assert r.status_code == 400 and "USER-KEY-VALUE-123" not in r.text and "k" * 201 not in r.text
+
+
+@pytest.mark.asyncio
+async def test_refresh_with_another_account_is_refused(async_client: AsyncClient, monkeypatch):
+    sid = await add_snapshot(labelled_rows())
+    calls, state = [], {"status": "running"}
+    monkeypatch.setattr(kaggle_trigger.subprocess, "run", byo_fake(calls, state))
+    job = (await async_client.post("/api/pipeline/train", headers={**H, **BYO}, json={"snapshot_id": sid, "target": "kaggle"})).json()
+    n = len(calls)
+    other = {"X-Kaggle-Username": "someone-else", "X-Kaggle-Key": "OTHER-KEY-999"}
+    r = await async_client.post(f"/api/pipeline/train/jobs/{job['id']}/refresh", headers={**H, **other})
+    assert r.status_code == 409 and "visitor.one" in r.text and "someone-else" in r.text and "OTHER-KEY-999" not in r.text
+    monkeypatch.setattr(settings, "KAGGLE_USERNAME", "owner")                                      # the server's own account is a different account too
+    monkeypatch.setattr(settings, "KAGGLE_KEY", "SECRET-KEY-VALUE")
+    r2 = await async_client.post(f"/api/pipeline/train/jobs/{job['id']}/refresh", headers=H)
+    assert r2.status_code == 409 and "SECRET-KEY-VALUE" not in r2.text
+    assert len(calls) == n                                                                         # the command was never run with a wrong account
+    assert (await async_client.get("/api/pipeline/train/jobs")).json()["jobs"][0]["status"] == "running"
+
+
+@pytest.mark.asyncio
+async def test_server_credentials_still_work_and_headers_take_precedence(async_client: AsyncClient, monkeypatch):
+    monkeypatch.setattr(settings, "KAGGLE_USERNAME", "owner")
+    monkeypatch.setattr(settings, "KAGGLE_KEY", "SECRET-KEY-VALUE")
+    sid = await add_snapshot(labelled_rows())
+    calls, state = [], {"status": "running"}
+    monkeypatch.setattr(kaggle_trigger.subprocess, "run", byo_fake(calls, state))
+    job = (await async_client.post("/api/pipeline/train", headers=H, json={"snapshot_id": sid, "target": "kaggle"})).json()
+    assert job["slug"].startswith("owner/") and calls[-1][1:] == ("owner", "SECRET-KEY-VALUE")
+    mine = (await async_client.post("/api/pipeline/train", headers={**H, **BYO}, json={"snapshot_id": sid, "target": "kaggle"})).json()
+    assert mine["slug"].startswith("visitor.one/") and calls[-1][1:] == ("visitor.one", "USER-KEY-VALUE-123")
+    assert (await async_client.get("/api/pipeline/train/jobs")).json()["kaggle_configured"] is True
+
+
+@pytest.mark.asyncio
+async def test_no_credentials_anywhere_gives_409_that_mentions_bringing_your_own(async_client: AsyncClient):
+    sid = await add_snapshot(labelled_rows())
+    r = await async_client.post("/api/pipeline/train", headers=H, json={"snapshot_id": sid, "target": "kaggle"})
+    assert r.status_code == 409 and "KAGGLE_USERNAME" in r.text and "your own" in r.text
+
+
 # ---------------------------------------------------------------------------------------------- lineage
 @pytest.mark.asyncio
 async def test_lineage_links_job_run_snapshot_training_and_model(async_client: AsyncClient):
