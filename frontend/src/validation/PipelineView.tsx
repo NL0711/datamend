@@ -4,8 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ClipboardCheck, Download, FileUp, Loader2, ShieldCheck } from 'lucide-react';
 import {
   checkJob, decideAudit, decideProposal, downloadSnapshot, drawAudit, getLineage, getPipelineStatus, ingestFile, listAudit, listJobs, listModels, listProposals,
-  listSnapshots, listTrainingJobs, makeProposals, makeSnapshot, promoteModel, refreshTrainingJob, registerModel, rollbackModel, startTraining,
+  listSnapshots, listTrainingJobs, makeProposals, makeSnapshot, promoteModel, refreshTrainingJob, registerModel, rememberKaggle, rollbackModel, startTraining, storedKaggle,
 } from './api';
+import type { KaggleAccount } from './api';
 import { LineageGraph } from './LineageGraph';
 import { useAdmin } from './Login';
 import type { AuditEstimate, AuditItem, IngestJob, Lineage, PipelineModel, PipelineProposal, PipelineSnapshot, PipelineStatus, TrainingJob } from './types';
@@ -36,6 +37,10 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
   const [lineage, setLineage] = useState<Lineage | null>(null);
   const [tjobs, setTjobs] = useState<TrainingJob[]>([]);
   const [kaggleOn, setKaggleOn] = useState(false);
+  const [account, setAccount] = useState<KaggleAccount | null>(() => storedKaggle());
+  const [kUser, setKUser] = useState('');
+  const [kKey, setKKey] = useState('');
+  const [consent, setConsent] = useState(false);
   const [msg, setMsg] = useState<{ tone: 'info' | 'error' | 'warn'; text: string } | null>(null);
   const [busy, setBusy] = useState('');
   const [cut, setCut] = useState(new Date().toISOString().slice(0, 10));
@@ -90,6 +95,16 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
     if (!f) { setMsg({ tone: 'warn', text: 'Choose a CSV file first.' }); return; }
     void run('upload', async () => { const j = await ingestFile(f, status?.sources[0] ?? 'cwc'); setJobs((x) => [j, ...x]); }, 'Accepted. The file is read in the background; the job row shows progress.');
   };
+
+  const saveKaggle = () => {
+    const username = kUser.trim(), key = kKey.trim();
+    if (!/^[A-Za-z0-9_.-]{1,60}$/.test(username)) { setMsg({ tone: 'warn', text: 'The Kaggle username may contain only letters, digits, underscore, dot and hyphen (at most 60).' }); return; }
+    if (!key || key.length > 200 || /\s/.test(key)) { setMsg({ tone: 'warn', text: 'Enter the API key without spaces (at most 200 characters).' }); return; }
+    const a = { username, key };
+    rememberKaggle(a); setAccount(a); setKKey(''); setMsg({ tone: 'info', text: 'Kaggle account saved for this tab only.' });
+  };
+  const forgetKaggle = () => { rememberKaggle(null); setAccount(null); setKUser(''); setKKey(''); setConsent(false); };
+  const kaggleReady = !!account || kaggleOn;
 
   const regModel = () => {
     let metrics: Record<string, unknown>;
@@ -186,6 +201,24 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
           <label className="text-xs flex items-center gap-1"><input type="checkbox" checked={allowTest} onChange={(e) => setAllowTest(e.target.checked)} />include the locked test years (breaks the protocol)</label>
           <button className={btn} disabled={!signedIn || !!busy} onClick={() => void run('snap', () => makeSnapshot(cut, allowTest), 'Snapshot created.')}><ClipboardCheck className="w-3.5 h-3.5 inline mr-1" />Create snapshot</button>
         </div>
+        <div className="border border-[#D3DCE7] rounded px-3 py-2 space-y-2" aria-label="Kaggle account">
+          <div className="text-xs font-bold">Kaggle account <span className="font-normal text-slate-500">(optional: train on your own free Kaggle quota)</span></div>
+          <div className="flex items-end gap-2 flex-wrap">
+            <label className="text-xs font-bold block">Username <input value={kUser} onChange={(e) => setKUser(e.target.value)} className={`${field} block w-40`} autoComplete="off" spellCheck={false} /></label>
+            <label className="text-xs font-bold block">API key <input type="password" value={kKey} onChange={(e) => setKKey(e.target.value)} className={`${field} block w-52`} autoComplete="off" /></label>
+            <button className={btn} disabled={!kUser || !kKey} onClick={saveKaggle}>Save for this tab</button>
+            <button className={btnQuiet} disabled={!account && !kUser && !kKey} onClick={forgetKaggle}>Forget</button>
+          </div>
+          <p className="text-xs" data-testid="kaggle-status">
+            {account ? <>Training will use <b>your</b> Kaggle account <span className="font-mono">{account.username}</span>.</>
+              : kaggleOn ? <>No account of yours is set: training will use <b>the server's</b> Kaggle account.</>
+              : <>No Kaggle account: add yours to train on Kaggle (this server has none of its own).</>}
+          </p>
+          <label className="text-xs flex items-start gap-1.5"><input type="checkbox" className="mt-0.5" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+            <span>This sends the snapshot (station-days and your labels) to Kaggle under your account.</span></label>
+          <p className="text-[10px] text-slate-500">Get a token from your Kaggle account settings, API section. It is kept in this browser tab only (cleared when the tab closes), sent with each Kaggle request, and
+            held in the server's memory just for that request: the server does not store or log it. The notebook is created private, on CPU, without internet.</p>
+        </div>
         {snaps.length > 0 && (
           <ul className="space-y-1">{snaps.map((s) => (
             <li key={s.id} className="flex items-center gap-3 text-[11px] border border-[#E2E8F2] rounded px-2 py-1 flex-wrap">
@@ -195,7 +228,8 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
               <span className="ml-auto flex gap-1">
                 <button className={btn} disabled={!signedIn || !!busy} title="Retrain the label-fusion model here, on the server's CPU"
                         onClick={() => void run('train' + s.id, async () => { const j = await startTraining(s.id, 'local'); if (j.status === 'failed') throw new Error(j.error ?? 'training failed'); }, 'Trained. A challenger was registered below; run the gate to decide.')}>Train here</button>
-                <button className={btnQuiet} disabled={!signedIn || !!busy || !kaggleOn} title={kaggleOn ? 'Run the same training as a private Kaggle notebook' : 'Kaggle is not configured on this server (KAGGLE_USERNAME and KAGGLE_KEY)'}
+                <button className={btnQuiet} disabled={!signedIn || !!busy || !kaggleReady || !consent}
+                        title={!kaggleReady ? 'Add your Kaggle account above (the server has none of its own)' : !consent ? 'Tick the consent box above first' : 'Run the same training as a private Kaggle notebook'}
                         onClick={() => void run('kaggle' + s.id, () => startTraining(s.id, 'kaggle'), 'Sent to Kaggle. It is checked every 20 seconds and the result registers itself.')}>Train on Kaggle</button>
                 <button className={btnQuiet} onClick={() => void downloadSnapshot(s.id).catch(fail)}><Download className="w-3 h-3 inline mr-1" />JSONL</button>
               </span>

@@ -40,8 +40,8 @@ const call = (url: string, init: RequestInit = {}) => {
 };
 
 const get = <T>(url: string) => call(url).then((r) => json<T>(r));
-const post = <T>(url: string, body: unknown) =>
-  call(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((r) => json<T>(r));
+const post = <T>(url: string, body: unknown, extra: Record<string, string> = {}) =>
+  call(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...extra }, body: JSON.stringify(body) }).then((r) => json<T>(r));
 
 export const listRuns = () => get<{ storage: string; cap: number; runs: RunSummary[] }>(`${V}/runs`);
 export const getRun = (id: number) => get<RunFull>(`${V}/runs/${id}`);
@@ -110,9 +110,29 @@ export async function downloadSnapshot(id: number): Promise<void> {
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
-export const startTraining = (snapshotId: number, target: 'local' | 'kaggle') => post<TrainingJob>(`${P}/train`, { snapshot_id: snapshotId, target });
-export const listTrainingJobs = () => get<{ jobs: TrainingJob[]; kaggle_configured: boolean }>(`${P}/train/jobs`);
-export const refreshTrainingJob = (id: number) => post<TrainingJob>(`${P}/train/jobs/${id}/refresh`, {});
+/** The visitor's own Kaggle account, kept for this browser tab only (sessionStorage, like the admin token). It is sent as two headers on the
+ *  Kaggle start and check requests, and nowhere else. The server uses it for that request and does not store it. */
+export const KAGGLE_USER_KEY = 'datamend-kaggle-username';
+export const KAGGLE_SECRET_KEY = 'datamend-kaggle-key';
+export interface KaggleAccount { username: string; key: string }
+export const storedKaggle = (): KaggleAccount | null => {
+  if (typeof sessionStorage === 'undefined') return null;
+  const username = sessionStorage.getItem(KAGGLE_USER_KEY) ?? '', key = sessionStorage.getItem(KAGGLE_SECRET_KEY) ?? '';
+  return username && key ? { username, key } : null;
+};
+export const rememberKaggle = (a: KaggleAccount | null) => {
+  if (typeof sessionStorage === 'undefined') return;
+  if (a) { sessionStorage.setItem(KAGGLE_USER_KEY, a.username); sessionStorage.setItem(KAGGLE_SECRET_KEY, a.key); }
+  else { sessionStorage.removeItem(KAGGLE_USER_KEY); sessionStorage.removeItem(KAGGLE_SECRET_KEY); }
+};
+const kaggleHeaders = (): Record<string, string> => {
+  const a = storedKaggle();
+  return a ? { 'X-Kaggle-Username': a.username, 'X-Kaggle-Key': a.key } : {};
+};
+export const startTraining = (snapshotId: number, target: 'local' | 'kaggle') =>
+  post<TrainingJob>(`${P}/train`, { snapshot_id: snapshotId, target }, target === 'kaggle' ? kaggleHeaders() : {});
+export const listTrainingJobs = () => get<{ jobs: TrainingJob[]; kaggle_configured: boolean; byo_supported?: boolean }>(`${P}/train/jobs`);
+export const refreshTrainingJob = (id: number) => post<TrainingJob>(`${P}/train/jobs/${id}/refresh`, {}, kaggleHeaders());
 export const getLineage = () => get<Lineage>(`${P}/lineage`);
 export const listModels = () => get<{ models: PipelineModel[]; not_implemented: string[] }>(`${P}/models`);
 export const registerModel = (body: { name: string; version: string; metrics: Record<string, unknown>; snapshot_id?: number }) => post<PipelineModel>(`${P}/models`, body);
