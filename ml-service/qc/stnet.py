@@ -40,7 +40,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from qc import paths
+from qc import paths, telemetry
 from qc.batches import mask_unreadable
 from qc.evaluate import compute_scores_many, evaluate_component, score_store
 from qc.extremes import find_extremes
@@ -327,7 +327,7 @@ def year_data(p: Prepared, year: int, gen: FaultGenerator, rng: np.random.Genera
     lab_f = np.zeros((R, N_OUT) + tuple(g.shape), np.float16)
     lab_f[:, :, g.rows, g.cols] = lab
     t = lambda a: torch.from_numpy(np.ascontiguousarray(a)).to(device)
-    return YearData(R, pad, doy, t(to_field(g, seen)), t(to_field(g, np.where(np.isfinite(clean), z, 0.0).astype(np.float32))),
+    return YearData(R, pad, doy, t(to_field(g, seen)), t(np.nan_to_num(to_field(g, np.where(np.isfinite(clean), z, 0.0).astype(np.float32)))),
                     t(np.isfinite(to_field(g, clean)).astype(np.float32)), t(lab_f), t(np.nan_to_num(to_field(g, w), nan=1.0)),
                     t(np.nan_to_num(to_field(g, (wpos > 0).astype(np.float32)))), t(np.nan_to_num(to_field(g, wpos))))
 
@@ -457,16 +457,18 @@ def run_sequence(model: STNet, fields: torch.Tensor, doy: np.ndarray, stat: Stat
             x[:, 1 + i][:, m] = float("nan")
         n = (e - s) * S
         di = torch.from_numpy(np.asarray(doy[s:e], np.int64)).to(dev).repeat_interleave(S)
-        feats = build_features(
-            x.reshape(n, H, W), stat.scale.expand(n, -1, -1), stat.land.expand(n, -1, -1), stat.heavy.expand(n, -1, -1), stat.clim[di],
-            sin_all[s:e].repeat_interleave(S), cos_all[s:e].repeat_interleave(S), robust=cfg.use_robust).view(e - s, S, IN_CH, H, W)
-        for t in range(e - s):
-            out, state = model.step(feats[t], state)
-            feat[s + t], fault[s + t], clean[s + t] = out["feat"][0].half(), out["fault"][0].half(), out["clean"][0]
-            resid[s + t] = feats[t, 0, 3:3 + N_RESID].half()                       # channels 3..6 are the four residuals
-            for i, m in enumerate(masks):
-                dsum[s + t] += torch.where(m, out["disc"][1 + i], torch.zeros_like(out["disc"][1 + i]))
-                dcnt[s + t] += m.float()
+        with telemetry.span("stnet.infer.features", units=e - s, unit="days"):
+            feats = build_features(
+                x.reshape(n, H, W), stat.scale.expand(n, -1, -1), stat.land.expand(n, -1, -1), stat.heavy.expand(n, -1, -1), stat.clim[di],
+                sin_all[s:e].repeat_interleave(S), cos_all[s:e].repeat_interleave(S), robust=cfg.use_robust).view(e - s, S, IN_CH, H, W)
+        with telemetry.span("stnet.infer.network", units=e - s, unit="days"):               # latency per day = mean_ms / days per chunk
+            for t in range(e - s):
+                out, state = model.step(feats[t], state)
+                feat[s + t], fault[s + t], clean[s + t] = out["feat"][0].half(), out["fault"][0].half(), out["clean"][0]
+                resid[s + t] = feats[t, 0, 3:3 + N_RESID].half()                       # channels 3..6 are the four residuals
+                for i, m in enumerate(masks):
+                    dsum[s + t] += torch.where(m, out["disc"][1 + i], torch.zeros_like(out["disc"][1 + i]))
+                    dcnt[s + t] += m.float()
     return {"feat": feat, "resid": resid, "fault": fault, "clean": clean, "disc": dsum / dcnt.clamp(min=1.0), "disc_n": dcnt}
 
 
@@ -556,6 +558,27 @@ def score_functions(p: Prepared, model: STNet, long: Optional[LongMemory], cfg: 
 
 # ---------------------------------------------------------------------------------------------- the run
 
+def _record_model(model: STNet, long: Optional[LongMemory], p: Prepared, device) -> None:
+    """Parameters, size and FLOPs of one forward day on the full grid, into the telemetry session (if any)."""
+    n1 = sum(q.numel() for q in model.parameters())
+    n2 = sum(q.numel() for q in long.parameters()) if long is not None else 0
+    telemetry.record("model.stnet.parameters", n1, "count")
+    telemetry.record("model.stnet_long.parameters", n2, "count")
+    telemetry.record("model.stnet.size_mb", (n1 + n2) * 4 / 2 ** 20, "MB")
+    if telemetry.active() is None:
+        return
+    try:
+        from torch.utils.flop_counter import FlopCounterMode
+        was = model.training
+        model.eval()
+        with torch.no_grad(), FlopCounterMode(display=False) as fc:
+            model.step(torch.zeros(1, IN_CH, *p.grid.shape, device=device))
+        model.train(was)
+        telemetry.record("model.stnet.flops_per_day_full_grid", fc.get_total_flops(), "FLOPs")
+    except Exception as e:                                                    # an older torch has no FlopCounterMode
+        log.info("could not count FLOPs: %s", e)
+
+
 def probe_kinds(p: Prepared, model: STNet, cfg: STConfig, device, seed: int, years: Optional[Sequence[int]] = None,
                 neg_per_pos: int = 20, min_pos: int = 20) -> Dict[str, Dict]:
     """Can the FROZEN encoder features tell faults of one kind from clean cell-days? A logistic probe is fitted on the first validation year and
@@ -641,6 +664,7 @@ def run_stnet(p: Prepared, seed: int, cfg: STConfig, splits: Sequence[str] = ("v
     long = LongMemory(cfg.c_feat + N_OUT + (N_RESID if cfg.long_skip else 0), cfg.long_hidden).to(device) if cfg.use_long else None
     opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=1e-4)
     opt_long = torch.optim.AdamW(long.parameters(), lr=cfg.lr, weight_decay=1e-4) if long is not None else None
+    _record_model(model, long, p, device)
     total1 = cfg.epochs * len(years1)
     total2 = (cfg.long_epochs * len(years2)) if long is not None else 0
     done, log_rows = 0, []
@@ -675,11 +699,15 @@ def run_stnet(p: Prepared, seed: int, cfg: STConfig, splits: Sequence[str] = ("v
         order = np.random.default_rng([seed, phase, epoch]).permutation(len(ys))
         year = ys[int(order[i])]
         rng = np.random.default_rng([seed, phase, epoch, year])
-        d = year_data(p, year, gen, rng, cfg, readable, device)
+        with telemetry.span("stnet.data.year_data", sync=False):                  # fault injection and tensors; CPU work
+            d = year_data(p, year, gen, rng, cfg, readable, device)
         if phase == 1:
-            losses = train_windows(model, opt, d, stat_p, targets_p, cfg, rng, device, cfg.steps)
+            with telemetry.span("stnet.train.stage1_year_visit", units=cfg.steps * cfg.batch * cfg.window, unit="frames"):
+                losses = train_windows(model, opt, d, stat_p, targets_p, cfg, rng, device, cfg.steps)
         else:
-            losses = train_long(model, long, opt_long, d, stat, cfg, targets, rng, device, cfg.long_steps)
+            with telemetry.span("stnet.train.stage2_year_visit", units=cfg.long_steps * cfg.long_cells, unit="cell-sequences"):
+                losses = train_long(model, long, opt_long, d, stat, cfg, targets, rng, device, cfg.long_steps)
+        telemetry.gpu_peak(f"stnet.stage{phase}")
         del d
         done += 1
         log_rows.append({"phase": phase, "epoch": epoch, "year": year, "loss": float(np.mean(losses)) if losses else None})
@@ -698,7 +726,8 @@ def run_stnet(p: Prepared, seed: int, cfg: STConfig, splits: Sequence[str] = ("v
         write_json(run.file(f"train_log_{name}.json"), log_rows)
 
     if cfg.probe:
-        probe = probe_kinds(p, model, cfg, device, seed)
+        with telemetry.span("stnet.probe"):
+            probe = probe_kinds(p, model, cfg, device, seed)
         write_json(run.file(f"probe_{name}.json"), probe)
         log.info("%s: linear probe of the frozen features (AUC, fit on one validation year, scored on the next): %s", name,
                  {k: (None if v["auc"] is None else round(v["auc"], 3)) for k, v in probe.items()})

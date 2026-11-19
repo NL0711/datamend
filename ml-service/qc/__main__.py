@@ -587,6 +587,7 @@ def main(argv=None) -> int:
         s.add_argument("--config", default=str(paths.ASSETS.parent / "configs" / "base.yaml"))
         s.add_argument("--profile", choices=available_profiles(), default=None)
         s.add_argument("--set", action="append", metavar="KEY=VALUE", help="config override, e.g. clients.buffer_cells=6")
+        s.add_argument("--no-telemetry", action="store_true", help="do not record time, GPU energy, memory and latency (qc/telemetry.py)")
     sub.choices["client-map"].add_argument("--force", action="store_true")
     sub.choices["client-map"].add_argument("--nest-imd", default=None, metavar="FILE", help="re-cut the existing map so each client is a union of whole IMD sub-divisions (needs the file from scripts/fetch_imd_regions.py)")
     sub.choices["prepare"].add_argument("--skip-contract", action="store_true",
@@ -722,7 +723,10 @@ def main(argv=None) -> int:
         cfg = load_config(args.config, args.set, args.profile)
         if getattr(args, "seed", 0) is None:      # --seed not given: the first training seed of the config, never a silent 0
             args.seed = int(cfg.train.seeds[0])
-        return COMMANDS[args.cmd](cfg, args)
+        from qc import telemetry
+        with telemetry.session(paths.out_dir(cfg) / str(cfg.name) / "telemetry", args.cmd, on=not args.no_telemetry,
+                               run=str(cfg.name), profile=args.profile, seed=getattr(args, "seed", None), config_digest=cfg.digest()):
+            return COMMANDS[args.cmd](cfg, args)
     except (ConfigError, ContractError, LeakageError, FileNotFoundError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

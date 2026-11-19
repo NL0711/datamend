@@ -100,6 +100,8 @@ def test_year_data_never_reads_held_out_cells_and_labels_match_the_faults(prepar
     d = S.year_data(p, p.split.years["train"][1], FaultGenerator(p.grid), np.random.default_rng(0), tiny_cfg, readable, "cpu")
     hid = ~readable
     assert torch.isnan(d.seen[:, torch.from_numpy(hid)]).all()                 # held-out and buffer cells are never an input
+    for name in ("clean_z", "clean_ok", "labels", "weight", "pos", "wpos"):               # only `seen` may hold NaN (unreadable cells);
+        assert torch.isfinite(getattr(d, name).float()).all(), f"{name} has non-finite values (NaN times a zero mask is still NaN)"
     assert d.labels.shape == (d.rows, S.N_OUT) + tuple(p.grid.shape)
     anyl = d.labels[:, 0] > 0
     for k in range(1, S.N_OUT):
@@ -117,6 +119,14 @@ def test_end_to_end_tiny_run_trains_scores_evaluates_and_resumes(prepared, bench
         a = store.load(f"stt_{nm}_s0", "val", y)
         assert a.shape[1] == p.grid.n_land and np.isfinite(a).any() and (a[np.isfinite(a)] >= 0).all()
     assert ("stt_fault_s0", "val") in out["metrics"]
+    import json
+    from qc import paths
+    rd = paths.out_dir(p.cfg) / str(p.cfg.name) / "stt_s0"
+    ck = torch.load(rd / "checkpoints" / "stt_s0_final.pt", weights_only=False)
+    for part in ("model", "long"):
+        assert all(torch.isfinite(v).all() for v in ck[part].values() if v.dtype.is_floating_point), f"{part} weights are not finite"
+    losses = [r["loss"] for r in json.loads((rd / "train_log_stt_s0.json").read_text(encoding="utf-8"))]
+    assert losses and all(l is not None and np.isfinite(l) for l in losses), "a training loss was NaN"
     again = S.run_stnet(p, 0, tiny_cfg, ("val",), max_years=2)                 # finished: loads the final checkpoint, scores exist
     assert again["status"] == "done"
 
