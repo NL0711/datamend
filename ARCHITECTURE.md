@@ -26,6 +26,7 @@ upload (CSV, JSON) or live Weather Union feed
 | Live Weather Union feed (`backend/app/rainfall`), scored by the same catalogue as one open run per rain day | IMPLEMENTED; accumulation units and period UNCONFIRMED |
 | `evidence-v1` schema, baseline explainer, explanations table, narrator client, chat endpoints | IMPLEMENTED against a mocked narrator |
 | AI narrator | NOT IMPLEMENTED here (external deliverable); `docs/contracts/narrator-request-v1.md` is a proposal awaiting the AI team |
+| Settings editable from the dashboard (Weather Union key, city, interval, mode; narrator URL and token): `/api/settings`, admin-token protected, secrets write-only | IMPLEMENTED against mocked transports; no real Weather Union call made |
 | Place lookup (`backend/app/places`: RF25 cell, land, client region) | IMPLEMENTED; IMD sub-division NOT IMPLEMENTED |
 | Score-provider seam for trained scores | seam only; NO trained score is connected |
 | Dashboard (`frontend/src/validation`: Runs, Run view, Live gauge feed, Settings) | IMPLEMENTED; type-checked and unit-tested, not looked at in a browser by the author |

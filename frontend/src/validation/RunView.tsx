@@ -7,20 +7,20 @@ import { exportUrl, getFeed, getNarrator, getRows, getRun, getSeries } from './a
 import { ChatPanel } from './ChatPanel';
 import { EvidencePane } from './EvidencePane';
 import { Timeline } from './Timeline';
-import { PAGE_SIZE, completenessText, headlineLine, pct, rowsQuery } from './lib';
+import { PAGE_SIZE, completenessText, pct, rowsQuery } from './lib';
 import type { NarratorStatus, RowsPage, RunFull, Series, Verdict } from './types';
 import { Notice, Panel, SeverityPill, SyntheticBadge, VerdictBadge, formatError } from './ui';
 
 type Feed = Awaited<ReturnType<typeof getFeed>>;
 
-function LiveStrip({ run }: { run: RunFull }) {
+function LiveStrip() {
   const [feed, setFeed] = useState<Feed | null>(null);
   useEffect(() => { getFeed().then(setFeed).catch(() => setFeed(null)); }, []);
   return (
     <Panel className="px-4 py-2 flex items-center gap-4 flex-wrap text-[11px] font-mono">
       <span className={`flex items-center gap-1.5 font-bold ${feed?.enabled ? 'text-emerald-700' : 'text-slate-500'}`}><Radio className="w-3.5 h-3.5" />LIVE · Weather Union</span>
       {feed === null && <span className="text-slate-500">live feed status unavailable</span>}
-      {feed && !feed.enabled && <span className="text-slate-500">feed not enabled (set WEATHER_UNION_API_KEY and WEATHER_UNION_CITY)</span>}
+      {feed && !feed.enabled && <span className="text-slate-500">feed not enabled (add a key and a city in Settings)</span>}
       {feed?.enabled && (
         <>
           <span>{feed.status.calls_used_today}/{feed.status.calls_used_today + feed.status.calls_remaining_today} calls today</span>
@@ -28,7 +28,6 @@ function LiveStrip({ run }: { run: RunFull }) {
           <span>time basis: received</span>
           <span>{feed.stations.filter((s) => s.quality?.assessment === 'OK').length} of {feed.stations.length} gauges OK</span>
         </>)}
-      <span className="ml-auto text-slate-500">{run.label} · {headlineLine(run.report.headline)}</span>
     </Panel>
   );
 }
@@ -42,11 +41,10 @@ function Headline({ run }: { run: RunFull }) {
       <div className="flex items-center gap-2 flex-wrap">
         <h2 className="text-base font-bold text-slate-900">Run {run.id} · {run.label}</h2>
         {run.synthetic && <SyntheticBadge />}
-        <span className="text-[10px] font-mono text-slate-500">{run.profile} profile · {run.source} · {run.status} · v{run.platform_version} · commit {run.git_commit.slice(0, 8)} · input sha256 {run.input_sha256?.slice(0, 12) ?? 'n/a'}</span>
+        <span className="text-[10px] font-mono text-slate-500" title={`platform v${run.platform_version} · commit ${run.git_commit} · input sha256 ${run.input_sha256 ?? 'n/a'}`}>{run.profile} profile · {run.source} · {run.status}</span>
         <span className="ml-auto flex items-center gap-2">
           <a href={exportUrl(run.id, 'json')} className="px-2 py-1 rounded border border-[#D3DCE7] text-[11px] font-bold flex items-center gap-1"><Download className="w-3 h-3" />JSON</a>
           <a href={exportUrl(run.id, 'csv')} className="px-2 py-1 rounded border border-[#D3DCE7] text-[11px] font-bold flex items-center gap-1"><Download className="w-3 h-3" />CSV</a>
-          <button disabled title="NOT IMPLEMENTED" className="px-2 py-1 rounded border border-slate-300 text-[11px] opacity-50 cursor-not-allowed">PDF · NOT IMPLEMENTED</button>
         </span>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
@@ -110,7 +108,7 @@ export function RunView({ runId }: { runId: number }) {
   return (
     <div className="space-y-3">
       {error && <Notice tone="error">{error}</Notice>}
-      <LiveStrip run={run} />
+      <LiveStrip />
       <Headline run={run} />
       <Panel className="p-3">
         <div className="flex items-center gap-2 flex-wrap mb-2">

@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.places import router as places_router
 from backend.app.api.rainfall import router as rainfall_router
+from backend.app.api.settings import router as settings_router
 from backend.app.api.validation import router as validation_router
 from backend.app.config import settings
 from backend.app.db.database import close_db, init_db
@@ -62,6 +63,7 @@ app.add_middleware(
 app.include_router(places_router)
 app.include_router(rainfall_router)
 app.include_router(validation_router)
+app.include_router(settings_router)
 
 
 @app.get("/", tags=["system"])

@@ -19,10 +19,13 @@ MAX_QUESTION_CHARS = 2000
 
 
 def get_narrator() -> Optional[NarratorExplainer]:
-    """The configured narrator, or None. The URL comes from the environment only; the UI never sets it."""
-    if not settings.NARRATOR_URL.strip():
+    """The configured narrator, or None. The URL comes from .env or from the dashboard's Settings (runtime_settings.py), where a private or
+    loopback address is refused unless NARRATOR_ALLOW_PRIVATE is set on the server."""
+    from backend.app.runtime_settings import effective      # runtime overrides on top of the environment
+    eff = effective()
+    if not eff.narrator_url.strip():
         return None
-    return NarratorExplainer(settings.NARRATOR_URL.strip(), settings.NARRATOR_TOKEN, settings.NARRATOR_TIMEOUT_SECONDS)
+    return NarratorExplainer(eff.narrator_url.strip(), eff.narrator_token, settings.NARRATOR_TIMEOUT_SECONDS)
 
 
 def narrator_status(narrator: Optional[NarratorExplainer]) -> Dict[str, Any]:

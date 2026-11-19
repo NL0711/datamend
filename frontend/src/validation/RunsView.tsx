@@ -28,7 +28,7 @@ function NewRun({ onCreated }: { onCreated: (id: number) => void }) {
   return (
     <Panel className="p-4 space-y-3">
       <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2"><Upload className="w-4 h-4" />New run</h2>
-      <p className="text-[11px] text-slate-600">CSV or JSON, about 10 MB at most, millimetres only. Parquet and unit conversion are NOT IMPLEMENTED. A file-level problem rejects the whole upload with a reason; a row-level problem keeps the row with a flag.</p>
+      <p className="text-[11px] text-slate-600">CSV or JSON, up to 10 MB, millimetres only.</p>
       <div className="grid md:grid-cols-2 gap-3">
         <label className="text-[11px] space-y-1 block">File
           <input type="file" accept=".csv,.json" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className={`${field} block w-full`} aria-label="file" /></label>
@@ -57,9 +57,8 @@ function NewRun({ onCreated }: { onCreated: (id: number) => void }) {
 export function RunsView({ onOpen }: { onOpen: (id: number) => void }) {
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [storage, setStorage] = useState('');
-  const [cap, setCap] = useState(50);
   const [error, setError] = useState<string | null>(null);
-  const load = useCallback(() => { listRuns().then((r) => { setRuns(r.runs); setStorage(r.storage); setCap(r.cap); }).catch((e) => setError(formatError(e))); }, []);
+  const load = useCallback(() => { listRuns().then((r) => { setRuns(r.runs); setStorage(r.storage); }).catch((e) => setError(formatError(e))); }, []);
   useEffect(load, [load]);
 
   return (
@@ -69,7 +68,6 @@ export function RunsView({ onOpen }: { onOpen: (id: number) => void }) {
         <div className="flex items-center gap-3 mb-2">
           <h2 className="text-sm font-bold text-slate-900">Runs</h2>
           <span className="px-2 py-0.5 rounded border border-amber-300 bg-amber-50 text-amber-800 text-[10px] font-mono font-bold">{storage || 'demo storage, resets on restart'}</span>
-          <span className="text-[10px] font-mono text-slate-500">at most {cap} kept, oldest removed first · download the JSON export to keep a run</span>
         </div>
         {error && <Notice tone="error">{error}</Notice>}
         {runs && runs.length === 0 && <p className="text-xs text-slate-500">No runs yet. Upload a file above; the live feed adds one run per rain day when it is enabled.</p>}

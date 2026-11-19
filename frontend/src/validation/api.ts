@@ -1,6 +1,7 @@
 // Typed client of /api/validation and /api/rainfall. Errors carry the server's plain-language reason.
 import type {
-  Evidence, ExplanationItem, FeedStation, FeedStatus, NarratorStatus, RowDetail, RowsPage, RunFull, RunSummary, Series,
+  Evidence, ExplanationItem, FeedStation, FeedStatus, FeedTestResult, NarratorStatus, RowDetail, RowsPage, RunFull, RunSummary, Series,
+  SettingsState, SettingsUpdate,
 } from './types';
 
 const V = '/api/validation';
@@ -46,7 +47,17 @@ export const getChat = (id: number) => get<{ messages: ExplanationItem[] }>(`${V
 export const sendChat = (id: number, message: string, rowId?: number) =>
   post<ExplanationItem>(`${V}/runs/${id}/chat`, { message, row_id: rowId ?? null });
 
-export const exportUrl = (id: number, kind: 'json' | 'csv') => `${V}/runs/${id}/export.${kind}`;
+export const getSettings = () => get<SettingsState>('/api/settings');
+
+const admin = (token: string) => ({ 'Content-Type': 'application/json', 'X-Admin-Token': token });
+
+export const saveSettings = (body: SettingsUpdate, token: string) =>
+  fetch('/api/settings', { method: 'PUT', headers: admin(token), body: JSON.stringify(body) }).then((r) => json<SettingsState>(r));
+
+export const testFeed = (token: string) =>
+  fetch('/api/settings/feed/test', { method: 'POST', headers: admin(token) }).then((r) => json<FeedTestResult>(r));
+
+export const exportUrl =(id: number, kind: 'json' | 'csv') => `${V}/runs/${id}/export.${kind}`;
 
 export interface UploadForm {
   file: File; profile: 'reading' | 'daily'; accumulationMode?: string; timezone?: string; intervalMinutes?: string; synthetic: boolean;

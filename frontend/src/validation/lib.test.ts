@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, getFeed, getRows, sendChat, uploadRun } from './api';
-import { PAGE_SIZE, asPlainText, buildLanes, chartData, completenessText, lanePosition, markerY, pct, rowsQuery } from './lib';
-import type { SeriesPoint } from './types';
+import { ApiError, getFeed, getRows, saveSettings, sendChat, uploadRun } from './api';
+import { PAGE_SIZE, asPlainText, buildLanes, buildSettingsUpdate, chartData, completenessText, lanePosition, markerY, pct, rowsQuery } from './lib';
+import type { SeriesPoint, SettingsState } from './types';
 
 const pt = (id: number, time: string, over: Partial<SeriesPoint> = {}): SeriesPoint => ({
   id, time, intensity: 0, accumulation: 0, mm: null, verdict: 'SUSPECT', rule_score: 0.7, ...over,
@@ -59,6 +59,35 @@ describe('timeline helpers', () => {
   });
 });
 
+describe('settings update', () => {
+  const current = {
+    editing_enabled: true, cities: ['Mumbai', 'Pune'], accumulation_modes: ['cumulative', 'per_reading'], interval_limits_seconds: [60, 86400],
+    weather_union: { api_key_set: true, api_key_source: 'runtime', city: 'Mumbai', city_source: 'runtime', poll_interval_seconds: 900,
+      poll_interval_source: 'environment', accumulation_mode: 'cumulative', accumulation_mode_source: 'environment', enabled: true },
+    narrator: { url: '', url_source: 'unset', token_set: false, token_source: 'unset', connected: false }, feed_running: true,
+  } as const as unknown as SettingsState;
+  const unchanged = { apiKey: '', city: 'Mumbai', intervalMinutes: '15', mode: 'cumulative', narratorUrl: '', narratorToken: '' };
+
+  it('sends nothing when nothing changed, so an empty secret box never overwrites a saved key', () => {
+    expect(buildSettingsUpdate(unchanged, current)).toBeNull();
+  });
+  it('sends only what changed and converts minutes to seconds', () => {
+    expect(buildSettingsUpdate({ ...unchanged, city: 'Pune', intervalMinutes: '30' }, current)).toEqual({ weather_union_city: 'Pune', weather_union_poll_interval_seconds: 1800 });
+  });
+  it('sends a secret only when one was typed, trimmed', () => {
+    expect(buildSettingsUpdate({ ...unchanged, apiKey: '  new-key-12345  ', narratorToken: ' tok-1234567 ' }, current))
+      .toEqual({ weather_union_api_key: 'new-key-12345', narrator_token: 'tok-1234567' });
+  });
+  it('sends the narrator URL only when it differs, and passes clear requests through', () => {
+    expect(buildSettingsUpdate({ ...unchanged, narratorUrl: 'https://n.example/x' }, current)).toEqual({ narrator_url: 'https://n.example/x' });
+    expect(buildSettingsUpdate(unchanged, current, ['narrator_url'])).toEqual({ clear: ['narrator_url'] });
+  });
+  it('ignores a blank or non-numeric interval instead of sending garbage', () => {
+    expect(buildSettingsUpdate({ ...unchanged, intervalMinutes: '' }, current)).toBeNull();
+    expect(buildSettingsUpdate({ ...unchanged, intervalMinutes: 'abc' }, current)).toBeNull();
+  });
+});
+
 describe('api client', () => {
   afterEach(() => { vi.unstubAllGlobals(); });
   const respond = (status: number, body: unknown) => vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }));
@@ -81,6 +110,15 @@ describe('api client', () => {
     vi.stubGlobal('fetch', f);
     await getRows(7, rowsQuery({ page: 1, verdict: 'SUSPECT' }));
     expect(f.mock.calls[0][0]).toBe('/api/validation/runs/7/rows?page=1&page_size=50&verdict=SUSPECT');
+  });
+  it('sends the admin token as a header and surfaces a refusal', async () => {
+    const f = respond(401, { detail: 'the admin token is missing or wrong' });
+    vi.stubGlobal('fetch', f);
+    await expect(saveSettings({ weather_union_city: 'Pune' }, 'tok')).rejects.toMatchObject({ status: 401, message: expect.stringContaining('admin token') });
+    const init = f.mock.calls[0][1] as RequestInit;
+    expect(init.method).toBe('PUT');
+    expect((init.headers as Record<string, string>)['X-Admin-Token']).toBe('tok');
+    expect(JSON.parse(init.body as string)).toEqual({ weather_union_city: 'Pune' });
   });
   it('treats a disabled live feed (503) as a state, not an error', async () => {
     vi.stubGlobal('fetch', respond(503, { detail: 'Rainfall feed is not enabled: set WEATHER_UNION_API_KEY and WEATHER_UNION_CITY in the environment' }));

@@ -145,6 +145,29 @@ def test_training_stays_finite_on_real_like_statistics_and_a_bad_loss_stops_the_
         S.train_windows(model, opt, d, stat_p, targets_p, tiny_cfg, np.random.default_rng(2), "cpu", 1)
 
 
+def test_init_from_trains_only_stage_two_on_the_finished_encoder_and_refuses_a_mismatch(prepared, bench):
+    import dataclasses
+    import json
+    from qc import paths
+    p = prepared
+    src_cfg = S.STConfig(width=8, c_feat=8, long_hidden=8, epochs=1, steps=2, batch=2, window=8, burn=2, crop=24, long_epochs=1, long_steps=2,
+                         long_cells=64, prefix="stsrc", probe=False)
+    S.run_stnet(p, 0, src_cfg, ("val",), max_years=2)
+    new_cfg = dataclasses.replace(src_cfg, prefix="stcont", long_epochs=2, long_steps=3)
+    out = S.run_stnet(p, 0, new_cfg, ("val",), max_years=2, init_from="stsrc")
+    assert out["status"] == "done"
+    root = paths.out_dir(p.cfg) / str(p.cfg.name)
+    rows = json.loads((root / "stcont_s0" / "train_log_stcont_s0.json").read_text(encoding="utf-8"))
+    assert rows and all(r["phase"] == 2 for r in rows) and len(rows) == 2                   # 2 epochs x 1 stage-2 year, no stage 1 here
+    a = torch.load(root / "stsrc_s0" / "checkpoints" / "stsrc_s0_final.pt", weights_only=False)["model"]
+    b = torch.load(root / "stcont_s0" / "checkpoints" / "stcont_s0_final.pt", weights_only=False)["model"]
+    assert all(torch.equal(a[k], b[k]) for k in a)                                           # the encoder is the other run's, untouched
+    with pytest.raises(ValueError, match="different width"):
+        S.run_stnet(p, 0, dataclasses.replace(new_cfg, prefix="stbad", width=16), ("val",), max_years=2, init_from="stsrc")
+    with pytest.raises(FileNotFoundError):
+        S.run_stnet(p, 0, dataclasses.replace(new_cfg, prefix="stnone"), ("val",), max_years=2, init_from="doesnotexist")
+
+
 def test_a_checkpoint_with_nan_weights_is_refused_not_reused(prepared, bench):
     from qc import paths
     p = prepared

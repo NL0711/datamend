@@ -107,7 +107,7 @@ Layout D, timeline over queue. Four rail items:
 1. **Runs:** the list, "new run" upload, the "demo storage, resets on restart" label.
 2. **Run view:** full-width series chart (intensity bars, accumulation line, verdict markers) and check lanes on top; below, the live strip, filterable worklist and decision pane. A chart marker, lane tick or queue item selects the same reading. Headline measured numbers, "not run" list, JSON and CSV export buttons (PDF NOT IMPLEMENTED).
 3. **Live gauge feed.**
-4. **Settings:** feed city and interval, accumulation mode, narrator URL.
+4. **Settings:** the Weather Union key, city, interval and accumulation mode, and the narrator URL and token. Editable from the dashboard (owner request, 2026-11-19) but only with an `ADMIN_TOKEN` set in the server's `.env` (there are no accounts; editing is off without it). Secrets are write-only: no endpoint returns them. A narrator URL on a private, loopback or link-local address is refused unless the server sets `NARRATOR_ALLOW_PRIVATE`. Saved values override `.env` and restart the live feed at once.
 
 **AI chat (owner addition, 2026-11-19):** a chat panel in the Run view. A question plus the selected row's evidence goes to the platform, which forwards it to `NARRATOR_URL` (same seam as "Explain", section 6); replies are stored as explanations, badged "AI-generated", and shown beside the evidence. With `NARRATOR_URL` unset the panel says "AI narrator not connected" and offers the baseline explanation; it never answers from canned text. It cannot change a verdict, score or evidence. NOT IMPLEMENTED until the teammate's narrator exists; the request and response shape still needs their confirmation.
 

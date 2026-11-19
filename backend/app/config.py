@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     NARRATOR_TOKEN: str = ""
     NARRATOR_TIMEOUT_SECONDS: float = 20.0
 
+    # Editing settings from the dashboard (api/settings.py) is DISABLED unless this is set; callers must send it as X-Admin-Token.
+    # A long random string, in .env only. There are no user accounts: anyone who has this token can change the feed key and the narrator.
+    ADMIN_TOKEN: str = ""
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 settings = Settings()

@@ -19,8 +19,8 @@ export function Timeline({ series, selectedId, onSelect, profile }: { series: Se
   return (
     <div>
       <div className="text-[10px] uppercase font-mono text-slate-500 mb-1">
-        {daily ? 'daily total (area, mm)' : 'intensity (area, mm/h, unit assumed unless the upload confirmed it) · accumulation counter (line)'}
-        {' · '}{series.n_total} rows{series.downsampled ? ` · line reduced to ${series.points.length} points on the server (every flagged row is still marked)` : ''}
+        {daily ? 'daily total (mm)' : 'intensity (area) · accumulation counter (line)'}
+        {' · '}{series.n_total} rows{series.downsampled ? ` · reduced to ${series.points.length} points (every flagged row is still marked)` : ''}
       </div>
       <div style={{ height: 300 }}>
         <ResponsiveContainer width="100%" height="100%">

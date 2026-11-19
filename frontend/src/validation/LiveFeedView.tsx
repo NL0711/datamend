@@ -22,7 +22,7 @@ export function LiveFeedView({ onOpenRun }: { onOpenRun: (id: number) => void })
 
   if (error) return <Notice tone="error">{error}</Notice>;
   if (!feed) return <p className="text-xs text-slate-500">Loading…</p>;
-  if (!feed.enabled) return <Notice tone="warn">The live gauge feed is not enabled. {feed.reason} Nothing is simulated in its place.</Notice>;
+  if (!feed.enabled) return <Notice tone="warn">The live gauge feed is not enabled. Add a Weather Union key and a city in Settings. Nothing is simulated in its place.</Notice>;
 
   const { status, stations } = feed;
   return (
@@ -39,7 +39,6 @@ export function LiveFeedView({ onOpenRun }: { onOpenRun: (id: number) => void })
         </div>
         {status.last_error && <Notice tone="error">{status.last_error}</Notice>}
         <ul className="text-[11px] text-slate-600 list-disc pl-5">{status.caveats.map((c) => <li key={c}>{c}</li>)}</ul>
-        <p className="text-[11px] text-slate-600">"Real-time" here means polling about every 15 minutes with received-time stamps. Gauges are often dry; that is shown as it is.</p>
       </Panel>
       <Panel className="p-3 overflow-x-auto">
         <table className="w-full text-[11px]">
@@ -56,7 +55,6 @@ export function LiveFeedView({ onOpenRun }: { onOpenRun: (id: number) => void })
               <td className="font-mono text-slate-600">{s.quality?.reasons.map((r) => r.check).join(', ') || '—'}</td>
             </tr>))}</tbody>
         </table>
-        <p className="text-[10px] text-slate-500 mt-2">Verdicts come from the same check catalogue as uploads (rules and a neighbour check, not a trained model). The score is an uncalibrated rule score.</p>
       </Panel>
     </div>
   );

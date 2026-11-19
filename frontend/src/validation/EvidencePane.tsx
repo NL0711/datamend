@@ -118,15 +118,11 @@ export function EvidencePane({ runId, rowId, narrator }: { runId: number; rowId:
           <div className="flex items-center gap-2 flex-wrap">
             <button disabled={busy || evidence.length === 0} onClick={() => run('baseline')}
                     className="px-2 py-1 rounded border border-sky-300 text-sky-800 text-[11px] font-bold disabled:opacity-50">Explain (rules)</button>
-            <button disabled={busy || evidence.length === 0 || !narrator?.connected} onClick={() => run('narrator')}
-                    title={narrator?.connected ? 'ask the AI narrator' : 'AI narrator not connected'}
-                    className="px-2 py-1 rounded border border-violet-300 text-violet-800 text-[11px] font-bold disabled:opacity-50 disabled:cursor-not-allowed">Explain (AI)</button>
+            {narrator?.connected && (
+              <button disabled={busy || evidence.length === 0} onClick={() => run('narrator')}
+                      className="px-2 py-1 rounded border border-violet-300 text-violet-800 text-[11px] font-bold disabled:opacity-50">Explain (AI)</button>)}
           </div>
-          <div className="rounded border border-dashed border-slate-300 p-2 text-[11px] text-slate-600">
-            <span className="font-mono font-bold uppercase text-[10px]">AI narrator · </span>
-            {narrator?.connected ? `connected (${narrator.host}). Its text is shown with an AI-generated badge, beside the evidence, and cannot change a verdict, score or evidence.`
-              : 'not connected. NOT IMPLEMENTED until the AI team delivers and NARRATOR_URL is set; nothing is answered from canned text.'}
-          </div>
+          {!narrator?.connected && <p className="text-[11px] text-slate-500">AI narrator not connected (NOT IMPLEMENTED until it is set up in Settings).</p>}
         </>)}
     </Panel>
   );

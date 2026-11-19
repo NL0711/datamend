@@ -83,6 +83,25 @@ export interface ExplanationItem {
 
 export interface NarratorStatus { connected: boolean; message: string; implemented: boolean; host?: string; note?: string }
 
+export interface SettingsState {
+  editing_enabled: boolean; cities: string[]; accumulation_modes: string[]; interval_limits_seconds: [number, number];
+  weather_union: {
+    api_key_set: boolean; api_key_source: 'runtime' | 'environment' | 'unset'; city: string; city_source: string;
+    poll_interval_seconds: number; poll_interval_source: string; accumulation_mode: string; accumulation_mode_source: string; enabled: boolean;
+  };
+  narrator: { url: string; url_source: string; token_set: boolean; token_source: string; connected: boolean };
+  feed_running: boolean;
+  feed?: { stations: number; poll_interval_seconds: number; calls_used_today: number; calls_remaining_today: number; last_poll_at: string | null; last_error: string | null };
+  saved?: string[]; feed_error?: string;
+}
+
+export interface SettingsUpdate {
+  weather_union_api_key?: string; weather_union_city?: string; weather_union_poll_interval_seconds?: number;
+  weather_union_accumulation_mode?: string; narrator_url?: string; narrator_token?: string; clear?: string[];
+}
+
+export interface FeedTestResult { ok: boolean; message: string; station_id: string; place?: string; status?: string }
+
 export interface FeedStatus {
   source: string; stations: number; poll_interval_seconds: number; calls_used_today: number; calls_remaining_today: number;
   last_poll_at: string | null; last_error: string | null; accumulation_mode: string; caveats: string[];

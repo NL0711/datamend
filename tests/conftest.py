@@ -7,6 +7,10 @@ import pytest
 # Tests never touch a developer's configured database: pin a throwaway SQLite file BEFORE the app (and its settings) load.
 # Environment variables outrank .env in pydantic-settings.
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///" + (Path(tempfile.gettempdir()) / "datamend_tests.db").as_posix()
+# ...and a throwaway file for dashboard-saved settings, so tests never read or write the developer's real data/runtime_settings.json
+os.environ["RUNTIME_SETTINGS_PATH"] = (Path(tempfile.gettempdir()) / "datamend_tests_runtime_settings.json").as_posix()
+for _name in ("WEATHER_UNION_API_KEY", "WEATHER_UNION_CITY", "NARRATOR_URL", "NARRATOR_TOKEN", "ADMIN_TOKEN"):
+    os.environ[_name] = ""           # a developer's real .env values must not leak into a test run (environment outranks .env)
 try:
     import pytest_asyncio
 except ImportError:

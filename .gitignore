@@ -52,6 +52,10 @@ dist-ssr/
 # Raw log of live rain-gauge readings (Weather Union)
 data/weather_union_raw.jsonl
 
+# Settings saved from the dashboard (contain the Weather Union key and the narrator token)
+data/runtime_settings.json
+data/runtime_settings.json.tmp
+
 # Database
 *.db
 *.sqlite
