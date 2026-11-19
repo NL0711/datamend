@@ -149,7 +149,7 @@ def build_features(x: torch.Tensor, scale: torch.Tensor, land: torch.Tensor, hea
         n = xs.shape[0]
         chans += [clim[s:s + chunk], heavy[s:s + chunk],
                   sin[s:s + chunk].view(n, 1, 1).expand_as(z), cos[s:s + chunk].view(n, 1, 1).expand_as(z)]
-        outs.append(torch.stack(chans, dim=1))
+        outs.append(torch.nan_to_num(torch.stack(chans, dim=1), nan=0.0, posinf=0.0, neginf=0.0))    # last guard: the network never sees NaN or inf
     return torch.cat(outs, dim=0)
 
 
@@ -241,12 +241,25 @@ class Static:
     def __init__(self, p: Prepared, device):
         g, st = p.grid, p.stats
         h, w = g.shape
+        # The training statistics set a cell's heavy-rain threshold to +inf when it never had a wet day (it can never be a protected
+        # extreme), and a climatology can hold NaN. Fed to a network these turn every output NaN, so they are made finite here.
+        heavy_mm = np.asarray(st.heavy_mm, np.float64)
+        finite_heavy = heavy_mm[np.isfinite(heavy_mm)]
+        n_inf = int((~np.isfinite(heavy_mm)).sum())
+        heavy_mm = np.where(np.isfinite(heavy_mm), heavy_mm, finite_heavy.max() if finite_heavy.size else 0.0)   # the largest threshold: "never heavy"
+        clim_mm = np.asarray(st.climatology, np.float64)
+        n_nan = int((~np.isfinite(clim_mm)).sum())
+        clim_mm = np.nan_to_num(clim_mm, nan=0.0, posinf=0.0, neginf=0.0)
+        sc = np.asarray(st.scale, np.float32)
+        sc = np.where(np.isfinite(sc) & (sc > 0), sc, 1.0).astype(np.float32)
+        if n_inf or n_nan:
+            log.warning("statics made finite for the network: %d cells without a heavy-rain threshold, %d non-finite climatology values", n_inf, n_nan)
         scale = np.ones((h, w), np.float32)
-        scale[g.rows, g.cols] = st.scale
+        scale[g.rows, g.cols] = sc
         heavy = np.zeros((h, w), np.float32)
-        heavy[g.rows, g.cols] = np.log1p(st.heavy_mm) / st.scale
+        heavy[g.rows, g.cols] = np.log1p(heavy_mm) / sc
         clim = np.zeros((366, h, w), np.float32)
-        clim[:, g.rows, g.cols] = np.log1p(np.clip(st.climatology, 0, None)) / st.scale[None, :]
+        clim[:, g.rows, g.cols] = np.log1p(np.clip(clim_mm, 0, None)) / sc[None, :]
         self.shape = (h, w)
         self.scale = torch.from_numpy(scale).to(device)
         self.land = torch.from_numpy(g.land.astype(np.float32)).to(device)
@@ -411,6 +424,12 @@ def train_windows(model: STNet, opt, d: YearData, stat_p: Static, targets_p: tor
         if cfg.use_disc:
             md = (base & hide & (S["cok"] > 0.5)).float()
             loss = loss + 0.5 * ((disc - S["cz"]).abs() * md).sum() / md.sum().clamp(min=1.0)
+        if not torch.isfinite(loss):                                     # stop at the first bad step, and say where it came from
+            raise RuntimeError(
+                "STNet loss is not finite. inputs finite: %s; outputs finite (fault, clean, disc): %s, %s, %s; weights finite: %s; "
+                "masked pixels: %d. Never continue a run on a NaN loss: the weights would be NaN for good." % (
+                    bool(torch.isfinite(F_).all()), bool(torch.isfinite(fault).all()), bool(torch.isfinite(clean).all()),
+                    bool(torch.isfinite(disc).all()), all(bool(torch.isfinite(q).all()) for q in model.parameters()), int(m.sum())))
         opt.zero_grad(set_to_none=True)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -509,6 +528,9 @@ def train_long(model: STNet, long: LongMemory, opt, d: YearData, stat: Static, c
         wt = torch.where(pos > 0.5, cfg.pos_weight * wpos, w)
         bce = F.binary_cross_entropy_with_logits(logit, lab, reduction="none").mean(dim=2)
         loss = (bce * wt * ok.float()).sum() / ok.float().sum().clamp(min=1.0)
+        if not torch.isfinite(loss):
+            raise RuntimeError("STNet stage-2 loss is not finite (encoder features finite: %s, stage-1 logits finite: %s)"
+                               % (bool(torch.isfinite(enc["feat"].float()).all()), bool(torch.isfinite(enc["fault"].float()).all())))
         opt.zero_grad(set_to_none=True)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(long.parameters(), 1.0)
@@ -557,6 +579,14 @@ def score_functions(p: Prepared, model: STNet, long: Optional[LongMemory], cfg: 
 
 
 # ---------------------------------------------------------------------------------------------- the run
+
+def _require_finite(ck: Dict, path: Path) -> None:
+    """A checkpoint from a diverged run holds NaN weights; resuming from it would score NaN for good."""
+    for part in ("model", "long"):
+        sd = ck.get(part)
+        if sd and not all(bool(torch.isfinite(v).all()) for v in sd.values() if v.dtype.is_floating_point):
+            raise RuntimeError(f"{path} holds non-finite {part} weights (a diverged earlier run). Delete the folder {path.parent.parent} and run again.")
+
 
 def _record_model(model: STNet, long: Optional[LongMemory], p: Prepared, device) -> None:
     """Parameters, size and FLOPs of one forward day on the full grid, into the telemetry session (if any)."""
@@ -611,6 +641,8 @@ def probe_kinds(p: Prepared, model: STNet, cfg: STConfig, device, seed: int, yea
             for k in set(ev["bases"]) | {ev["kind"]}:
                 if k in kind_rows:
                     kind_rows[k][fs.t[i], fs.cell[i]] = True
+        if not np.isfinite(feat).all():
+            return {k: {"auc": None, "reason": "the encoder features are not finite"} for k in KINDS}
         per_year.append((feat, any_lab, ok, kind_rows))
     out: Dict[str, Dict] = {}
     for k in KINDS:
@@ -671,6 +703,7 @@ def run_stnet(p: Prepared, seed: int, cfg: STConfig, splits: Sequence[str] = ("v
     sig = cfg.signature()
     if ck_final.is_file():
         ck = torch.load(ck_final, map_location=device, weights_only=False)
+        _require_finite(ck, ck_final)
         model.load_state_dict(ck["model"])
         if long is not None:
             long.load_state_dict(ck["long"])
@@ -679,6 +712,7 @@ def run_stnet(p: Prepared, seed: int, cfg: STConfig, splits: Sequence[str] = ("v
         ck = torch.load(ck_last, map_location=device, weights_only=False)
         if ck["sig"] != sig or ck["seed"] != seed or ck["total"] != (total1, total2) or ck["config_digest"] != p.cfg.digest():
             raise RuntimeError(f"{ck_last} was made under a different config, seed or run length; use another prefix or delete it")
+        _require_finite(ck, ck_last)
         model.load_state_dict(ck["model"]); opt.load_state_dict(ck["opt"])
         if long is not None:
             long.load_state_dict(ck["long"]); opt_long.load_state_dict(ck["opt_long"])

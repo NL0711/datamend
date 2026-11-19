@@ -109,6 +109,56 @@ def test_year_data_never_reads_held_out_cells_and_labels_match_the_faults(prepar
     assert int(anyl.sum()) > 0
 
 
+def _real_like_stats(p):
+    """The statistics of the real data have cells with no heavy-rain threshold (+inf by design) and can hold NaN climatology."""
+    import dataclasses
+    from types import SimpleNamespace
+    heavy = p.stats.heavy_mm.copy()
+    heavy[:5] = np.inf
+    clim = p.stats.climatology.copy()
+    clim[:, 7] = np.nan
+    return SimpleNamespace(grid=p.grid, stats=dataclasses.replace(p.stats, heavy_mm=heavy, climatology=clim))
+
+
+def test_statics_are_finite_even_with_infinite_thresholds_and_nan_climatology(prepared):
+    st = S.Static(_real_like_stats(prepared), "cpu")
+    for name in ("scale", "land", "heavy", "clim"):
+        assert torch.isfinite(getattr(st, name)).all(), f"{name} is not finite"
+    assert float(st.scale.min()) > 0
+
+
+def test_training_stays_finite_on_real_like_statistics_and_a_bad_loss_stops_the_run(prepared, tiny_cfg):
+    p = prepared
+    stat = S.Static(_real_like_stats(p), "cpu")
+    stat_p = stat.padded(S.MARGIN)
+    targets_p, _ = S._targets(p, "cpu")
+    d = S.year_data(p, p.split.years["train"][1], FaultGenerator(p.grid), np.random.default_rng(0), tiny_cfg, p.split.input_mask(), "cpu")
+    torch.manual_seed(0)
+    model = S.STNet(8, 8, True)
+    opt = torch.optim.AdamW(model.parameters(), lr=1e-3)
+    losses = S.train_windows(model, opt, d, stat_p, targets_p, tiny_cfg, np.random.default_rng(1), "cpu", 3)
+    assert len(losses) == 3 and all(np.isfinite(losses))
+    assert all(torch.isfinite(q).all() for q in model.parameters())
+    with torch.no_grad():
+        next(model.parameters()).fill_(float("nan"))
+    with pytest.raises(RuntimeError, match="not finite"):                   # it stops at the first bad step instead of training on NaN
+        S.train_windows(model, opt, d, stat_p, targets_p, tiny_cfg, np.random.default_rng(2), "cpu", 1)
+
+
+def test_a_checkpoint_with_nan_weights_is_refused_not_reused(prepared, bench):
+    from qc import paths
+    p = prepared
+    cfg = S.STConfig(width=8, c_feat=8, long_hidden=8, epochs=1, steps=1, batch=2, window=6, burn=2, crop=24, long_steps=1, prefix="stnan")
+    net, lm = S.STNet(8, 8, True), S.LongMemory(8 + S.N_OUT + S.N_RESID, 8)
+    with torch.no_grad():
+        next(net.parameters()).fill_(float("nan"))
+    ck_dir = paths.out_dir(p.cfg) / str(p.cfg.name) / "stnan_s0" / "checkpoints"
+    ck_dir.mkdir(parents=True, exist_ok=True)
+    torch.save({"model": net.state_dict(), "long": lm.state_dict()}, ck_dir / "stnan_s0_final.pt")
+    with pytest.raises(RuntimeError, match="non-finite"):
+        S.run_stnet(p, 0, cfg, ("val",), max_years=2)
+
+
 def test_end_to_end_tiny_run_trains_scores_evaluates_and_resumes(prepared, bench, tiny_cfg):
     p = prepared
     out = S.run_stnet(p, 0, tiny_cfg, ("val",), max_years=2)
