@@ -1,85 +1,59 @@
-# DataMend — Intelligent Real-Time Anomaly Detection & Sensor Health for AWS
+# DataMend
 
-**DataMend (v0.2.0 PRO)** is an intelligent real-time meteorological quality control, anomaly detection, fault classification, explainability, and sensor health monitoring platform for Automatic Weather Stations (AWS).
+**A rainfall time-series data validation platform.** Submit a rainfall series (an uploaded file or a live rain-gauge feed); the platform runs layered checks on every reading, returns a verdict for each one with the evidence behind it, and produces a run report. Rainfall is the only parameter.
 
----
+- **Explanations:** a rule-based baseline explains each flag from its evidence. An external AI narrator (MCP-based, built by the AI implementation team) can be connected behind the same interface. It is optional.
+- **Optional trained layer:** the model system in `ml-service/qc` scores rainfall on the IMD RF25 grid and can attach its scores through a score-provider seam.
 
-## 🌟 Key Capabilities
+**Honest status (2026-11-19).** The live gauge feed is built and tested; the rest of the platform (input contract, check catalogue, runs, reports, evidence, dashboard) is designed and **not yet built**. There are no real quality-control labels for India: every accuracy figure is on synthetic faults and is labelled that way. No trained model has run on real data inside the platform. See [shared-docs/DATAMEND_ARCHITECTURE.docx](shared-docs/DATAMEND_ARCHITECTURE.docx) for the full picture and [TODO.md](TODO.md) for the build slices.
 
-1. **Three Interchangeable Telemetry Feeds**:
-   - **🟡 Simulated AWS:** Continuous diurnal radiation physics & Magnus-Tetens thermodynamics with live anomaly injection.
-   - **🌐 Real External Weather Feed:** Open-Meteo REST API live surface observation ingestion with async polling and timeout backoff.
-   - **📟 Real Physical AWS Sensor:** ESP32 microcontroller firmware sampling a Bosch BME280 precision sensor over MQTT.
-2. **Canonical Telemetry Contract**: Normalizes $(T, P, RH)$ into a strict, validated schema preserving full source provenance and data lineage.
-3. **5-Tier Machine Learning Pipeline**:
-   - **Tier 1 (QC):** WMO physical bounds, rate-of-change, and frozen sensor checks.
-   - **Tier 2 (ML Point & Temporal):** Scikit-Learn `IsolationForest` + PyTorch 2-layer GRU Autoencoder.
-   - **Tier 3 (Multivariate):** Magnus-Tetens dew point consistency + Chi-Square Mahalanobis covariance distance.
-   - **Tier 4 (Fusion & Classifier):** Convex fusion matrix + 7-Class Fault Taxonomy Random Forest Classifier.
-   - **Tier 5 (Health & XAI):** Exponential Moving Average Sensor Health Index (SHI 0–100) + TreeSHAP feature attributions.
-4. **Interactive Operations Dashboard**: High-density React + Tailwind UI with live 1-click source selector, latency counters, and WebSocket streaming.
+## What is in the repo
 
----
+| Path | What |
+|---|---|
+| `backend/` | FastAPI backend. `backend/app/rainfall` is the live rain-gauge feed (Weather Union). The temperature/pressure/humidity pipeline is legacy and scheduled for removal. |
+| `frontend/` | React + Vite dashboard (Vercel config in `frontend/vercel.json`). A throwaway prototype of the new dashboard layout is in `frontend/src/prototype-validation/` (not for production). |
+| `ml-service/` | The model system (`ml-service/qc`, locked) and its training code. See `ml-service/README.md`. |
+| `shared-docs/` | Documents for the team: the architecture and the integration guide for the AI implementation team (Word files). |
+| `docs/` | Model specs (`qc-*.md`), the live-feed note, primary-source research (`docs/research`), the decision records (`docs/wayfinder`) and the seminar files. |
+| `CONTEXT.md` | The glossary of terms. |
 
-## 🚀 Quickstart Guide
+## Run it
 
-### 1. Backend Service
-```bash
-# Install Python dependencies
+Backend:
+
+```powershell
 pip install -r requirements.txt
-
-# Storage (default): local SQLite at ./skyguard.db — no database server needed.
-# Production opt-in: TimescaleDB via docker-compose.yml (set a real DATABASE_URL).
-
-# Run Automated Test Suites
-python -m pytest tests/test_data_sources.py tests/test_sanity.py -v
-
-# Run Performance & Latency Benchmark
-python -m scripts.benchmark_system
-
-# Launch FastAPI Backend Server
+copy .env.example .env     # set WEATHER_UNION_API_KEY and WEATHER_UNION_CITY to enable the live feed
 python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 2. Frontend Operational Dashboard
-```bash
+Open `http://localhost:8000/docs`. The live feed endpoints are under `/api/rainfall`; they return 503 until a key and a city are set.
+
+Frontend:
+
+```powershell
 cd frontend
-
-# Install Node modules
 npm install
-
-# Start Vite Development Server
-npm run dev
-
-# Build Production Bundle
+npm run dev      # http://localhost:5199
 npm run build
 ```
 
----
+Tests of the live feed (generated data and a mocked transport; no network, no API quota):
 
-## 📟 Physical AWS Hardware Setup (ESP32 + Bosch BME280)
+```powershell
+python -m pytest tests/test_rainfall_feed.py -q
+```
 
-1. **Hardware Connections**:
-   - `VIN / VCC` $\rightarrow$ `3.3V`
-   - `GND` $\rightarrow$ `GND`
-   - `SDA` $\rightarrow$ `GPIO 21`
-   - `SCL` $\rightarrow$ `GPIO 22`
-2. **Firmware Flashing**:
-   - Open `hardware/esp32/datamend_aws/datamend_aws.ino` in Arduino IDE.
-   - Copy `config.example.h` to `config.h` and configure Wi-Fi SSID and MQTT broker.
-   - Flash to DOIT ESP32 DevKit V1.
-3. **MQTT Topics**:
-   - Telemetry: `skyguard/aws/{station_id}/telemetry`
-   - Heartbeat: `skyguard/aws/{station_id}/heartbeat`
+## Deploy
 
----
+- **Frontend:** Vercel, branch `frontend`, root directory `frontend`, env `VITE_BACKEND_URL` set to the backend URL.
+- **Backend:** Render, Docker, branch `backend` (`render.yaml`). The free plan has 512 MB RAM, no persistent disk (SQLite resets on restart) and sleeps after 15 minutes idle. Set `CORS_ORIGINS` to the Vercel URL.
 
-## 📚 Technical Documentation
+## Documents
 
-- [Data Source Architecture](docs/DATA_SOURCE_ARCHITECTURE.md)
-- [External Weather Feed Setup (Open-Meteo)](docs/EXTERNAL_API_SETUP.md)
-- [Physical AWS & ESP32 Hardware Guide](docs/PHYSICAL_AWS_SETUP.md)
-- [MQTT Communication Protocol](docs/MQTT_PROTOCOL.md)
-- [Data Lineage & Provenance Specification](docs/DATA_LINEAGE.md)
-- [Automated Testing Report](docs/DATA_SOURCE_TESTING.md)
-- [Master System Verification Audit](docs/FINAL_SYSTEM_VERIFICATION.md)
+- [shared-docs/DATAMEND_ARCHITECTURE.docx](shared-docs/DATAMEND_ARCHITECTURE.docx): architecture of the platform and the model system.
+- [shared-docs/DATAMEND_AI_INTEGRATION_GUIDE.docx](shared-docs/DATAMEND_AI_INTEGRATION_GUIDE.docx): the contract for the AI narrator.
+- [docs/RAINFALL_LIVE_FEED.md](docs/RAINFALL_LIVE_FEED.md): the live gauge feed.
+- [docs/wayfinder/rainfall-validation-platform/MAP.md](docs/wayfinder/rainfall-validation-platform/MAP.md): the decisions behind the platform design.
+- [docs/qc-system-spec.md](docs/qc-system-spec.md), [docs/qc-evaluation-protocol.md](docs/qc-evaluation-protocol.md): the model system.
