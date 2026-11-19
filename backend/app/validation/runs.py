@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.config import settings as app_settings
 from backend.app.validation import checks
 from backend.app.validation.ingest import InputRejected, ParsedInput, UploadOptions, parse_upload
-from backend.app.validation.models import ValidationCheckHit, ValidationResult, ValidationRun
+from backend.app.validation.models import Explanation, ValidationCheckHit, ValidationResult, ValidationRun
 from backend.app.validation.records import DailyTotal, Reading
 
 RUN_CAP = 50
@@ -159,6 +159,7 @@ async def prune_runs(session: AsyncSession, cap: int = RUN_CAP) -> int:
 async def _delete_runs(session: AsyncSession, ids: List[int]) -> None:
     if not ids:
         return
+    await session.execute(delete(Explanation).where(Explanation.run_id.in_(ids)))
     await session.execute(delete(ValidationCheckHit).where(ValidationCheckHit.run_id.in_(ids)))
     await session.execute(delete(ValidationResult).where(ValidationResult.run_id.in_(ids)))
     await session.execute(delete(ValidationRun).where(ValidationRun.id.in_(ids)))

@@ -63,6 +63,29 @@ class ValidationResult(Base):
     issues: Mapped[List[Dict[str, str]]] = mapped_column(JSON, default=list)   # input-integrity issues from the parser
 
 
+class Explanation(Base):
+    """An explanation of a flag, stored SEPARATELY from the evidence and always marked generated (spec section 6).
+
+    generator is 'baseline-rules' (a template filled from the evidence) or 'mcp-narrator' (the AI team's service). A chat turn has a
+    question. Nothing here can change a verdict, score or evidence."""
+    __tablename__ = "explanations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(Integer, ForeignKey("validation_runs.id", ondelete="CASCADE"), index=True)
+    result_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)     # informational only: a live run replaces its result rows
+    row_ref: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)   # the stable link to a row (spec: run, row_ref, check)
+    check: Mapped[Optional[str]] = mapped_column(String(48), nullable=True)
+    kind: Mapped[str] = mapped_column(String(8), default="explain")          # explain | chat
+    question: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    text: Mapped[str] = mapped_column(Text)
+    contributions: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, default=list)
+    generator: Mapped[str] = mapped_column(String(24))
+    model_id: Mapped[str] = mapped_column(String(96))
+    confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)   # the narrator's own number, if it sent one
+    generated: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
 class ValidationCheckHit(Base):
     __tablename__ = "validation_check_hits"
 
