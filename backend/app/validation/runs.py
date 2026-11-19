@@ -21,6 +21,8 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.config import settings as app_settings
+from backend.app.places.grid import GridError
+from backend.app.places.lookup import locate
 from backend.app.validation import checks
 from backend.app.validation.ingest import InputRejected, ParsedInput, UploadOptions, parse_upload
 from backend.app.validation.models import Explanation, ValidationCheckHit, ValidationResult, ValidationRun
@@ -80,6 +82,17 @@ def _completeness(profile: str, recs: Sequence[Union[Reading, DailyTotal]], inte
     return {"value": round(min(1.0, len(stamps) / expected), 4), "n": len(stamps), "expected": expected, "basis": "derived"}
 
 
+def _place(recs: Sequence[Union[Reading, DailyTotal]]) -> Optional[Dict[str, Any]]:
+    """The station's RF25 cell and client region from its first coordinates (stateless lookup); None when it has no coordinates."""
+    for r in recs:
+        if r.latitude is not None and r.longitude is not None:
+            try:
+                return locate(r.latitude, r.longitude)
+            except GridError as e:
+                return {"latitude": r.latitude, "longitude": r.longitude, "cell": None, "reason": str(e)}
+    return None
+
+
 def build_report(profile: str, records: Sequence[Union[Reading, DailyTotal]], cat: checks.CatalogueResult,
                  interval_minutes: Optional[float]) -> Dict[str, Any]:
     n = len(records)
@@ -93,7 +106,8 @@ def build_report(profile: str, records: Sequence[Union[Reading, DailyTotal]], ca
         v = Counter(res.verdict for _, res in pairs)
         stations[sid] = {"rows": len(pairs), "verdicts": dict(v),
                          "checks": dict(Counter(h.check for _, res in pairs for h in res.hits)),
-                         "completeness": _completeness(profile, [rec for rec, _ in pairs], interval_minutes)}
+                         "completeness": _completeness(profile, [rec for rec, _ in pairs], interval_minutes),
+                         "place": _place([rec for rec, _ in pairs])}
 
     def share(k: str) -> Optional[float]:
         return round(verdicts.get(k, 0) / n, 4) if n else None

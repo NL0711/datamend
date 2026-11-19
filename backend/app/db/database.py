@@ -162,7 +162,6 @@ async def get_db_context() -> AsyncGenerator[AsyncSession, None]:
 async def init_db() -> None:
     """Creates all database tables, applies non-breaking schema migrations, and seeds default stations if empty."""
     from backend.app.db import models  # noqa: F401
-    from backend.app.locations import models as _location_models  # noqa: F401  (registers the Locations tables)
     from backend.app.validation import models as _validation_models  # noqa: F401  (registers the validation platform tables)
     from sqlalchemy import text
     

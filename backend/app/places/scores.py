@@ -1,11 +1,14 @@
-"""Where scores of the TRAINED models (ml-service/qc) plug in.
+"""Where scores of the TRAINED models (ml-service/qc) plug in: the ScoreProvider seam (spec section 12).
 
-v1 has no trained-model scores to show, so the answer is "not available" unless a file exists. Nothing here computes or
-invents a score. A score file is written by the ml-service pipeline (one per grid cell) and looks like:
+NOT IMPLEMENTED beyond this seam: no trained score exists today (no real RF25 run), so the answer is "not available" unless a file
+exists. Nothing here computes or invents a score. A score file is written by the ml-service pipeline, one per grid cell, for rainfall only:
 
     data/location_scores/<row>_<col>.json
-    {"model": "fusion (qc)", "version": "...", "label_tier": "synthetic faults",
-     "scores": {"2026-11-16": {"temperature": 1.2, "humidity": 0.8, "pressure": 0.4, "fused": 1.9, "flag": "none"}}}
+    {"model": "...", "version": "...", "label_tier": "synthetic",
+     "scores": {"2026-11-16": {"fault_scores": {"scale": 1.2, "zeroed": 0.1}, "fused": 1.9, "calibrated": false}}}
+
+A provider score would fill the `provider` block of the evidence payload (docs/contracts/evidence-v1.schema.json); it is never mixed with
+the rule score.
 """
 
 from __future__ import annotations
