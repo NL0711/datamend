@@ -54,8 +54,8 @@ python -m pytest tests -q
 
 ## Deploy
 
-- **Frontend:** Vercel, branch `frontend`, root directory `frontend`, env `VITE_BACKEND_URL` set to the backend URL.
-- **Backend:** Render, Docker (`Dockerfile.backend`). The free plan has 512 MB RAM, no persistent disk (SQLite resets on restart) and sleeps after 15 minutes idle. Set `CORS_ORIGINS` (a JSON list) to the Vercel URL. Measured, not on the Render image: the idle app uses about 79 MiB of working set on Windows with Python 3.11.
+- **Frontend:** Vercel, branch `frontend`, root directory `frontend`. The dashboard calls relative `/api/...` paths; `frontend/vercel.json` rewrites them to the Render backend (`https://datamend-backend.onrender.com`), so no environment variable or CORS setting is needed. If the backend URL changes, change the one `destination` in that file. A free Render backend that has been asleep can take about a minute to answer the first request.
+- **Backend:** Render, Docker (`Dockerfile.backend`). The free plan has 512 MB RAM, no persistent disk (SQLite resets on restart) and sleeps after 15 minutes idle. The browser reaches it through Vercel's rewrite (same origin), so `CORS_ORIGINS` only matters for direct calls. Measured, not on the Render image: the idle app uses about 79 MiB of working set on Windows with Python 3.11.
 
 ## Documents
 
