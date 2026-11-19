@@ -5,7 +5,7 @@
 - **Explanations:** a rule-based baseline explains each flag from its evidence. An external AI narrator (MCP-based, built by the AI implementation team) can be connected behind the same interface. It is optional.
 - **Optional trained layer:** the model system in `ml-service/qc` scores rainfall on the IMD RF25 grid and can attach its scores through a score-provider seam.
 
-**Honest status (2026-11-19).** The live gauge feed is built and tested; the rest of the platform (input contract, check catalogue, runs, reports, evidence, dashboard) is designed and **not yet built**. There are no real quality-control labels for India: every accuracy figure is on synthetic faults and is labelled that way. No trained model has run on real data inside the platform. See [shared-docs/DATAMEND_ARCHITECTURE.docx](shared-docs/DATAMEND_ARCHITECTURE.docx) for the full picture and [TODO.md](TODO.md) for the build slices.
+**Honest status (2026-11-19).** The live gauge feed is built and tested. On branch `rf`, live readings also have structured evidence, a template explainer, stored explanation snapshots, an optional AI narrator adapter, and a Rainfall reasoning view. The upload contract, shared check catalogue, validation runs, reports and full dashboard remain **PLANNED**. There are no real quality-control labels for India: every accuracy figure is on synthetic faults and is labelled that way. No trained model has run on real data inside the platform. See [shared-docs/DATAMEND_ARCHITECTURE.docx](shared-docs/DATAMEND_ARCHITECTURE.docx) for the design and [TODO.md](TODO.md) for current implementation status.
 
 ## What is in the repo
 
@@ -55,5 +55,6 @@ python -m pytest tests/test_rainfall_feed.py -q
 - [shared-docs/DATAMEND_ARCHITECTURE.docx](shared-docs/DATAMEND_ARCHITECTURE.docx): architecture of the platform and the model system.
 - [shared-docs/DATAMEND_AI_INTEGRATION_GUIDE.docx](shared-docs/DATAMEND_AI_INTEGRATION_GUIDE.docx): the contract for the AI narrator.
 - [docs/RAINFALL_LIVE_FEED.md](docs/RAINFALL_LIVE_FEED.md): the live gauge feed.
+- [docs/contracts/README.md](docs/contracts/README.md): implemented live evidence/explanation API, narrator settings and limitations (branch `rf`).
 - [docs/wayfinder/rainfall-validation-platform/MAP.md](docs/wayfinder/rainfall-validation-platform/MAP.md): the decisions behind the platform design.
 - [docs/qc-system-spec.md](docs/qc-system-spec.md), [docs/qc-evaluation-protocol.md](docs/qc-evaluation-protocol.md): the model system.

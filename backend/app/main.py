@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api.routes import router as api_router
 from backend.app.api.locations import router as locations_router
 from backend.app.api.rainfall import router as rainfall_router
+from backend.app.api.rainfall_explanations import router as rainfall_explanations_router
 from backend.app.api.websocket import router as ws_router
 from backend.app.config import settings
 from backend.app.db.database import close_db, init_db
@@ -82,6 +83,7 @@ app.add_middleware(
 app.include_router(api_router)
 app.include_router(locations_router)
 app.include_router(rainfall_router)
+app.include_router(rainfall_explanations_router)
 app.include_router(ws_router)
 
 

@@ -25,6 +25,7 @@ import { DataExplorerView } from './components/DataExplorerView';
 import { LocationsView } from './components/LocationsView';
 import { AnomalyInjectorUI } from './components/AnomalyInjectorUI';
 import { ExplainabilityViewer } from './components/ExplainabilityViewer';
+import { RainfallReasoningView } from './components/RainfallReasoningView';
 import { SettingsCenter } from './settings/SettingsCenter';
 import {
   SystemConfigurationProvider,
@@ -42,7 +43,7 @@ function AppContent() {
   } = useSystemConfiguration();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'live' | 'alerts' | 'health' | 'events' | 'explorer' | 'injector' | 'explainability' | 'locations'
+    'overview' | 'live' | 'alerts' | 'health' | 'events' | 'explorer' | 'injector' | 'explainability' | 'locations' | 'rainfall'
   >(preferences.defaultView || 'overview');
 
   const [selectedIncidentId, setSelectedIncidentId] = useState<number | null>(null);
@@ -141,9 +142,11 @@ function AppContent() {
     { id: 'injector', label: 'Anomaly Lab', icon: Zap, short: '7' },
     { id: 'explainability', label: 'XAI Reasoner', icon: Layers, short: '8' },
     { id: 'locations', label: 'Locations', icon: MapPin, short: '9' },
+    { id: 'rainfall', label: 'Rainfall reasoning', icon: Layers, short: '' },
   ];
 
   const getSourceBadge = () => {
+    if (activeTab === 'rainfall') return <span className="text-slate-600">Weather Union · received times</span>;
     switch (activeSource) {
       case 'EXTERNAL_API':
         return (
@@ -218,7 +221,7 @@ function AppContent() {
               </span>
             </div>
             <p className="text-[11px] text-slate-500 hidden sm:block">
-              WMO-No. 8 Automatic Weather Station Quality Control System
+              {activeTab === 'rainfall' ? 'Rainfall validation and decision evidence' : 'WMO-No. 8 Automatic Weather Station Quality Control System'}
             </p>
           </div>
         </div>
@@ -287,7 +290,7 @@ function AppContent() {
           </nav>
 
           {/* Rail Footer Information */}
-          <div className="p-3 border-t border-[#D3DCE7] hidden sm:block text-[11px] font-mono text-slate-500 space-y-1 bg-[#F4F6FA]">
+          {activeTab === 'rainfall' ? <div className="p-3 border-t border-slate-300 text-xs text-slate-600 hidden sm:block">Rules + neighbour checks. No trained model connected.</div> : <div className="p-3 border-t border-[#D3DCE7] hidden sm:block text-[11px] font-mono text-slate-500 space-y-1 bg-[#F4F6FA]">
             <div className="flex items-center justify-between text-slate-600">
               <span>Pipeline Latency:</span>
               <span className="font-bold text-emerald-600">&lt; 2.0 ms</span>
@@ -296,7 +299,7 @@ function AppContent() {
               <span>Inference Engine:</span>
               <span className="text-sky-700">PyTorch GRU</span>
             </div>
-          </div>
+          </div>}
         </aside>
 
         {/* Operational Workspace Deck */}
@@ -367,6 +370,7 @@ function AppContent() {
             />
           )}
           {activeTab === 'locations' && <LocationsView />}
+          {activeTab === 'rainfall' && <RainfallReasoningView />}
 
           {activeTab === 'explainability' && (
             <ExplainabilityViewer
@@ -381,7 +385,7 @@ function AppContent() {
       <SettingsCenter />
 
       {/* Mission Control Status Bar Footer */}
-      <footer className="h-9 border-t border-[#D3DCE7] bg-[#F4F6FA] px-4 sm:px-6 text-xs text-slate-500 flex items-center justify-between font-mono z-40 select-none">
+      {activeTab === 'rainfall' ? <footer className="border-t border-slate-300 bg-slate-50 p-3 text-xs text-slate-600">Rainfall decisions use uncalibrated rules. Generated explanations are separate from evidence.</footer> : <footer className="h-9 border-t border-[#D3DCE7] bg-[#F4F6FA] px-4 sm:px-6 text-xs text-slate-500 flex items-center justify-between font-mono z-40 select-none">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5 text-slate-600 text-[11px]">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> WMO-No. 8 & CIMO Compliant QC Engine
@@ -395,7 +399,7 @@ function AppContent() {
         <div className="text-[11px] text-slate-600">
           REST API <span className="text-sky-600 font-bold">:8899</span> | WS <span className="text-sky-600 font-bold">/ws/live</span>
         </div>
-      </footer>
+      </footer>}
     </div>
   );
 }

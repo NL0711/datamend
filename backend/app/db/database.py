@@ -163,6 +163,7 @@ async def init_db() -> None:
     """Creates all database tables, applies non-breaking schema migrations, and seeds default stations if empty."""
     from backend.app.db import models  # noqa: F401
     from backend.app.locations import models as _location_models  # noqa: F401  (registers the Locations tables)
+    from backend.app.rainfall import explanation_store as _explanations  # noqa: F401
     from sqlalchemy import text
     
     async with engine.begin() as conn:

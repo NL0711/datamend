@@ -1,0 +1,361 @@
+{
+  "$defs": {
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "evidence-v1",
+          "default": "evidence-v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "row_ref": {
+          "title": "Row Ref",
+          "type": "string"
+        },
+        "station_id": {
+          "title": "Station Id",
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "OK",
+            "SUSPECT",
+            "UNCERTAIN",
+            "NO_DATA"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        },
+        "rule_score": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Rule Score",
+          "type": "number"
+        },
+        "rule_score_basis": {
+          "const": "derived",
+          "default": "derived",
+          "title": "Rule Score Basis",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "check": {
+          "title": "Check",
+          "type": "string"
+        },
+        "layer": {
+          "enum": [
+            "input",
+            "rule",
+            "neighbour"
+          ],
+          "title": "Layer",
+          "type": "string"
+        },
+        "profile": {
+          "const": "reading",
+          "default": "reading",
+          "title": "Profile",
+          "type": "string"
+        },
+        "observed": {
+          "$ref": "#/$defs/Quantity"
+        },
+        "threshold": {
+          "$ref": "#/$defs/Threshold"
+        },
+        "weight": {
+          "$ref": "#/$defs/Quantity"
+        },
+        "window": {
+          "items": {
+            "$ref": "#/$defs/WindowRow"
+          },
+          "title": "Window",
+          "type": "array"
+        },
+        "neighbours": {
+          "items": {
+            "$ref": "#/$defs/Neighbour"
+          },
+          "title": "Neighbours",
+          "type": "array"
+        },
+        "time_basis": {
+          "const": "received",
+          "default": "received",
+          "title": "Time Basis",
+          "type": "string"
+        },
+        "accumulation_mode": {
+          "title": "Accumulation Mode",
+          "type": "string"
+        },
+        "units_confirmed": {
+          "const": false,
+          "default": false,
+          "title": "Units Confirmed",
+          "type": "boolean"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id",
+        "row_ref",
+        "station_id",
+        "verdict",
+        "rule_score",
+        "severity",
+        "check",
+        "layer",
+        "observed",
+        "threshold",
+        "weight",
+        "window",
+        "neighbours",
+        "accumulation_mode",
+        "reason"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "Neighbour": {
+      "additionalProperties": false,
+      "properties": {
+        "station_id": {
+          "title": "Station Id",
+          "type": "string"
+        },
+        "distance": {
+          "$ref": "#/$defs/Quantity"
+        },
+        "wet": {
+          "title": "Wet",
+          "type": "boolean"
+        },
+        "reading": {
+          "$ref": "#/$defs/WindowRow"
+        },
+        "previous_reading": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WindowRow"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "station_id",
+        "distance",
+        "wet",
+        "reading"
+      ],
+      "title": "Neighbour",
+      "type": "object"
+    },
+    "Quantity": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "basis": {
+          "enum": [
+            "measured",
+            "assumed",
+            "derived"
+          ],
+          "title": "Basis",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "basis"
+      ],
+      "title": "Quantity",
+      "type": "object"
+    },
+    "Threshold": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "why": {
+          "default": "Design choice, uncalibrated; not a learned probability.",
+          "title": "Why",
+          "type": "string"
+        },
+        "parameters": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Quantity"
+          },
+          "title": "Parameters",
+          "type": "object"
+        }
+      },
+      "required": [
+        "description",
+        "parameters"
+      ],
+      "title": "Threshold",
+      "type": "object"
+    },
+    "WindowRow": {
+      "additionalProperties": false,
+      "properties": {
+        "row_ref": {
+          "title": "Row Ref",
+          "type": "string"
+        },
+        "received_at": {
+          "title": "Received At",
+          "type": "string"
+        },
+        "intensity": {
+          "$ref": "#/$defs/Quantity"
+        },
+        "accumulation": {
+          "$ref": "#/$defs/Quantity"
+        }
+      },
+      "required": [
+        "row_ref",
+        "received_at",
+        "intensity",
+        "accumulation"
+      ],
+      "title": "WindowRow",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "evidence-v1",
+      "default": "evidence-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "row_ref": {
+      "title": "Row Ref",
+      "type": "string"
+    },
+    "station_id": {
+      "title": "Station Id",
+      "type": "string"
+    },
+    "verdict": {
+      "enum": [
+        "OK",
+        "SUSPECT",
+        "UNCERTAIN",
+        "NO_DATA"
+      ],
+      "title": "Verdict",
+      "type": "string"
+    },
+    "rule_score": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Rule Score",
+      "type": "number"
+    },
+    "rule_score_basis": {
+      "const": "derived",
+      "default": "derived",
+      "title": "Rule Score Basis",
+      "type": "string"
+    },
+    "severity": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "checks": {
+      "items": {
+        "$ref": "#/$defs/Evidence"
+      },
+      "title": "Checks",
+      "type": "array"
+    },
+    "checks_run": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Checks Run",
+      "type": "array"
+    },
+    "not_run": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Not Run",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "run_id",
+    "row_ref",
+    "station_id",
+    "verdict",
+    "rule_score",
+    "severity",
+    "checks",
+    "checks_run",
+    "not_run",
+    "limitations"
+  ],
+  "title": "DecisionEvidence",
+  "type": "object"
+}

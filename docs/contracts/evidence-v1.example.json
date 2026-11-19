@@ -1,0 +1,295 @@
+{
+  "label": "SYNTHETIC generated readings; not live observations",
+  "evidence": {
+    "schema_version": "evidence-v1",
+    "run_id": "live:2026-11-20",
+    "row_ref": "A:2026-11-19T04:15:00+00:00",
+    "station_id": "A",
+    "verdict": "SUSPECT",
+    "rule_score": 0.79,
+    "rule_score_basis": "derived",
+    "severity": "high",
+    "checks": [
+      {
+        "schema_version": "evidence-v1",
+        "run_id": "live:2026-11-20",
+        "row_ref": "A:2026-11-19T04:15:00+00:00",
+        "station_id": "A",
+        "verdict": "SUSPECT",
+        "rule_score": 0.79,
+        "rule_score_basis": "derived",
+        "severity": "high",
+        "check": "ACCUMULATION_JUMP",
+        "layer": "rule",
+        "profile": "reading",
+        "observed": {
+          "value": 80,
+          "unit": "mm",
+          "basis": "derived"
+        },
+        "threshold": {
+          "description": "Counter increase exceeds the per-reading limit.",
+          "why": "Design choice, uncalibrated; not a learned probability.",
+          "parameters": {
+            "jump_limit": {
+              "value": 50,
+              "unit": "mm",
+              "basis": "assumed"
+            }
+          }
+        },
+        "weight": {
+          "value": 0.7,
+          "unit": "score weight",
+          "basis": "assumed"
+        },
+        "window": [
+          {
+            "row_ref": "A:2026-11-19T04:00:00+00:00",
+            "received_at": "2026-11-19T04:00:00+00:00",
+            "intensity": {
+              "value": 0,
+              "unit": "mm/h",
+              "basis": "assumed"
+            },
+            "accumulation": {
+              "value": 0,
+              "unit": "mm",
+              "basis": "assumed"
+            }
+          },
+          {
+            "row_ref": "A:2026-11-19T04:15:00+00:00",
+            "received_at": "2026-11-19T04:15:00+00:00",
+            "intensity": {
+              "value": 0,
+              "unit": "mm/h",
+              "basis": "assumed"
+            },
+            "accumulation": {
+              "value": 80,
+              "unit": "mm",
+              "basis": "assumed"
+            }
+          }
+        ],
+        "neighbours": [],
+        "time_basis": "received",
+        "accumulation_mode": "cumulative",
+        "units_confirmed": false,
+        "reason": "+80.0 between consecutive readings (limit 50.0)"
+      },
+      {
+        "schema_version": "evidence-v1",
+        "run_id": "live:2026-11-20",
+        "row_ref": "A:2026-11-19T04:15:00+00:00",
+        "station_id": "A",
+        "verdict": "SUSPECT",
+        "rule_score": 0.79,
+        "rule_score_basis": "derived",
+        "severity": "high",
+        "check": "ISOLATED_WET",
+        "layer": "neighbour",
+        "profile": "reading",
+        "observed": {
+          "value": 1,
+          "unit": "fraction",
+          "basis": "derived"
+        },
+        "threshold": {
+          "description": "Disagreement with nearby gauges alone gives UNCERTAIN, not a diagnosed fault.",
+          "why": "Design choice, uncalibrated; not a learned probability.",
+          "parameters": {
+            "minimum_neighbours": {
+              "value": 3,
+              "unit": "stations",
+              "basis": "assumed"
+            },
+            "agreement": {
+              "value": 0.75,
+              "unit": "fraction",
+              "basis": "assumed"
+            },
+            "radius": {
+              "value": 10,
+              "unit": "km",
+              "basis": "assumed"
+            }
+          }
+        },
+        "weight": {
+          "value": 0.3,
+          "unit": "score weight",
+          "basis": "assumed"
+        },
+        "window": [
+          {
+            "row_ref": "A:2026-11-19T04:00:00+00:00",
+            "received_at": "2026-11-19T04:00:00+00:00",
+            "intensity": {
+              "value": 0,
+              "unit": "mm/h",
+              "basis": "assumed"
+            },
+            "accumulation": {
+              "value": 0,
+              "unit": "mm",
+              "basis": "assumed"
+            }
+          },
+          {
+            "row_ref": "A:2026-11-19T04:15:00+00:00",
+            "received_at": "2026-11-19T04:15:00+00:00",
+            "intensity": {
+              "value": 0,
+              "unit": "mm/h",
+              "basis": "assumed"
+            },
+            "accumulation": {
+              "value": 80,
+              "unit": "mm",
+              "basis": "assumed"
+            }
+          }
+        ],
+        "neighbours": [
+          {
+            "station_id": "B",
+            "distance": {
+              "value": 0.11119508023366881,
+              "unit": "km",
+              "basis": "derived"
+            },
+            "wet": false,
+            "reading": {
+              "row_ref": "B:2026-11-19T04:15:00+00:00",
+              "received_at": "2026-11-19T04:15:00+00:00",
+              "intensity": {
+                "value": 0,
+                "unit": "mm/h",
+                "basis": "assumed"
+              },
+              "accumulation": {
+                "value": 0,
+                "unit": "mm",
+                "basis": "assumed"
+              }
+            },
+            "previous_reading": {
+              "row_ref": "B:2026-11-19T04:00:00+00:00",
+              "received_at": "2026-11-19T04:00:00+00:00",
+              "intensity": {
+                "value": 0,
+                "unit": "mm/h",
+                "basis": "assumed"
+              },
+              "accumulation": {
+                "value": 0,
+                "unit": "mm",
+                "basis": "assumed"
+              }
+            }
+          },
+          {
+            "station_id": "C",
+            "distance": {
+              "value": 0.22239016046694257,
+              "unit": "km",
+              "basis": "derived"
+            },
+            "wet": false,
+            "reading": {
+              "row_ref": "C:2026-11-19T04:15:00+00:00",
+              "received_at": "2026-11-19T04:15:00+00:00",
+              "intensity": {
+                "value": 0,
+                "unit": "mm/h",
+                "basis": "assumed"
+              },
+              "accumulation": {
+                "value": 0,
+                "unit": "mm",
+                "basis": "assumed"
+              }
+            },
+            "previous_reading": {
+              "row_ref": "C:2026-11-19T04:00:00+00:00",
+              "received_at": "2026-11-19T04:00:00+00:00",
+              "intensity": {
+                "value": 0,
+                "unit": "mm/h",
+                "basis": "assumed"
+              },
+              "accumulation": {
+                "value": 0,
+                "unit": "mm",
+                "basis": "assumed"
+              }
+            }
+          },
+          {
+            "station_id": "D",
+            "distance": {
+              "value": 0.33358524070061135,
+              "unit": "km",
+              "basis": "derived"
+            },
+            "wet": false,
+            "reading": {
+              "row_ref": "D:2026-11-19T04:15:00+00:00",
+              "received_at": "2026-11-19T04:15:00+00:00",
+              "intensity": {
+                "value": 0,
+                "unit": "mm/h",
+                "basis": "assumed"
+              },
+              "accumulation": {
+                "value": 0,
+                "unit": "mm",
+                "basis": "assumed"
+              }
+            },
+            "previous_reading": {
+              "row_ref": "D:2026-11-19T04:00:00+00:00",
+              "received_at": "2026-11-19T04:00:00+00:00",
+              "intensity": {
+                "value": 0,
+                "unit": "mm/h",
+                "basis": "assumed"
+              },
+              "accumulation": {
+                "value": 0,
+                "unit": "mm",
+                "basis": "assumed"
+              }
+            }
+          }
+        ],
+        "time_basis": "received",
+        "accumulation_mode": "cumulative",
+        "units_confirmed": false,
+        "reason": "wet here, 3 of 3 neighbours dry"
+      }
+    ],
+    "checks_run": [
+      "NO_RAIN_FIELDS",
+      "NEGATIVE_VALUE",
+      "INTENSITY_IMPLAUSIBLE",
+      "ACCUMULATION_JUMP",
+      "COUNTER_RESET",
+      "NEIGHBOUR_CHECK"
+    ],
+    "not_run": [
+      "FROZEN_INTENSITY: Needs six recent usable intensity readings.",
+      "INTENSITY_ACCUMULATION_MISMATCH: Needs cumulative mode and four usable paired readings.",
+      "Trained grid models: no score provider connected.",
+      "Input-integrity catalogue: not implemented for live readings yet."
+    ],
+    "limitations": [
+      "Rainfall units and accumulation period are unconfirmed.",
+      "Times are received times, not observation times.",
+      "The rule score is uncalibrated and is not a probability.",
+      "No real Indian fault labels support an accuracy claim."
+    ]
+  }
+}

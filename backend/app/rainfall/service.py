@@ -19,7 +19,7 @@ from backend.app.rainfall.catalog import Station, load_catalog, neighbours as ca
 from backend.app.rainfall.daily import DailyAccumulator, rain_day
 from backend.app.rainfall.scorer import score_reading
 from backend.app.rainfall.weather_union import BudgetExhausted, CallBudget, RainObservation, WeatherUnionClient
-from backend.app.spatial.consensus import haversine_distance_km
+from backend.app.rainfall.geo import haversine_distance_km
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +119,16 @@ class RainfallService:
         await self.client.aclose()
 
     # -- reporting -------------------------------------------------------------------------------------------------
+    def decision_evidence(self, sid: str):
+        from backend.app.rainfall.evidence import build_evidence
+        hist = list(self.history[sid])
+        if not hist:
+            raise ValueError("No reading has been received for this station")
+        st = self.stations[sid]
+        nb = {n.locality_id: list(self.history[n.locality_id])
+              for n in catalog_neighbours(st, self.buddy_radius_km, self._catalog)}
+        return build_evidence(st, hist, nb, self.stations, score_reading(hist, nb, self.mode), self.mode, self.buddy_radius_km)
+
     def station_report(self, sid: str, now: Optional[datetime] = None) -> Dict[str, Any]:
         st = self.stations[sid]
         hist = list(self.history[sid])

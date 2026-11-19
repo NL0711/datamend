@@ -75,6 +75,11 @@ class Settings(BaseSettings):
     WEATHER_UNION_ACCUMULATION_MODE: str = "cumulative"   # cumulative | per_reading; the provider does not document it
     WEATHER_UNION_RAW_LOG_PATH: str = "data/weather_union_raw.jsonl"
 
+    # Optional external narrator. The baseline works with all three unset.
+    NARRATOR_URL: str = ""
+    NARRATOR_TOKEN: str = ""
+    EVIDENCE_API_TOKEN: str = ""
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors(cls, value):

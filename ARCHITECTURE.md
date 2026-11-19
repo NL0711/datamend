@@ -22,6 +22,7 @@ upload or live feed
 | Input contract, check catalogue merge, runs and reports, evidence and explainer, dashboard | PLANNED (slices in TODO.md) |
 | Place lookup (RF25 cell, land, client region) and score-provider seam | PLANNED (replaces Locations) |
 | AI narrator | NOT IMPLEMENTED here (external deliverable) |
+| Live-feed explanation adapter (`rf`) | IMPLEMENTED: evidence, template, explanation snapshots, narrator HTTP adapter, Rainfall reasoning view; see `docs/contracts/README.md`. Full run/upload integration remains PLANNED. |
 | Temperature, pressure and humidity pipeline, Locations weather code | LEGACY, to be removed |
 
 Rules that do not change: raw data is never overwritten; every assumed number is tagged `assumed`; synthetic results are labelled synthetic; nothing unbuilt is presented as built.
