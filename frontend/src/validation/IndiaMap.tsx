@@ -9,7 +9,7 @@ import type { MapLayers } from './types';
 
 export interface MapPoint {
   key: string; kind: 'gauge' | 'imd' | 'upload'; id: string; label: string; lat: number; lon: number; state: CycleState;
-  synthetic?: boolean;                       // every checked row of this station is synthetic: drawn with a violet dashed ring
+  synthetic?: boolean;                       // every checked row of this station is synthetic: drawn with a dashed slate ring
 }
 export interface MapShow { regions: boolean; gauges: boolean; imd: boolean; dataOnly: boolean }
 
@@ -72,11 +72,13 @@ export function IndiaMap({ layers, points, show, selected, onSelect, height = 56
     const ctx = c.getContext('2d');
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = '#F1F5F9';
+    const sea = ctx.createLinearGradient(0, 0, 0, size.h);          // a grey-blue sea, a little lighter toward the top
+    sea.addColorStop(0, '#E3EEF6'); sea.addColorStop(1, '#D3E3EF');
+    ctx.fillStyle = sea;
     ctx.fillRect(0, 0, size.w, size.h);
 
     // graticule every 5 degrees
-    ctx.strokeStyle = '#D9E2EE'; ctx.lineWidth = 1; ctx.fillStyle = '#94A3B8'; ctx.font = '10px monospace';
+    ctx.strokeStyle = '#C4D8E6'; ctx.lineWidth = 1; ctx.fillStyle = '#7C93A6'; ctx.font = '10px monospace';
     for (let lat = 5; lat <= 40; lat += 5) {
       const y = project(lat, view.cx, view, size.w, size.h).y;
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(size.w, y); ctx.stroke(); ctx.fillText(`${lat}°N`, 4, y - 2);
@@ -96,7 +98,7 @@ export function IndiaMap({ layers, points, show, selected, onSelect, height = 56
           if (d <= 0) continue;
           const p = project(lat0 + step * r + step / 2, lon0 + step * col - step / 2, view, size.w, size.h);
           if (p.x > size.w || p.y > size.h || p.x + px < 0 || p.y + px < 0) continue;
-          ctx.fillStyle = show.regions ? regionColor(d) : '#E2E8F0';
+          ctx.fillStyle = show.regions ? regionColor(d) : '#E9EFF4';
           ctx.fillRect(Math.floor(p.x), Math.floor(p.y), Math.ceil(px) + 1, Math.ceil(px) + 1);
         }
       });
@@ -108,8 +110,11 @@ export function IndiaMap({ layers, points, show, selected, onSelect, height = 56
       if (x < -10 || y < -10 || x > size.w + 10 || y > size.h + 10) return;
       ctx.lineWidth = 1.2; ctx.strokeStyle = '#FFFFFF';
       if (p.kind === 'imd') {
-        ctx.fillStyle = '#111827';
-        ctx.beginPath(); ctx.moveTo(x, y - 5); ctx.lineTo(x + 4.5, y + 3.5); ctx.lineTo(x - 4.5, y + 3.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+        // an IMD station is a triangle: dark navy until it has rows, then coloured by its state and drawn larger
+        const hasData = p.state !== 'unchecked';
+        const s = hasData ? 6.5 : 4.5;
+        ctx.fillStyle = hasData ? CYCLE_COLOR[p.state] : '#1E3A52';
+        ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s * 0.9, y + s * 0.7); ctx.lineTo(x - s * 0.9, y + s * 0.7); ctx.closePath(); ctx.fill(); ctx.stroke();
       } else if (p.kind === 'upload') {
         ctx.fillStyle = CYCLE_COLOR[p.state];
         ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 6); ctx.lineTo(x - 6, y); ctx.closePath(); ctx.fill(); ctx.stroke();
@@ -119,11 +124,12 @@ export function IndiaMap({ layers, points, show, selected, onSelect, height = 56
         ctx.beginPath(); ctx.arc(x, y, hasData ? 5.5 : 3, 0, Math.PI * 2); ctx.fill(); if (hasData) ctx.stroke();
       }
     };
-    visible.filter((p) => p.kind === 'imd').forEach(draw);
-    visible.filter((p) => p.kind === 'gauge' && p.state === 'unchecked').forEach(draw);
-    visible.filter((p) => p.kind !== 'imd' && !(p.kind === 'gauge' && p.state === 'unchecked')).forEach(draw);
-    // a violet dashed ring marks a station whose checked rows are all synthetic, so it is never read as a real gauge status
-    ctx.strokeStyle = '#7C3AED'; ctx.lineWidth = 1.6; ctx.setLineDash([3, 2]);
+    const quiet = (p: MapPoint) => p.state === 'unchecked' && p.kind !== 'upload';        // stations with no rows yet sit underneath
+    visible.filter((p) => p.kind === 'imd' && quiet(p)).forEach(draw);
+    visible.filter((p) => p.kind === 'gauge' && quiet(p)).forEach(draw);
+    visible.filter((p) => !quiet(p)).forEach(draw);
+    // a dashed slate ring marks a station whose checked rows are all synthetic (dashed = not a measurement), so it is never read as a real status
+    ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.6; ctx.setLineDash([3, 2]);
     for (const p of visible) {
       if (!p.synthetic || p.state === 'unchecked') continue;
       const { x, y } = at(p);
@@ -147,7 +153,7 @@ export function IndiaMap({ layers, points, show, selected, onSelect, height = 56
     if (!view) return null;
     const screen = visible.map((p) => ({ ...project(p.lat, p.lon, view, size.w, size.h), p }));
     // markers with data win over the small grey gauges and the IMD triangles when they overlap
-    const withData = screen.filter((s) => s.p.kind === 'upload' || (s.p.kind === 'gauge' && s.p.state !== 'unchecked'));
+    const withData = screen.filter((s) => s.p.kind === 'upload' || s.p.state !== 'unchecked');
     return (nearestPoint(withData, x, y, HIT_PX) ?? nearestPoint(screen, x, y, HIT_PX))?.p ?? null;
   };
 

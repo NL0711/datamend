@@ -35,7 +35,7 @@ export function LabView({ onOpenRun }: { onOpenRun: (id: number) => void }) {
   return (
     <div className="space-y-3 max-w-4xl">
       <Panel className="p-4 space-y-3">
-        <div className="flex items-center gap-2"><FlaskConical className="w-4 h-4 text-violet-600" /><h2 className="text-sm font-bold text-slate-900">Anomaly Lab</h2><SyntheticBadge /></div>
+        <div className="flex items-center gap-2"><FlaskConical className="w-4 h-4 text-teal-700" /><h2 className="text-sm font-bold text-slate-900">Anomaly Lab</h2><SyntheticBadge /></div>
         <p className="text-[11px] text-slate-600">Builds an invented rainfall file (stations about 1 km apart, a shared shower) and injects the faults you choose, one per station. The file is validated by the same code as any upload and stored as a run labelled SYNTHETIC. The same seed always gives the same file.</p>
         <div className="grid md:grid-cols-4 gap-3">
           <label className="text-[11px] font-bold text-slate-700">Profile<select value={profile} onChange={(e) => choose(e.target.value as Profile)} className={field} aria-label="profile"><option value="reading">reading (15-minute)</option><option value="daily">daily</option></select></label>
@@ -49,7 +49,7 @@ export function LabView({ onOpenRun }: { onOpenRun: (id: number) => void }) {
             <label key={f} className="text-[11px] flex items-center gap-1"><input type="checkbox" checked={faults.includes(f)} onChange={() => toggle(f)} />
               <span className="font-mono">{f}</span><span className="text-slate-500">→ {opts.expected_check[f]}</span></label>))}</div></fieldset>
         {error && <Notice tone="error">{error}</Notice>}
-        <button disabled={busy || faults.length === 0} onClick={() => void run()} className="px-3 py-1.5 rounded bg-violet-600 text-white text-xs font-bold disabled:opacity-40">{busy ? 'Generating…' : 'Generate and validate'}</button>
+        <button disabled={busy || faults.length === 0} onClick={() => void run()} className="px-3 py-1.5 rounded bg-teal-700 text-white text-xs font-bold disabled:opacity-40">{busy ? 'Generating…' : 'Generate and validate'}</button>
       </Panel>
 
       {result && (

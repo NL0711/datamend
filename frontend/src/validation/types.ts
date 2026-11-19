@@ -16,7 +16,7 @@ export interface Headline {
 export interface NotRun { check: string; reason: string; station_id?: string }
 
 export interface RunSummary {
-  id: number; created_at: string | null; profile: Profile; source: 'upload' | 'live'; label: string | null;
+  id: number; created_at: string | null; profile: Profile; source: 'upload' | 'live' | 'replay'; label: string | null;
   status: 'completed' | 'failed' | 'open'; error: string | null; n_rows: number; n_stations: number;
   duration_ms: number | null; synthetic: boolean; rain_day: string | null; storage: string; headline: Headline | null;
 }
@@ -55,7 +55,7 @@ export interface Tagged<T> { value: T; basis: Basis }
 
 export interface Evidence {
   schema: 'evidence-v1';
-  run: { id: number; profile: Profile; source: 'upload' | 'live'; synthetic: boolean };
+  run: { id: number; profile: Profile; source: 'upload' | 'live' | 'replay'; synthetic: boolean };
   row: { id: number; row_ref: string; station_id: string; time: string | null; verdict: Verdict; rule_score: number; severity: Severity };
   check: string; layer: string; kind: 'fault' | 'uncertain' | 'info'; weight?: number; profile: string;
   time_basis: 'observed' | 'received'; reason: string;
@@ -158,11 +158,19 @@ export interface MapLayers {
 /** One station's check -> flag -> audit cycle, from the stored runs and reviews. */
 export interface StationCycle {
   station_id: string; place: string | null; city: string | null; latitude: number | null; longitude: number | null;
-  position_source: 'catalogue' | 'upload' | null; nearest_imd: NearestImd | null;
-  checked: number; runs: number; synthetic_rows: number; last_run_at: string | null; latest_run_id: number | null;
+  position_source: 'catalogue' | 'upload' | 'imd' | null; nearest_imd: NearestImd | null;
+  checked: number; runs: number; synthetic_rows: number; replay_rows: number; last_run_at: string | null; latest_run_id: number | null;
   flagged: number; suspect: number; uncertain: number; no_data: number;
   audited: number; unaudited: number; decisions: Record<Decision, number>; top_checks: Record<string, number>;
 }
+/** The NOAA ISD India replay: real station rainfall to Aug 2025, shown as a REPLAY, never as live. */
+export interface ReplayStatus {
+  state: 'idle' | 'running' | 'done' | 'failed'; started_at: string | null; finished_at: string | null; run_id: number | null;
+  stations: { id: string; name: string | null; ok: boolean; totals: number; error: string | null }[]; stations_ok: number;
+  message: string | null; default_stations: number; year: number; note: string;
+  stored_run_id: number | null; stored_run_label: string | null; on_start: boolean;
+}
+
 export interface StationCycleResponse {
   storage: string; count: number; shown: number; truncated: boolean; positioned: number; positions_truncated: boolean;
   truncated_reviews: boolean; stations: StationCycle[]; note: string;

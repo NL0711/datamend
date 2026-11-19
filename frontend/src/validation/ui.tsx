@@ -11,8 +11,11 @@ const SEVERITY_STYLE = { high: 'bg-red-600 text-white', medium: 'bg-amber-500 te
 const BASIS_STYLE: Record<Basis, string> = { measured: 'text-emerald-700', assumed: 'text-amber-700', derived: 'text-sky-700' };
 
 export const Panel = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
-  <div className={`bg-white border border-[#D3DCE7] rounded-lg ${className}`}>{children}</div>
+  <div className={`rain-panel ${className}`}>{children}</div>
 );
+
+/** Anything that is not a measurement (synthetic data, AI-written text) is drawn dashed, so it is never mistaken for one. */
+export const NOT_MEASURED = 'border border-dashed border-slate-400 bg-slate-50 text-slate-700';
 
 export const VerdictBadge = ({ v }: { v: Verdict }) => (
   <span className={`px-2 py-0.5 rounded border text-[10px] font-mono font-bold ${VERDICT_STYLE[v]}`}>{v}</span>
@@ -32,7 +35,11 @@ export const Notice = ({ tone, children }: { tone: 'info' | 'warn' | 'error'; ch
 };
 
 export const SyntheticBadge = () => (
-  <span className="px-1.5 py-0.5 rounded border border-violet-300 bg-violet-50 text-violet-700 text-[10px] font-mono font-bold">SYNTHETIC</span>
+  <span className={`px-1.5 py-0.5 rounded ${NOT_MEASURED} text-[10px] font-mono font-bold`}>SYNTHETIC</span>
+);
+
+export const ReplayBadge = () => (
+  <span className="px-1.5 py-0.5 rounded border border-sky-300 bg-sky-50 text-sky-800 text-[10px] font-mono font-bold" title="Real NOAA ISD observations replayed from the past, not live">REPLAY</span>
 );
 
 export function formatError(e: unknown): string {

@@ -49,6 +49,7 @@ def position_from_row(row: Dict[str, Any]) -> Optional[Tuple[float, float]]:
 async def station_cycle(session: AsyncSession) -> Dict[str, Any]:
     from backend.app.rainfall.catalog import load_catalog
     catalogue = load_catalog()
+    imd_by_id = {s["id"]: s for s in imd.stations()}          # ISD ids (USAF-WBAN): the NOAA replay's station ids are these
 
     live = ValidationRun.status != "failed"
     rows = (await session.execute(
@@ -57,6 +58,7 @@ async def station_cycle(session: AsyncSession) -> Dict[str, Any]:
                func.sum(case((ValidationResult.verdict == "UNCERTAIN", 1), else_=0)),
                func.sum(case((ValidationResult.verdict == "NO_DATA", 1), else_=0)),
                func.sum(case((ValidationRun.synthetic.is_(True), 1), else_=0)),
+               func.sum(case((ValidationRun.source == "replay", 1), else_=0)),
                func.count(func.distinct(ValidationResult.run_id)), func.max(ValidationRun.created_at), func.max(ValidationResult.run_id))
         .join(ValidationRun, ValidationRun.id == ValidationResult.run_id).where(live).group_by(ValidationResult.station_id))).all()
 
@@ -88,7 +90,7 @@ async def station_cycle(session: AsyncSession) -> Dict[str, Any]:
 
     # Positions of stations the catalogue does not know, from latitude and longitude columns of the upload: the first row of each station,
     # fetched in batches (not one query per station). More than UPLOAD_POSITION_LOOKUPS such stations are reported as truncated.
-    unknown_all = [sid for sid, *_ in rows if sid not in catalogue]
+    unknown_all = [sid for sid, *_ in rows if sid not in catalogue and sid not in imd_by_id]
     positions_truncated = len(unknown_all) > UPLOAD_POSITION_LOOKUPS
     unknown = unknown_all[:UPLOAD_POSITION_LOOKUPS]
     upload_pos: Dict[str, Tuple[float, float]] = {}
@@ -102,11 +104,14 @@ async def station_cycle(session: AsyncSession) -> Dict[str, Any]:
                 upload_pos[sid] = pos
 
     out: List[Dict[str, Any]] = []
-    for sid, n, sus, unc, nod, syn, n_runs, last, latest_run in rows:
-        sus, unc, nod, syn = int(sus or 0), int(unc or 0), int(nod or 0), int(syn or 0)
+    for sid, n, sus, unc, nod, syn, rep, n_runs, last, latest_run in rows:
+        sus, unc, nod, syn, rep = int(sus or 0), int(unc or 0), int(nod or 0), int(syn or 0), int(rep or 0)
         cat = catalogue.get(sid)
         if cat:
             lat, lon, source, place, city = cat.latitude, cat.longitude, "catalogue", cat.place, cat.city
+        elif sid in imd_by_id:
+            s_ = imd_by_id[sid]
+            lat, lon, source, place, city = s_["latitude"], s_["longitude"], "imd", s_["name"], s_["state"]
         elif sid in upload_pos:
             (lat, lon), source, place, city = upload_pos[sid], "upload", None, None
         else:
@@ -118,7 +123,7 @@ async def station_cycle(session: AsyncSession) -> Dict[str, Any]:
         out.append({
             "station_id": sid, "place": place, "city": city, "latitude": lat, "longitude": lon, "position_source": source,
             "nearest_imd": None,                                      # filled in below, for the stations that are returned
-            "checked": int(n), "runs": int(n_runs), "synthetic_rows": syn, "last_run_at": last.isoformat() if last else None,
+            "checked": int(n), "runs": int(n_runs), "synthetic_rows": syn, "replay_rows": rep, "last_run_at": last.isoformat() if last else None,
             "latest_run_id": int(latest_run) if latest_run is not None else None,
             "flagged": flagged, "suspect": sus, "uncertain": unc, "no_data": nod,
             "audited": n_audited, "unaudited": max(0, flagged - n_audited), "decisions": {d: dec.get(d, 0) for d in DECISIONS},

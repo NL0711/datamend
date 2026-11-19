@@ -165,7 +165,8 @@ export function nearestPoint<T extends { x: number; y: number }>(points: T[], x:
   return best;
 }
 
-export const REGION_COLORS = ['#BFDBFE', '#BBF7D0', '#FDE68A', '#FBCFE8', '#DDD6FE', '#FED7AA', '#A7F3D0', '#E9D5FF'];
+// Eight calm, rain-toned tints (blues, greens and sand; no violet), distinct enough to tell regions apart on a grey-blue sea.
+export const REGION_COLORS = ['#BBD8EC', '#BFE4D6', '#E6E0B8', '#F0D3C4', '#C4DFE6', '#D7E3B9', '#CCD8E6', '#E9D5B8'];
 export const regionColor = (id: number): string => REGION_COLORS[(Math.max(1, id) - 1) % REGION_COLORS.length];
 
 export type CycleState = 'unchecked' | 'nodata' | 'clean' | 'flagged' | 'audited';

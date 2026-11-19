@@ -97,7 +97,7 @@ export function SettingsView() {
       <Panel className="p-4 space-y-3">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-bold text-slate-900">AI narrator</h2>
-          <span className={`px-2 py-0.5 rounded border text-[10px] font-mono font-bold ${state.narrator.connected ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-slate-300 bg-slate-100 text-slate-600'}`}>
+          <span className={`px-2 py-0.5 rounded border text-[10px] font-mono font-bold ${state.narrator.connected ? 'border-teal-300 bg-teal-50 text-teal-800' : 'border-slate-300 bg-slate-100 text-slate-600'}`}>
             {state.narrator.connected ? 'URL SET' : 'NOT CONNECTED'}</span>
         </div>
         <p className="text-[11px] text-slate-600">The narrator is built by the AI team and is NOT IMPLEMENTED here; the chat and "Explain (AI)" use whatever service you point this at. The platform sends it the evidence of a row and a question, nothing else. A narrator on localhost or a private network is refused unless the server has <span className="font-mono">NARRATOR_ALLOW_PRIVATE=true</span>.</p>
@@ -108,7 +108,7 @@ export function SettingsView() {
             <input type="password" value={form.narratorToken} onChange={set('narratorToken')} disabled={!state.editing_enabled} placeholder={state.narrator.token_set ? '•••••••• (set)' : 'not set'} autoComplete="off" className={field} aria-label="narrator token" /></div>
         </div>
         <div className="flex items-center gap-2">
-          <button disabled={!can} onClick={() => void save()} className="px-3 py-1.5 rounded bg-violet-600 text-white text-xs font-bold disabled:opacity-40">Save narrator</button>
+          <button disabled={!can} onClick={() => void save()} className="px-3 py-1.5 rounded bg-teal-700 text-white text-xs font-bold disabled:opacity-40">Save narrator</button>
           {state.narrator.url_source === 'runtime' && <button disabled={!can} onClick={() => void save(['narrator_url', 'narrator_token'])} className="px-2 py-1 text-[11px] text-red-700 underline disabled:opacity-40">Disconnect</button>}
         </div>
       </Panel>

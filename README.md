@@ -32,6 +32,8 @@ python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
 
 To connect the live Weather Union feed from the dashboard, add `ADMIN_TOKEN=<a long random string>` to `.env` (generate one with `python -c "import secrets; print(secrets.token_urlsafe(32))"`), restart, open Settings, enter the token, your Weather Union key and a city, then Save and Test connection. Without `ADMIN_TOKEN` editing is off (you can still set the key and city in `.env`). Saved settings are kept in `data/runtime_settings.json` (git-ignored; it contains your key).
 
+To fill the Station network map without a key, open it and press Load replay (needs `ADMIN_TOKEN`). That fetches real NOAA ISD daily rainfall of Indian stations up to Aug 2025 and shows it as a REPLAY, never as live. The data is not stored in the repository (WMO Resolution 40).
+
 Open `http://localhost:8000/docs`. Runs are under `/api/validation`, the live feed under `/api/rainfall` (503 until a key and a city are set), the place lookup under `/api/places`. Storage is a local SQLite file: "demo storage, resets on restart"; download a run's JSON export to keep it.
 
 Frontend:

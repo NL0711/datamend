@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.places import router as places_router
 from backend.app.api.rainfall import router as rainfall_router
+from backend.app.api.replay import router as replay_router
 from backend.app.api.settings import router as settings_router
 from backend.app.api.validation import router as validation_router
 from backend.app.config import settings
@@ -36,6 +37,12 @@ async def lifespan(app: FastAPI):
         await start_rainfall_service()
     except Exception as exc:
         logger.warning("Rainfall feed start skipped: %s", exc)
+
+    from backend.app.api.replay import start_replay_on_boot
+    try:
+        await start_replay_on_boot()
+    except Exception as exc:
+        logger.warning("ISD replay start skipped: %s", exc)
 
     yield
 
@@ -63,6 +70,7 @@ app.add_middleware(
 app.include_router(places_router)
 app.include_router(rainfall_router)
 app.include_router(validation_router)
+app.include_router(replay_router)
 app.include_router(settings_router)
 
 

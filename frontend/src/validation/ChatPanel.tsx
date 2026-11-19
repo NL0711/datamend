@@ -44,8 +44,8 @@ export function ChatPanel({ runId, rowId, narrator }: { runId: number; rowId: nu
         {messages.map((m) => (
           <div key={m.id} className="space-y-1 text-xs">
             <div className="ml-6 rounded bg-slate-100 px-2 py-1"><span className="text-[10px] font-mono text-slate-500">you{m.row_ref ? ` · row ${m.row_ref}` : ''}: </span>{asPlainText(m.question)}</div>
-            <div className="mr-6 rounded border border-violet-300 bg-violet-50 px-2 py-1">
-              <div className="text-[10px] uppercase font-mono font-bold text-violet-700">AI-generated · {m.model_id}{m.confidence !== null ? ` · narrator's own confidence ${m.confidence}` : ''}</div>
+            <div className="mr-6 rounded border border-dashed border-slate-400 bg-slate-50 px-2 py-1">
+              <div className="text-[10px] uppercase font-mono font-bold text-slate-700">AI-generated · {m.model_id}{m.confidence !== null ? ` · narrator's own confidence ${m.confidence}` : ''}</div>
               <p className="whitespace-pre-wrap text-slate-800">{asPlainText(m.text)}</p>
             </div>
           </div>))}
@@ -55,7 +55,7 @@ export function ChatPanel({ runId, rowId, narrator }: { runId: number; rowId: nu
         <input value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} disabled={!connected || busy}
                placeholder={connected ? 'Why was this flagged? What should I check?' : 'AI narrator not connected'}
                className="flex-1 text-xs border border-[#D3DCE7] rounded px-2 py-1.5 disabled:bg-slate-100" aria-label="question for the AI" />
-        <button type="submit" disabled={!connected || busy || !text.trim()} className="px-3 rounded bg-violet-600 text-white text-xs font-bold disabled:opacity-40 flex items-center gap-1">
+        <button type="submit" disabled={!connected || busy || !text.trim()} className="px-3 rounded bg-teal-700 text-white text-xs font-bold disabled:opacity-40 flex items-center gap-1">
           <Send className="w-3 h-3" />{busy ? 'Asking…' : 'Ask'}
         </button>
       </form>

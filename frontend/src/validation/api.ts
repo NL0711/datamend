@@ -1,7 +1,7 @@
 // Typed client of /api/validation and /api/rainfall. Errors carry the server's plain-language reason.
 import type {
   Decision, Evidence, ExplanationItem, ExplorerPage, FeedStation, FeedStatus, FeedTestResult, ImdStationsResponse, LabOptions, LabResult,
-  MapLayers, NarratorStatus, StationCycleResponse,
+  MapLayers, NarratorStatus, ReplayStatus, StationCycleResponse,
   Overview, PlaceInfo, GaugeStation, Profile, QueuePage, ReviewItem, ReviewSummary, RowContext, RowDetail, RowsPage, RunFull, RunSummary,
   Series, SettingsState, SettingsUpdate,
 } from './types';
@@ -66,6 +66,11 @@ export const getAllGauges = () =>
 export const getImdStations = () => get<ImdStationsResponse>('/api/places/imd-stations');
 export const getMapLayers = () => get<MapLayers>('/api/places/map');
 export const getStationCycle = () => get<StationCycleResponse>(`${V}/stations`);
+
+/** The NOAA ISD India replay (real station rainfall, labelled REPLAY). Reading is open; loading it needs the admin token. */
+export const getReplayStatus = () => get<ReplayStatus>(`${V}/replay/isd`);
+export const startReplay = (token: string) =>
+  fetch(`${V}/replay/isd`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token } }).then((r) => json<ReplayStatus>(r));
 
 /** The admin token is kept for this browser tab only (sessionStorage). Reviews and Settings need it; reading never does. */
 export const ADMIN_TOKEN_KEY = 'datamend-admin-token';

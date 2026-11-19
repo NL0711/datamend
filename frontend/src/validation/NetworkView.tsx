@@ -2,14 +2,14 @@
 // Reads the stored runs and reviews (nothing is invented): a gauge with no rows checked is drawn grey. "IMD stations" are NOAA's list of
 // Indian synoptic stations (IMD's own AWS/ARG list is not public). Regions are the RF25 client regions, not IMD's own boundaries.
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Network, ShieldCheck } from 'lucide-react';
-import { getAllGauges, getImdStations, getMapLayers, getStationCycle, locate } from './api';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
+import { getAllGauges, getImdStations, getMapLayers, getReplayStatus, getStationCycle, locate, startReplay, storedToken } from './api';
 import { IndiaMap, MapPoint, MapShow } from './IndiaMap';
 import { CYCLE_COLOR, CYCLE_LABEL, DECISION_LABEL, cycleState, distanceKm, networkTotals, regionColor } from './lib';
 import type { CycleState } from './lib';
 import type { Tab } from './OverviewView';
-import type { GaugeStation, ImdStation, MapLayers, PlaceInfo, StationCycle, StationCycleResponse } from './types';
-import { Notice, Panel, SyntheticBadge, formatError } from './ui';
+import type { GaugeStation, ImdStation, MapLayers, PlaceInfo, ReplayStatus, StationCycle, StationCycleResponse } from './types';
+import { Notice, Panel, ReplayBadge, SyntheticBadge, formatError } from './ui';
 
 interface Props { onAudit: (station: string) => void; onOpenRun: (id: number) => void; go: (t: Tab) => void }
 type Selection = { key: string; kind: 'gauge' | 'imd' | 'upload' | 'cycle'; id: string };
@@ -77,6 +77,8 @@ export function NetworkView({ onAudit, onOpenRun, go }: Props) {
   const [show, setShow] = useState<MapShow>({ regions: true, gauges: true, imd: true, dataOnly: false });
   const [sel, setSel] = useState<Selection | null>(null);
   const [place, setPlace] = useState<PlaceInfo | null>(null);
+  const [replay, setReplay] = useState<ReplayStatus | null>(null);
+  const [replayError, setReplayError] = useState('');
 
   useEffect(() => {
     const fail = (what: string) => (e: unknown) => setErrors((x) => [...x, `${what}: ${formatError(e)}`]);
@@ -84,15 +86,39 @@ export function NetworkView({ onAudit, onOpenRun, go }: Props) {
     getAllGauges().then((g) => setGauges(g.stations)).catch(fail('Gauge catalogue'));
     getImdStations().then((r) => { setImd(r.stations); setImdNote(r.note); }).catch(fail('IMD station list'));
     getStationCycle().then(setCycle).catch(fail('Station cycle'));
+    getReplayStatus().then(setReplay).catch(() => setReplay(null));
   }, []);
+
+  // while the replay downloads, ask for its state every few seconds; when it finishes, reload the cycle so the map fills
+  const replayState = replay?.state;
+  useEffect(() => {
+    if (replayState !== 'running') return;
+    const t = window.setInterval(() => {
+      getReplayStatus().then((r) => {
+        setReplay(r);
+        if (r.state !== 'running') getStationCycle().then(setCycle).catch(() => undefined);
+      }).catch(() => undefined);
+    }, 3000);
+    return () => window.clearInterval(t);
+  }, [replayState]);
+
+  const loadReplay = () => {
+    setReplayError('');
+    startReplay(storedToken()).then(setReplay).catch((e) => setReplayError(formatError(e)));
+  };
 
   const byId = useMemo(() => new Map((cycle?.stations ?? []).map((s) => [s.station_id, s])), [cycle]);
   const gaugeById = useMemo(() => new Map(gauges.map((g) => [g.station_id, g])), [gauges]);
 
   const points = useMemo<MapPoint[]>(() => {
     const out: MapPoint[] = [];
-    for (const i of imd) out.push({ key: `imd:${i.id}`, kind: 'imd', id: i.id, label: `${i.name} · IMD station (NOAA list) · data to ${i.last_data ?? '?'}`, lat: i.latitude, lon: i.longitude, state: 'unchecked' });
     const onlySynthetic = (c: StationCycle | undefined) => !!c && c.checked > 0 && c.synthetic_rows >= c.checked;
+    for (const i of imd) {
+      const c = byId.get(i.id);
+      const st = cycleState(c);
+      out.push({ key: `imd:${i.id}`, kind: 'imd', id: i.id, lat: i.latitude, lon: i.longitude, state: st, synthetic: onlySynthetic(c),
+                 label: `${i.name} · IMD station (NOAA list) · ${st === 'unchecked' ? `data to ${i.last_data ?? '?'}` : `${CYCLE_LABEL[st]}${c && c.replay_rows > 0 ? ' · REPLAY' : ''}`}` });
+    }
     for (const g of gauges) {
       const c = byId.get(g.station_id);
       const st = cycleState(c);
@@ -132,8 +158,7 @@ export function NetworkView({ onAudit, onOpenRun, go }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2"><Network className="w-4 h-4 text-sky-600" /><h2 className="text-sm font-bold text-slate-900">Station network</h2>
-        <span className="text-[10px] font-mono text-slate-500">flat map from the RF25 land mask · {gauges.length} gauges · {imd.length} IMD stations</span></div>
+      <p className="text-[11px] font-mono text-slate-500">flat map from the RF25 land mask · {gauges.length} gauges · {imd.length} IMD stations</p>
       {errors.map((e) => <Notice key={e} tone="error">{e}</Notice>)}
 
       <Panel className="p-3">
@@ -149,6 +174,28 @@ export function NetworkView({ onAudit, onOpenRun, go }: Props) {
         {cycle?.positions_truncated && <p className="text-[10px] text-amber-700 mt-1">Some stations from uploaded files were not placed on the map (limit reached); they are listed in the table without a position.</p>}
       </Panel>
 
+      <Panel className="p-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <ReplayBadge />
+          <div className="flex-1 min-w-[16rem] text-xs">
+            <div className="font-bold text-slate-900">NOAA ISD India replay</div>
+            <p className="text-slate-600">
+              {replay === null ? 'Replay status is not available.'
+                : replay.state === 'running' ? 'Downloading station files from NOAA…'
+                : replay.stored_run_id !== null ? `Loaded: ${replay.stored_run_label ?? `run ${replay.stored_run_id}`}.`
+                : `Not loaded. Real daily rainfall of up to ${replay.default_stations} Indian stations for ${replay.year}; a replay, never live.`}
+            </p>
+          </div>
+          {replay && replay.stored_run_id !== null && <button onClick={() => onOpenRun(replay.stored_run_id as number)} className="px-3 py-1.5 rounded border border-[#D3DCE7] bg-white text-xs font-bold">Open run</button>}
+          <button onClick={loadReplay} disabled={replay === null || replay.state === 'running'} className="px-3 py-1.5 rounded bg-teal-700 text-white text-xs font-bold disabled:opacity-40">
+            {replay?.stored_run_id !== null && replay?.stored_run_id !== undefined ? 'Reload replay' : 'Load replay'}</button>
+        </div>
+        {replay?.state === 'failed' && <p className="text-[11px] text-red-700 mt-1">{replay.message ?? 'The replay failed.'}</p>}
+        {replay?.state === 'done' && replay.stations_ok < replay.stations.length && <p className="text-[11px] text-amber-700 mt-1">{replay.stations_ok} of {replay.stations.length} stations downloaded.</p>}
+        {replayError && <p className="text-[11px] text-red-700 mt-1">{replayError} (loading needs the admin token set in Settings)</p>}
+        <p className="text-[10px] text-slate-500 mt-1">{replay?.note}</p>
+      </Panel>
+
       <div className="grid xl:grid-cols-[1fr_380px] gap-3 items-start">
         <div className="space-y-2 min-w-0">
           <Panel className="p-2 flex items-center gap-x-4 gap-y-1 flex-wrap text-[11px]">
@@ -157,7 +204,7 @@ export function NetworkView({ onAudit, onOpenRun, go }: Props) {
             <span className="ml-auto flex items-center gap-2 font-mono text-[10px] text-slate-600 flex-wrap">
               {STATE_ORDER.map((s) => <span key={s} className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: CYCLE_COLOR[s] }} />{CYCLE_LABEL[s]} ({totals.byState[s]})</span>)}
               <span className="flex items-center gap-1"><span style={{ width: 0, height: 0, borderLeft: '4px solid transparent', borderRight: '4px solid transparent', borderBottom: '7px solid #111827', display: 'inline-block' }} />IMD station</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full" style={{ border: '2px dashed #7C3AED' }} />synthetic rows only</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full" style={{ border: '2px dashed #334155' }} />synthetic rows only</span>
             </span>
           </Panel>
           <IndiaMap layers={layers} points={points} show={show} selected={sel?.key ?? null} onSelect={(p) => setSel(p ? { key: p.key, kind: p.kind, id: p.id } : null)} />
@@ -174,7 +221,7 @@ export function NetworkView({ onAudit, onOpenRun, go }: Props) {
               <h3 className="text-xs font-bold text-slate-900">Select a station on the map</h3>
               <p className="text-slate-600">Click a gauge, an IMD station or a diamond (a station from an uploaded file) to see where it is in the cycle.</p>
               {(cycle?.stations.length ?? 0) === 0
-                ? <Notice tone="info">No rows have been checked yet, so every gauge is grey. Upload a file in <button className="font-bold text-sky-700" onClick={() => go('runs')}>Runs</button> whose station ids match a gauge, or turn on the live feed in <button className="font-bold text-sky-700" onClick={() => go('settings')}>Settings</button>.</Notice>
+                ? <Notice tone="info">No rows have been checked yet, so every station is grey. Load the replay above, upload a file in <button className="font-bold text-sky-700" onClick={() => go('runs')}>Runs</button> whose station ids match a gauge, or turn on the live feed in <button className="font-bold text-sky-700" onClick={() => go('settings')}>Settings</button>.</Notice>
                 : <p className="text-[11px] text-slate-600">{cycle?.positioned} of {cycle?.count} stations with rows have a position on the map.</p>}
             </div>)}
 
@@ -193,7 +240,11 @@ export function NetworkView({ onAudit, onOpenRun, go }: Props) {
                     <li key={g.station_id}><button onClick={() => selectByKey('gauge', g.station_id)} className="text-left w-full flex items-center gap-2 hover:bg-[#F4F6FA] rounded px-1 py-0.5">
                       <span className="w-2 h-2 rounded-full" style={{ background: CYCLE_COLOR[cycleState(byId.get(g.station_id))] }} /><span className="font-bold">{g.place}</span><span className="ml-auto font-mono text-[10px] text-slate-500">{km.toFixed(1)} km</span></button></li>))}</ul>)}
               </div>
-              <p className="text-[10px] text-slate-500">Metadata only (name and position). NOAA's archive is the source; this is not IMD's own station list.</p>
+              {byId.get(selImd.id)
+                ? (<div className="space-y-1"><div className="flex items-center gap-2"><span className="text-[10px] uppercase font-mono text-slate-500">Rows checked for this station</span>{(byId.get(selImd.id)?.replay_rows ?? 0) > 0 && <ReplayBadge />}</div>
+                    <CyclePanel c={byId.get(selImd.id) as StationCycle} onAudit={onAudit} onOpenRun={onOpenRun} /></div>)
+                : <p className="text-slate-500">No rows checked for this station yet.</p>}
+              <p className="text-[10px] text-slate-500">Name and position come from NOAA's archive; this is not IMD's own station list.</p>
             </div>)}
 
           {sel && !selImd && (
@@ -227,7 +278,7 @@ export function NetworkView({ onAudit, onOpenRun, go }: Props) {
             <table className="w-full text-[11px]">
               <thead className="text-left bg-[#EDF1F7] sticky top-0"><tr><th className="px-2">Station</th><th className="px-2">State</th><th className="px-2 text-right">Checked</th><th className="px-2 text-right">Flagged</th><th className="px-2 text-right">Audited</th><th className="px-2 text-right">Awaiting</th><th className="px-2">Nearest IMD</th></tr></thead>
               <tbody>{cycle.stations.map((s) => (
-                <tr key={s.station_id} onClick={() => selectByKey(s.position_source === 'catalogue' ? 'gauge' : s.position_source === 'upload' ? 'upload' : 'cycle', s.station_id)}
+                <tr key={s.station_id} onClick={() => selectByKey(s.position_source === 'catalogue' ? 'gauge' : s.position_source === 'upload' ? 'upload' : s.position_source === 'imd' ? 'imd' : 'cycle', s.station_id)}
                     className={`border-t border-[#E2E8F2] cursor-pointer hover:bg-[#F4F6FA] ${sel?.id === s.station_id ? 'bg-sky-50' : ''}`}>
                   <td className="px-2 font-bold">{s.place ?? s.station_id}<div className="font-mono text-[10px] text-slate-400">{s.station_id}{s.synthetic_rows > 0 ? ' · has synthetic rows' : ''}</div></td>
                   <td className="px-2"><StateBadge s={cycleState(s)} /></td><td className="px-2 text-right font-mono">{s.checked}</td><td className="px-2 text-right font-mono">{s.flagged}</td>

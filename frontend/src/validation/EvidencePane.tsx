@@ -59,9 +59,9 @@ function EvidenceCard({ ev }: { ev: Evidence }) {
 function ExplanationCard({ e }: { e: ExplanationItem }) {
   const ai = e.generator === 'mcp-narrator';
   return (
-    <div className={`rounded border p-2 text-xs ${ai ? 'border-violet-300 bg-violet-50' : 'border-sky-200 bg-sky-50'}`}>
+    <div className={`rounded border p-2 text-xs ${ai ? 'border-dashed border-slate-400 bg-slate-50' : 'border-sky-200 bg-sky-50'}`}>
       <div className="text-[10px] uppercase font-mono font-bold flex items-center gap-2 flex-wrap">
-        <span className={ai ? 'text-violet-700' : 'text-sky-700'}>{ai ? 'AI-generated' : 'Explanation · baseline rules · generated'}</span>
+        <span className={ai ? 'text-slate-700' : 'text-sky-700'}>{ai ? 'AI-generated' : 'Explanation · baseline rules · generated'}</span>
         <span className="text-slate-500">{e.check ?? 'row'} · {e.model_id}</span>
         {e.confidence !== null && <span className="text-slate-500">narrator's own confidence {e.confidence}</span>}
       </div>
@@ -126,7 +126,7 @@ export function EvidencePane({ runId, rowId, narrator, onSelectRow, onReviewed }
                     className="px-2 py-1 rounded border border-sky-300 text-sky-800 text-[11px] font-bold disabled:opacity-50">Explain (rules)</button>
             {narrator?.connected && (
               <button disabled={busy || evidence.length === 0} onClick={() => run('narrator')}
-                      className="px-2 py-1 rounded border border-violet-300 text-violet-800 text-[11px] font-bold disabled:opacity-50">Explain (AI)</button>)}
+                      className="px-2 py-1 rounded border border-dashed border-slate-400 text-slate-800 text-[11px] font-bold disabled:opacity-50">Explain (AI)</button>)}
           </div>
           {!narrator?.connected && <p className="text-[11px] text-slate-500">AI narrator not connected (NOT IMPLEMENTED until it is set up in Settings).</p>}
         </>)}

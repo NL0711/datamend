@@ -248,6 +248,28 @@ async def refresh_live_run(session: AsyncSession, readings: Sequence[Reading], d
     return run
 
 
+async def run_replay(session: AsyncSession, records: Sequence[DailyTotal], label: str, info: Dict[str, Any]) -> ValidationRun:
+    """Store a REPLAY of real station daily totals (NOAA ISD India) as one daily-profile run, source 'replay'. An earlier replay run is
+    replaced (its reviews go with it). ``info`` (year, stations, note, fetched_at) is kept in the run's settings."""
+    t0 = time.perf_counter()
+    old = list((await session.execute(select(ValidationRun.id).where(ValidationRun.source == "replay"))).scalars())
+    await _delete_runs(session, old)
+    cat = checks.run_checks(list(records), "daily", None)
+    report = build_report("daily", records, cat, None)
+    st = check_settings("daily", None, None)
+    st["replay"] = info
+    run = ValidationRun(profile="daily", source="replay", label=label, platform_version=app_settings.VERSION, git_commit=git_commit(),
+                        settings=st, status="completed", n_rows=len(records), n_stations=len({r.station_id for r in records}),
+                        not_run=list(cat.not_run), report=report, issue_counts=dict(Counter(i.code for r in records for i in r.issues)))
+    session.add(run)
+    await session.flush()
+    await _store_rows(session, run, records, cat)
+    run.duration_ms = (time.perf_counter() - t0) * 1000
+    await prune_runs(session)
+    await session.commit()
+    return run
+
+
 # ------------------------------------------------------------------------------------------------ reading back
 
 def run_dict(run: ValidationRun, full: bool = False) -> Dict[str, Any]:
