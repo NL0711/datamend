@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ClipboardCheck, Download, FileUp, Loader2, ShieldCheck } from 'lucide-react';
 import {
-  checkJob, decideAudit, decideProposal, downloadSnapshot, drawAudit, getPipelineStatus, ingestFile, listAudit, listJobs, listModels, listProposals,
-  listSnapshots, makeProposals, makeSnapshot, promoteModel, registerModel, rollbackModel,
+  checkJob, decideAudit, decideProposal, downloadSnapshot, drawAudit, getLineage, getPipelineStatus, ingestFile, listAudit, listJobs, listModels, listProposals,
+  listSnapshots, listTrainingJobs, makeProposals, makeSnapshot, promoteModel, refreshTrainingJob, registerModel, rollbackModel, startTraining,
 } from './api';
+import { LineageGraph } from './LineageGraph';
 import { useAdmin } from './Login';
-import type { AuditEstimate, AuditItem, IngestJob, PipelineModel, PipelineProposal, PipelineSnapshot, PipelineStatus } from './types';
+import type { AuditEstimate, AuditItem, IngestJob, Lineage, PipelineModel, PipelineProposal, PipelineSnapshot, PipelineStatus, TrainingJob } from './types';
 import { NOT_MEASURED, Notice, Panel, formatError } from './ui';
 
 const btn = 'px-3 py-1.5 rounded bg-teal-700 text-white text-xs font-bold disabled:opacity-40';
@@ -32,6 +33,9 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
   const [audit, setAudit] = useState<{ items: AuditItem[]; estimate: AuditEstimate } | null>(null);
   const [snaps, setSnaps] = useState<PipelineSnapshot[]>([]);
   const [models, setModels] = useState<PipelineModel[]>([]);
+  const [lineage, setLineage] = useState<Lineage | null>(null);
+  const [tjobs, setTjobs] = useState<TrainingJob[]>([]);
+  const [kaggleOn, setKaggleOn] = useState(false);
   const [msg, setMsg] = useState<{ tone: 'info' | 'error' | 'warn'; text: string } | null>(null);
   const [busy, setBusy] = useState('');
   const [cut, setCut] = useState(new Date().toISOString().slice(0, 10));
@@ -45,8 +49,20 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
     listJobs().then((r) => setJobs(r.jobs)).catch(fail);
     listSnapshots().then((r) => setSnaps(r.snapshots)).catch(fail);
     listModels().then((r) => setModels(r.models)).catch(fail);
+    listTrainingJobs().then((r) => { setTjobs(r.jobs); setKaggleOn(r.kaggle_configured); }).catch(fail);
+    getLineage().then(setLineage).catch(fail);
   }, []);
   useEffect(refresh, [refresh]);
+
+  // a Kaggle notebook runs on Kaggle's side: ask about it every 20 seconds while one is running (this also registers its result when it ends)
+  const kaggleRunning = tjobs.filter((t) => t.target === 'kaggle' && t.status === 'running').map((t) => t.id).join(',');
+  useEffect(() => {
+    if (!kaggleRunning) return;
+    const t = window.setInterval(() => {
+      void Promise.all(kaggleRunning.split(',').map((id) => refreshTrainingJob(Number(id)).catch(() => undefined))).then(refresh);
+    }, 20000);
+    return () => window.clearInterval(t);
+  }, [kaggleRunning, refresh]);
 
   // while a job is queued or running, look again every 2 seconds
   const active = jobs.some((j) => j.status === 'queued' || j.status === 'running');
@@ -95,6 +111,10 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
           <b>Not built yet:</b> {status.not_implemented.join('; ')}.
         </div>)}
       {!signedIn && <Notice tone="warn">Sign in to change anything here.</Notice>}
+
+      <Section title="How it connects" hint="Every job, run, snapshot, training run and model, linked as the platform stored them. Click a box to see its facts.">
+        {lineage ? <LineageGraph data={lineage} onOpenRun={onOpenRun} /> : <p className="text-xs text-slate-500">Loading…</p>}
+      </Section>
 
       <Section title="1. Bring data in" hint={`CSV in the CWC hourly format, up to ${status?.max_upload_mb ?? 300} MB. Stored once and never overwritten; uploading the same file again adds nothing.`}>
         <div className="flex items-center gap-2 flex-wrap">
@@ -172,8 +192,23 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
               <span className="font-mono font-bold">#{s.id}</span><span>cut {s.cut_day}</span><span className="font-mono">{num(s.n_rows)} rows</span>
               <span className="text-slate-500">{Object.entries(s.manifest.label_counts).map(([k, v]) => `${k} ${v}`).join(', ') || 'no labels'} · excluded years {s.manifest.excluded_years.length ? `${s.manifest.excluded_years[0]} to ${s.manifest.excluded_years[s.manifest.excluded_years.length - 1]}` : 'none'}</span>
               <span className="font-mono text-slate-400 truncate" title={s.sha256}>{s.sha256.slice(0, 12)}</span>
-              <button className={`${btnQuiet} ml-auto`} onClick={() => void downloadSnapshot(s.id).catch(fail)}><Download className="w-3 h-3 inline mr-1" />JSONL</button>
+              <span className="ml-auto flex gap-1">
+                <button className={btn} disabled={!signedIn || !!busy} title="Retrain the label-fusion model here, on the server's CPU"
+                        onClick={() => void run('train' + s.id, async () => { const j = await startTraining(s.id, 'local'); if (j.status === 'failed') throw new Error(j.error ?? 'training failed'); }, 'Trained. A challenger was registered below; run the gate to decide.')}>Train here</button>
+                <button className={btnQuiet} disabled={!signedIn || !!busy || !kaggleOn} title={kaggleOn ? 'Run the same training as a private Kaggle notebook' : 'Kaggle is not configured on this server (KAGGLE_USERNAME and KAGGLE_KEY)'}
+                        onClick={() => void run('kaggle' + s.id, () => startTraining(s.id, 'kaggle'), 'Sent to Kaggle. It is checked every 20 seconds and the result registers itself.')}>Train on Kaggle</button>
+                <button className={btnQuiet} onClick={() => void downloadSnapshot(s.id).catch(fail)}><Download className="w-3 h-3 inline mr-1" />JSONL</button>
+              </span>
             </li>))}</ul>)}
+        {tjobs.length > 0 && (
+          <ul className="space-y-1">{tjobs.slice(0, 6).map((t) => (
+            <li key={t.id} className="flex items-center gap-3 text-[11px] border border-[#E2E8F2] rounded px-2 py-1 flex-wrap">
+              <span className="font-mono font-bold">training {t.id}</span><span>snapshot {t.snapshot_id}</span><span className="font-mono">{t.target}</span>
+              <span className={t.status === 'failed' ? 'text-red-700 font-bold' : t.status === 'complete' ? 'text-emerald-700 font-bold' : 'text-sky-700 font-bold'}>{t.status}</span>
+              {t.slug && <span className="font-mono text-slate-500">{t.slug}</span>}{t.error && <span className="text-red-700">{t.error}</span>}
+              {t.target === 'kaggle' && t.status === 'running' && <button className={`${btnQuiet} ml-auto`} onClick={() => void run('r' + t.id, () => refreshTrainingJob(t.id))}>Check now</button>}
+            </li>))}</ul>)}
+        <p className="text-[10px] text-slate-500">Retraining refits how much each check is trusted, from your labels (a small model, no GPU needed). It does not retrain the RF25 STNet. With few labels it refuses. Kaggle runs are private notebooks on your Kaggle account; the free quota cannot be read or a running notebook cancelled from here.</p>
       </Section>
 
       <Section title="4. Models trained offline" hint="Train on a snapshot elsewhere (Kaggle or a GPU machine), then register the model with its metrics. The metrics are declared by the training job and are not verified here. A candidate becomes champion only when the gate passes.">

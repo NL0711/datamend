@@ -37,6 +37,8 @@ def evaluate_gate(candidate: Dict[str, Any], champion: Optional[Dict[str, Any]])
     def add(name: str, ok: bool, detail: str) -> None:
         checks.append({"rule": name, "passed": bool(ok), "detail": detail})
 
+    if candidate.get("kind") == "label_fusion":
+        return _evaluate_label_model(candidate, champion)
     missing = [k for k in REQUIRED if k not in candidate]
     add("metrics_complete", not missing, "all required metrics present" if not missing else "missing: " + ", ".join(missing))
     if missing:
@@ -54,6 +56,41 @@ def evaluate_gate(candidate: Dict[str, Any], champion: Optional[Dict[str, Any]])
     else:
         add("no_champion_yet", True, "there is no champion to compare with; the first model is held to the budget and the declarations only")
     return {"passed": all(c["passed"] for c in checks), "checks": checks, "champion_compared": champion is not None}
+
+
+LABEL_REQUIRED = ("recall_at_budget", "false_alarms_per_1000", "protected_extremes_flagged", "false_alarm_budget_per_1000", "baseline", "validation", "train")
+
+
+def _evaluate_label_model(c: Dict[str, Any], champion: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Gate for a model trained from reviewer labels (kind label_fusion). It is judged on the later part of its own snapshot against the
+    fixed-weight rule score on the SAME days; it is never compared with a champion trained on a different snapshot (not comparable). The frozen
+    RF25 protocol does not apply to it, and the result says so."""
+    checks: List[Dict[str, Any]] = []
+
+    def add(name: str, ok: bool, detail: str) -> None:
+        checks.append({"rule": name, "passed": bool(ok), "detail": detail})
+
+    missing = [k for k in LABEL_REQUIRED if k not in c]
+    add("metrics_complete", not missing, "all required metrics present" if not missing else "missing: " + ", ".join(missing))
+    if missing:
+        return {"passed": False, "checks": checks, "champion_compared": False, "profile": "label_fusion"}
+    base, val, tr = c["baseline"], c["validation"], c["train"]
+    add("temporal_split", c.get("temporal_split") is True, "earlier days train, later days validate")
+    add("enough_labels", tr.get("n_fault", 0) >= 20 and tr.get("n_clean", 0) >= 100 and val.get("n_fault", 0) >= 1 and val.get("n_clean", 0) >= 1,
+        f"train {tr.get('n_fault')} faults and {tr.get('n_clean')} clean, validation {val.get('n_fault')} faults and {val.get('n_clean')} clean (needs 20 and 100 to train, 1 of each to judge)")
+    add("false_alarms_within_budget", c["false_alarms_per_1000"] is not None and float(c["false_alarms_per_1000"]) <= float(c["false_alarm_budget_per_1000"]),
+        f"{c['false_alarms_per_1000']} per 1,000 against a budget of {c['false_alarm_budget_per_1000']}")
+    add("recall_not_below_rules", c["recall_at_budget"] is not None and base.get("recall_at_budget") is not None and float(c["recall_at_budget"]) >= float(base["recall_at_budget"]),
+        f"{c['recall_at_budget']} against the fixed rule weights' {base.get('recall_at_budget')} on the same validation days")
+    add("protected_extremes_not_higher", int(c["protected_extremes_flagged"]) <= int(base.get("protected_extremes_flagged", 0)),
+        f"{c['protected_extremes_flagged']} genuine extremes flagged against the rules' {base.get('protected_extremes_flagged')}")
+    same = champion is not None and champion.get("snapshot_sha256") == c.get("snapshot_sha256")
+    if champion is not None and not same:
+        add("champion_not_comparable", True, "the champion was trained and judged on a different snapshot, so the two are not compared; this model is judged against the rules only")
+    elif champion is not None:
+        add("recall_not_lower_than_champion", float(c["recall_at_budget"] or 0) >= float(champion.get("recall_at_budget") or 0),
+            f"{c['recall_at_budget']} against the champion's {champion.get('recall_at_budget')} on the same snapshot")
+    return {"passed": all(x["passed"] for x in checks), "checks": checks, "champion_compared": bool(same), "profile": "label_fusion"}
 
 
 async def champion(session: AsyncSession, name: str) -> Optional[ModelVersion]:

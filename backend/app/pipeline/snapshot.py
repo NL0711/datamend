@@ -33,6 +33,7 @@ async def build(session: AsyncSession, cut: date, exclude_years: Optional[Sequen
     stations = {s.station_key: s for s in (await session.execute(select(PipelineStation))).scalars()}
     rows: List[Dict[str, Any]] = []
     skipped = {"after_cut": 0, "excluded_year": 0, "no_label": 0}
+    run_ids_used: set = set()
     for run_id, run_settings in runs:
         results = {r.row_ref: r for r in (await session.execute(select(ValidationResult).where(ValidationResult.run_id == run_id))).scalars()}
         corr = {c.row_ref: c for c in (await session.execute(select(Correction).where(Correction.run_id == run_id).order_by(Correction.id))).scalars()}
@@ -59,6 +60,7 @@ async def build(session: AsyncSession, cut: date, exclude_years: Optional[Sequen
                 skipped["excluded_year"] += 1
                 continue
             hits = hits_by_result.get(r.id, [])
+            run_ids_used.add(run_id)
             st = stations.get(r.station_id)
             c = corr.get(ref)
             rows.append({"run_id": run_id, "row_ref": ref, "station_id": r.station_id, "day": r.time_key[:10],
@@ -68,7 +70,7 @@ async def build(session: AsyncSession, cut: date, exclude_years: Optional[Sequen
     rows.sort(key=lambda x: (x["run_id"], int(x["row_ref"]) if str(x["row_ref"]).isdigit() else 0))
     content = "\n".join(json.dumps(r, sort_keys=True, separators=(",", ":")) for r in rows)
     sha = hashlib.sha256(content.encode("utf-8")).hexdigest()
-    manifest = {"cut_day": cut.isoformat(), "rows": len(rows), "excluded_years": list(years), "test_years_override": bool(allow_test_years and exclude_years is None),
+    manifest = {"cut_day": cut.isoformat(), "rows": len(rows), "runs": sorted(run_ids_used), "excluded_years": list(years), "test_years_override": bool(allow_test_years and exclude_years is None),
                 "skipped": skipped, "label_counts": {k: sum(1 for r in rows if r["label"] == k) for k in sorted({r["label"] for r in rows})},
                 "random_sample_rows": sum(1 for r in rows if r["random_sample"]), "platform_version": app_settings.VERSION,
                 "created_at": datetime.now(timezone.utc).isoformat(),

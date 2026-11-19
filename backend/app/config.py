@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     ADMIN_TOKEN: str = ""
     # The admin sign-in of the dashboard (api/auth.py). The defaults are for local and demo use ONLY: anyone who knows them can sign in, so
     # set both in the server's environment on any public deployment. An empty ADMIN_PASSWORD switches the sign-in off.
+    # Kaggle retraining (pipeline/kaggle_trigger.py): the owner's Kaggle account. Secrets: environment only, never a tracked file.
+    KAGGLE_USERNAME: str = ""
+    KAGGLE_KEY: str = ""
+
     # When true (the default) every /api route except the sign-in itself needs a signed-in session: nobody reads any data without signing in.
     REQUIRE_LOGIN: bool = True
     ADMIN_EMAIL: str = "admin@admin.com"

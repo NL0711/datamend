@@ -2,7 +2,7 @@
 import type {
   Decision, Evidence, ExplanationItem, ExplorerPage, FeedStation, FeedStatus, FeedTestResult, ImdStationsResponse, LabOptions, LabResult,
   MapLayers, NarratorStatus, ReplayStatus, StationCycleResponse,
-  AuditEstimate, AuditItem, IngestJob, PipelineModel, PipelineProposal, PipelineSnapshot, PipelineStatus,
+  AuditEstimate, AuditItem, IngestJob, Lineage, PipelineModel, PipelineProposal, PipelineSnapshot, PipelineStatus, TrainingJob,
   Overview, PlaceInfo, GaugeStation, Profile, QueuePage, ReviewItem, ReviewSummary, RowContext, RowDetail, RowsPage, RunFull, RunSummary,
   Series, SettingsState, SettingsUpdate,
 } from './types';
@@ -110,6 +110,10 @@ export async function downloadSnapshot(id: number): Promise<void> {
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
+export const startTraining = (snapshotId: number, target: 'local' | 'kaggle') => post<TrainingJob>(`${P}/train`, { snapshot_id: snapshotId, target });
+export const listTrainingJobs = () => get<{ jobs: TrainingJob[]; kaggle_configured: boolean }>(`${P}/train/jobs`);
+export const refreshTrainingJob = (id: number) => post<TrainingJob>(`${P}/train/jobs/${id}/refresh`, {});
+export const getLineage = () => get<Lineage>(`${P}/lineage`);
 export const listModels = () => get<{ models: PipelineModel[]; not_implemented: string[] }>(`${P}/models`);
 export const registerModel = (body: { name: string; version: string; metrics: Record<string, unknown>; snapshot_id?: number }) => post<PipelineModel>(`${P}/models`, body);
 export const promoteModel = (id: number) => post<PipelineModel>(`${P}/models/${id}/promote`, {});

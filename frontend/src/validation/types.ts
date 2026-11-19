@@ -205,6 +205,16 @@ export interface PipelineModel {
   alias: 'champion' | 'challenger' | 'archived' | 'rejected'; notes: string | null; metrics_basis: string;
 }
 
+export interface TrainingJob {
+  id: number; created_at: string | null; snapshot_id: number; target: 'local' | 'kaggle'; name: string; slug: string | null;
+  status: 'running' | 'complete' | 'failed'; error: string | null; model_id: number | null; finished_at: string | null;
+}
+export interface LineageNode {
+  id: string; kind: 'job' | 'run' | 'snapshot' | 'train' | 'model'; label: string; status: string; run_id?: number;
+  facts: Record<string, string | number>; gate_checks?: { rule: string; passed: boolean; detail: string }[];
+}
+export interface Lineage { columns: string[]; nodes: LineageNode[]; edges: { from: string; to: string }[]; note: string }
+
 export interface StationCycleResponse {
   storage: string; count: number; shown: number; truncated: boolean; positioned: number; positions_truncated: boolean;
   truncated_reviews: boolean; stations: StationCycle[]; note: string;

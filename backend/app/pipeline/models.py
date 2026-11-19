@@ -133,6 +133,22 @@ class TrainingSnapshot(Base):
     content: Mapped[str] = mapped_column(Text)                                # JSON lines, ordered
 
 
+class TrainingJob(Base):
+    """One retraining run started from a snapshot: here on the server's CPU, or as a Kaggle notebook. A finished job registers a challenger."""
+    __tablename__ = "pipeline_training_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    snapshot_id: Mapped[int] = mapped_column(Integer, index=True)
+    target: Mapped[str] = mapped_column(String(8))                            # local | kaggle
+    name: Mapped[str] = mapped_column(String(64), default="label-fusion")
+    slug: Mapped[Optional[str]] = mapped_column(String(96), nullable=True)    # the Kaggle notebook, user/slug
+    status: Mapped[str] = mapped_column(String(10), default="running")        # running | complete | failed
+    error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    model_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class ModelVersion(Base):
     """A model trained offline, registered with its metrics. Only a passed gate moves the champion alias."""
     __tablename__ = "pipeline_models"

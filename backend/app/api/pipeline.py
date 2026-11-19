@@ -16,17 +16,20 @@ from backend.app.api.settings import require_admin
 from backend.app.db.database import get_db
 from backend.app.pipeline import audit as audit_svc
 from backend.app.pipeline import jobs as jobs_svc
+from backend.app.pipeline import kaggle_trigger as kaggle_svc
+from backend.app.pipeline import lineage as lineage_svc
+from backend.app.pipeline import training as train_svc
 from backend.app.pipeline import proposals as prop_svc
 from backend.app.pipeline import qc as qc_svc
 from backend.app.pipeline import registry as reg_svc
 from backend.app.pipeline import snapshot as snap_svc
-from backend.app.pipeline.models import AuditItem, IngestJob, ModelVersion, Observation, PipelineStation, Proposal, TrainingSnapshot
+from backend.app.pipeline.models import AuditItem, IngestJob, ModelVersion, Observation, PipelineStation, Proposal, TrainingJob, TrainingSnapshot
 from backend.app.validation.runs import run_dict
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
 
 NOT_IMPLEMENTED = [
-    "training a model (it runs offline on Kaggle or a GPU machine from a training snapshot)",
+    "retraining the RF25 STNet from labels (only the small label-fusion model is retrained, on the server's CPU or as a Kaggle notebook)",
     "scoring with a registered model on the server (needs RF25 grid neighbours; see the map ticket on station-to-cell mapping)",
     "the shadow run of a candidate beside the champion",
     "the LLM proposer and explainer (the narrator team's service; the rule-based baseline works without it)",
@@ -246,6 +249,47 @@ async def promote_model(model_id: int, session: AsyncSession = Depends(get_db)) 
     except ValueError as e:
         raise _bad(e, status.HTTP_409_CONFLICT)
     return reg_svc.model_dict(m)
+
+
+# ------------------------------------------------------------------------------------------------ retraining and lineage
+class TrainBody(BaseModel):
+    snapshot_id: int
+    target: str = "local"                        # local (server CPU) | kaggle (a private notebook)
+    name: str = Field("label-fusion", max_length=64)
+
+
+@router.post("/train", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(require_admin)])
+async def train(body: TrainBody, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """Retrain the label-fusion model from a snapshot. A finished run registers a challenger; only the gate can promote it."""
+    try:
+        job = await train_svc.start(session, body.snapshot_id, body.target, body.name)
+    except LookupError as e:
+        raise _bad(e, status.HTTP_404_NOT_FOUND)
+    except PermissionError as e:
+        raise _bad(e, status.HTTP_409_CONFLICT)
+    except ValueError as e:
+        raise _bad(e)
+    return train_svc.job_dict(job)
+
+
+@router.get("/train/jobs")
+async def train_jobs(session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    rows = (await session.execute(select(TrainingJob).order_by(TrainingJob.id.desc()).limit(50))).scalars().all()
+    return {"jobs": [train_svc.job_dict(j) for j in rows], "kaggle_configured": kaggle_svc.configured()}
+
+
+@router.post("/train/jobs/{job_id}/refresh", dependencies=[Depends(require_admin)])
+async def refresh_train_job(job_id: int, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    try:
+        job = await train_svc.refresh(session, job_id)
+    except LookupError as e:
+        raise _bad(e, status.HTTP_404_NOT_FOUND)
+    return train_svc.job_dict(job)
+
+
+@router.get("/lineage")
+async def get_lineage(session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    return await lineage_svc.build(session)
 
 
 @router.post("/models/{name}/rollback", dependencies=[Depends(require_admin)])

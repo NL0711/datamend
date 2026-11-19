@@ -12,7 +12,8 @@ from sqlalchemy import delete, func, select
 from backend.app.config import settings
 from backend.app.db.database import async_session_factory
 from backend.app.pipeline import cwc, registry
-from backend.app.pipeline.models import (AuditItem, Correction, IngestJob, ModelVersion, Observation, PipelineStation, Proposal, TrainingSnapshot)
+from backend.app.pipeline.models import (AuditItem, Correction, IngestJob, ModelVersion, Observation, PipelineStation, Proposal, TrainingJob,
+                                          TrainingSnapshot)
 from backend.app.validation.models import Review, ValidationResult, ValidationRun
 
 TOKEN = "p" * 32
@@ -42,7 +43,7 @@ def wet_days(station, start, days, mm=4.0, hour=14, **kw):
 async def _clean(monkeypatch):
     monkeypatch.setattr(settings, "ADMIN_TOKEN", TOKEN)
     async with async_session_factory() as s:
-        for model in (Correction, Proposal, AuditItem, ModelVersion, TrainingSnapshot, Review, Observation, PipelineStation, IngestJob):
+        for model in (Correction, Proposal, AuditItem, TrainingJob, ModelVersion, TrainingSnapshot, Review, Observation, PipelineStation, IngestJob):
             await s.execute(delete(model))
         await s.execute(delete(ValidationRun).where(ValidationRun.source == "pipeline"))
         await s.commit()
@@ -241,3 +242,4 @@ async def test_register_promote_reject_and_roll_back(async_client: AsyncClient):
 async def test_status_lists_what_is_not_implemented(async_client: AsyncClient):
     st = (await async_client.get("/api/pipeline/status")).json()
     assert st["sources"] == ["cwc"] and any("scoring with a registered model" in x for x in st["not_implemented"])
+
