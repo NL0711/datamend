@@ -27,15 +27,20 @@ A locked **spec** plus ordered build slices (added to `TODO.md`) for the next Da
 
 - [What does one real CWC file look like?](tickets/t04-first-file-download.md): the Tripura 2021-2025 file has station, coordinates, `dd-mm-yyyy hh:mm` time (zone not stated) and hourly mm for 5 stations and 4,354 rows; only non-zero hours are present (smallest value 0.5 mm), so absence cannot be read as dry or missing; 59 values above 100 mm an hour (max 423) need a decision; coverage is patchy.
 
-- Build v1 (2026-11-20, owner asked for the pipeline to be ready instead of stopping at a spec): the storage schema, ingest jobs, reviewer workflow (proposals, corrections, labels, audit sample) and the training hand-off and gate were decided by building them on branch `feature/ingest-pipeline`; see `TODO.md` for what is built and what is NOT IMPLEMENTED. The tickets for those four areas stay open as the written decision record to confirm, and the measurement ticket on Tiger is still unrun.
+- [How do bulk uploads and source pulls become jobs?](tickets/t05-ingest-jobs.md) (decided by building, 2026-11-20, branch `feature/ingest-pipeline`): accept a streamed upload (300 MB cap, hashed) and return a job id at once; the jobs table is the queue and the work runs in the web process in 2,000-row chunks; re-ingest is idempotent; a bad file fails the job, bad rows are counted and listed; a job cut off by a restart is marked failed and the file is uploaded again. No object store, worker service or rate limit. IST and omitted zero hours are assumed and written on every job.
+
+- [How do AI proposals, reviewer decisions, corrections and labels relate?](tickets/t06-reviewer-workflow-and-proposals.md) (decided by building, 2026-11-20): proposals are generated, stored apart, with no effect until accepted; an accepted correction keeps the original beside it; accepting also writes a `confirmed_fault` review; labels come only from reviewer decisions (follow-up and unsure are not labels); a weighted random sample of unflagged days estimates missed faults; one reviewer, rule-based proposer only.
 
 ## Not yet specified
 
 - Monitoring and alerting (flag rate per station, drift) beyond what the MLOps spec section 8 says.
-- Roles beyond one admin (several reviewers, per-reviewer agreement).
-- PostgreSQL migrations (tables are only created at start-up today, never altered).
-- Paid-plan cost model and which object store holds uploads.
-- What a model-derived flag adds to the narrator's evidence payload (needs the teammate's facts).
+- Scoring with a registered model on the server, and the RF25 grid mapping it needs (graduated to [t10](tickets/t10-server-scoring-and-shadow-run.md)); the shadow run (same ticket).
+- The LLM proposer and explainer (the narrator team's service; would be a second `Proposer`), and what a model-derived flag adds to the narrator's evidence payload (needs the teammate's facts).
+- Roles beyond one admin: several reviewers, accounts, per-reviewer agreement. The reviewer is a free-text name behind the shared admin token.
+- PostgreSQL migrations and upload storage beyond the server disk (graduated to [t11](tickets/t11-migrations-and-upload-storage.md)); paid-plan cost model after the trial.
+- Kaggle bring-your-own accounts: today one `KAGGLE_USERNAME` and `KAGGLE_KEY` in the server environment; whose account runs a notebook, and where the snapshot may go, is open (see t08 and t12).
+- Lineage beyond the stage graph (job, run, snapshot, training, model). Row-level lineage exists only as the run view and has no row key from a verdict to its raw hours (see t01).
+- Retraining the RF25 STNet from labels (not built; needs t10).
 - Live sources beyond CWC and the existing feeds.
 - Ordering and sizing of the build slices (graduates once the tickets below close).
 
@@ -48,4 +53,12 @@ A locked **spec** plus ordered build slices (added to `TODO.md`) for the next Da
 
 ## Open tickets
 
-Frontier (unblocked): [Measure row size and compression on Tiger](tickets/t02-measure-row-size.md) (needs the owner's OK to create and drop test tables). Blocked on it: the storage schema, then ingest jobs and the reviewer workflow, then the training hand-off. Blocked: the others, see `blocked_by` in each ticket.
+The pipeline is built (branch `feature/ingest-pipeline`; `TODO.md` lists what is built and NOT IMPLEMENTED). Each open ticket below needs an owner decision or approval, not more building.
+
+- [Measure row size and compression on Tiger](tickets/t02-measure-row-size.md): unrun; needs the owner's OK to create and drop test tables in the Tiger service.
+- [Storage schema](tickets/t01-storage-schema.md): built and decided in part; open for retention, the compact-verdict question and the t02 numbers. Has a `## Needs the owner` list.
+- [Training hand-off and gate](tickets/t08-training-handoff-and-gate.md): built; open for the label minimums (20 faults, 100 clean), the 5 per 1,000 budget, where the threshold is fixed, Kaggle and the licence, and the gate design. Has a `## Needs the owner` list.
+- [May CWC data from 2018 to 2025 be used?](tickets/t09-test-years-and-cwc-data.md): the locked test years block the only real CWC file by default.
+- [Server scoring and the shadow run](tickets/t10-server-scoring-and-shadow-run.md): blocked on t08.
+- [Migrations and upload storage](tickets/t11-migrations-and-upload-storage.md).
+- [Ask NWIC about derived data](tickets/t12-ask-nwic-about-derived-data.md): owner task; the CWC licence for derived flags is unconfirmed.
