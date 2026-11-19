@@ -4,7 +4,8 @@ STATUS: new, unit-tested on a generated world only; nothing has run on real RF25
 
 Same discipline as the cross-scale pass (``qc.crossscale_test``), all enforced before anything is scored:
 
-  * the daily test pass must be FINISHED (its lock says done): the old daily fusions and the untrained baselines already have test and stress scores;
+  * the old daily components are NOT required: if the daily test pass was done their fusions are reported next to STNet, otherwise only the STNet
+    candidate and the untrained baselines are scored (the untrained baselines are scored here when missing). An unfinished daily lock stops the pass;
   * the choice must have been made on validation (``stnet_choice.json``, written once by ``python -m qc choose-stnet``) and name the STNet candidate
     (if the rule kept the old daily pipeline there is nothing to score here);
   * the budgets must be fixed (``fusion_budgets.json``);
@@ -22,7 +23,7 @@ import json
 from pathlib import Path
 from typing import Dict, Sequence
 
-from qc.baselines import UNTRAINED
+from qc.baselines import UNTRAINED, run_untrained
 from qc.benchmark import check_benchmark
 from qc.crossscale_test import comparison_rows
 from qc.evaluate import evaluate_component, score_store
@@ -45,8 +46,9 @@ def report_dir(p) -> Path:
 
 def preflight(p, splits: Sequence[str], resume: bool = False) -> Dict:
     dl = daily_lock_path(p)
-    if not dl.is_file() or read_json(dl).get("status") != "done":
-        raise RuntimeError(f"the daily test pass is not finished ({dl}); run `python -m qc test-score` first. This pass builds on its scores.")
+    if dl.is_file() and read_json(dl).get("status") != "done":
+        raise RuntimeError(f"an unfinished daily test pass exists ({dl}); finish it (`python -m qc test-score --resume`) or remove it with the owner's "
+                           "agreement before this pass. (No daily test pass at all is fine: the old components are not part of this pass.)")
     cp = choice_path(p)
     if not cp.is_file():
         raise RuntimeError(f"the STNet choice has not been made ({cp}); run `python -m qc stnet-fuse` and `python -m qc choose-stnet` on validation "
@@ -67,11 +69,12 @@ def preflight(p, splits: Sequence[str], resume: bool = False) -> Dict:
     return {"choice": choice, "budgets": budgets}
 
 
-def names_to_score(choice: Dict) -> Dict[str, str]:
-    """Label -> stored score name: the chosen candidate, the old daily fusions the rule compared against, the untrained baselines."""
+def names_to_score(choice: Dict, available=None) -> Dict[str, str]:
+    """Label -> stored score name: the chosen candidate, the old daily fusions the rule compared against IF their test scores exist (a reference read
+    from a committed file has none and is not scored), and the untrained baselines."""
     out = {"chosen STNet candidate": choice["chosen"]["component"]}
-    for n in choice["rows"]:
-        if "candidate" not in choice["rows"][n]:
+    for n, r in choice["rows"].items():
+        if "candidate" not in r and not r.get("from_file") and (available is None or available(n)):
             out[f"old daily: {n}"] = n
     for n in UNTRAINED:
         out[f"untrained: {n}"] = n
@@ -93,7 +96,9 @@ def run_stnet_test(p, splits: Sequence[str] = ("test", "stress"), resume: bool =
     apply_candidate(p, fit, tuple(splits), store)
     if choice["chosen"]["calibrated"]:
         apply_calibration(p, seed, tuple(splits), store)
-    names = names_to_score(choice)
+    run_untrained(p, tuple(splits))                                         # the untrained baselines on these years (skips what is already scored)
+    first = p.split.years[splits[0]][0]
+    names = names_to_score(choice, lambda n: store.has(n, splits[0], first))
     results: Dict[str, Dict[str, Dict]] = {}
     for split in splits:
         results[split] = {label: evaluate_component(p, comp, split, [final, review], GROUPS, store, pinned=True) for label, comp in names.items()}

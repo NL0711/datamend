@@ -169,8 +169,11 @@ def cmd_choose_stnet(cfg, args) -> int:
     from qc.stnet_arch import choice_path, decide, format_choice
 
     p = load_prepared(cfg)
-    doc = decide(p, args.seed, args.prefix, args.final_budget, args.min_recall_gain, args.guard_factor, args.baselines)
+    ref = Path(args.reference_json) if args.reference_json else paths.ML_SERVICE / "artifacts" / "qc" / "base" / "ablation" / f"ablation_s{args.seed}.json"
+    doc = decide(p, args.seed, args.prefix, args.final_budget, args.min_recall_gain, args.guard_factor, args.baselines,
+                 reference_file=ref, reference_benchmark_hash=args.reference_benchmark_hash)
     print(format_choice(doc))
+    print(f"\nreference: {doc['reference']} ({doc['reference_source']['kind']})")
     print(f"\nwrote {choice_path(p)}. Log it in docs/qc-evaluation-protocol.md and commit BEFORE any test year is scored.")
     return 0
 
@@ -431,7 +434,9 @@ def cmd_set_budgets(cfg, args) -> int:
     stnet_choice = json.loads(stnet_file.read_text(encoding="utf-8")) if stnet_file.is_file() else None
     if stnet_choice and stnet_choice["chosen"]["architecture"] == "stnet":
         component = stnet_choice["chosen"]["component"]
-        print(f"the budgets apply to the chosen STNet candidate's score: {component}")
+        from qc.stnet_arch import curves_path
+        curves = curves_path(p, int(stnet_choice["seed"]))                      # the candidate's own validation curves (written by stnet-fuse)
+        print(f"the budgets apply to the chosen STNet candidate's score: {component}; curves: {curves}")
     elif choice_file.is_file():
         component = json.loads(choice_file.read_text(encoding="utf-8"))["chosen"]["component"]
         print(f"the budgets apply to the chosen architecture's fused score: {component}")
@@ -675,6 +680,10 @@ def main(argv=None) -> int:
     cs_.add_argument("--final-budget", type=float, default=1.0, help="false alerts per 1,000 clean cell-days at which the rule compares")
     cs_.add_argument("--min-recall-gain", type=float, default=0.02, help="absolute recall gain over the best old daily fusion")
     cs_.add_argument("--guard-factor", type=float, default=2.0, help="every client's out-of-sample false-alarm rate must stay within this multiple of the budget")
+    cs_.add_argument("--reference-json", default=None, help="committed ablation file with the old four-component daily fusions, used as the reference when their "
+                     "scores are not in the score store (default artifacts/qc/base/ablation/ablation_s<seed>.json)")
+    cs_.add_argument("--reference-benchmark-hash", default="c37de7e3cf2be90e",
+                     help="the benchmark hash the committed reference was scored on; a different benchmark in this run stops the choice")
     cs_.add_argument("--baselines", nargs="+", default=None, help="old daily fusion score names to compare against (default fusion_logistic_s<seed> and fusion_boosted_s<seed>)")
     st_ = sub.choices["stnet-test"]
     st_.add_argument("--splits", nargs="+", default=["test", "stress"], choices=["test", "stress"])

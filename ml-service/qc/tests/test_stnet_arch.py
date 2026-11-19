@@ -121,6 +121,43 @@ def test_frozen_fusion_candidates_and_the_choice_are_written_once(pa, trained):
         A.decide(pa, 0, "sta", 5.0, 0.0, 100.0, baselines=("rules",), n_boot=20)
 
 
+def test_curves_are_written_for_the_budgets_and_the_names_skip_file_references(pa, trained):
+    import json
+    from qc import stnet_test as T
+    A.prepare_validation(pa, 0, "sta")
+    doc = json.loads(A.curves_path(pa, 0).read_text(encoding="utf-8"))
+    assert set(doc["scores"]) == {A.fused(v, 0, c) for v in A.VARIANTS for c in (False, True)} and doc["budgets"]
+    choice = {"chosen": {"component": "cand"}, "rows": {"cand": {"candidate": True}, "committed:x.json:boosted": {"from_file": True, "recall": 0.4},
+                                                          "fusion_logistic_s0": {"recall": 0.4}, "fusion_boosted_s0": {"recall": 0.3}}}
+    names = T.names_to_score(choice, lambda n: n == "fusion_logistic_s0")
+    assert "old daily: fusion_logistic_s0" in names and "old daily: fusion_boosted_s0" not in names     # no test scores: not scored
+    assert not any("committed" in v for v in names.values()) and names["chosen STNet candidate"] == "cand"
+
+
+def test_the_rule_runs_from_a_committed_reference_without_the_old_components(pa, trained, tmp_path):
+    import json
+    from qc.benchmark import check_benchmark
+    A.prepare_validation(pa, 0, "sta")
+    row = lambda v, rec, fa, prot: {"components": "rules+slow+spatial+temporal", "variant": v, "recall": rec, "event_recall": 0.5,
+                                     "false_per_1000": fa, "protected_flagged": prot, "pr_auc": 0.4}
+    ref = tmp_path / "ablation_s0.json"
+    ref.write_text(json.dumps({"budget": 5.0, "seed": 0, "rows": [row("logistic", 0.40, 1.0, 0.10), row("boosted", 0.47, 1.2, 0.04),
+                                                                  {**row("logistic", 0.43, 1.1, 0.14), "components": "rules"}]}), encoding="utf-8")
+    bh = check_benchmark(pa)["hash"]
+    A.choice_path(pa).unlink(missing_ok=True)
+    with pytest.raises(RuntimeError, match="not comparable"):
+        A.decide(pa, 0, "sta", 5.0, 0.0, 100.0, reference_file=ref, reference_benchmark_hash="deadbeef", n_boot=20)
+    with pytest.raises(ValueError, match="budget"):
+        A.decide(pa, 0, "sta", 1.0, 0.0, 100.0, reference_file=ref, reference_benchmark_hash=bh, n_boot=20)
+    assert not A.choice_path(pa).exists()                                                           # a refused choice writes nothing
+    doc = A.decide(pa, 0, "sta", 5.0, 0.0, 100.0, reference_file=ref, reference_benchmark_hash=bh, n_boot=20)
+    assert doc["reference"] == "committed:ablation_s0.json:boosted"                                  # the better of the two four-component rows
+    assert doc["reference_source"]["kind"] == "committed file" and doc["reference_source"]["benchmark_hash"] == bh
+    refs = {n: r for n, r in doc["rows"].items() if "candidate" not in r}
+    assert set(refs) == {"committed:ablation_s0.json:logistic", "committed:ablation_s0.json:boosted"} and all(r["from_file"] for r in refs.values())
+    A.choice_path(pa).unlink()
+
+
 def _force_choice(p, calibrated=False):
     write_json(A.choice_path(p), {
         "chosen": {"architecture": "stnet", "component": A.fused("boosted", 0, calibrated), "variant": "boosted", "calibrated": calibrated},
@@ -132,9 +169,10 @@ def test_the_test_pass_refuses_until_its_preconditions_hold_then_runs_once(pa, t
     from qc import stnet_test as T
     A.prepare_validation(pa, 0, "sta")
     A.choice_path(pa).unlink(missing_ok=True)
-    with pytest.raises(RuntimeError, match="daily test pass is not finished"):
+    write_json(daily_lock(pa), {"status": "started", "started": "x"})
+    with pytest.raises(RuntimeError, match="unfinished daily test pass"):                     # an unfinished daily pass stops this one
         T.run_stnet_test(pa)
-    write_json(daily_lock(pa), {"status": "done", "finished": "x"})
+    daily_lock(pa).unlink()                                                                     # no daily pass at all is fine: old components not needed
     with pytest.raises(RuntimeError, match="choice has not been made"):
         T.run_stnet_test(pa)
     write_json(A.choice_path(pa), {"chosen": {"architecture": "daily_only", "component": "rules"}, "reason": "kept", "rows": {}})

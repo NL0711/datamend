@@ -27,7 +27,7 @@ from qc.calibration import check_budget, check_budget_regional
 from qc.evaluate import evaluate_component, score_store, summary_row
 from qc.extremes import find_extremes
 from qc.fusion import FusionFit, fit_fusion, load_features
-from qc.fusion_eval import holdout_years
+from qc.fusion_eval import holdout_years, validation_curves
 from qc.prepare import Prepared
 from qc.runs import git_commit, write_json
 from qc.scoring import ScoreStore
@@ -157,7 +157,21 @@ def prepare_validation(p: Prepared, seed: int, prefix: str = "stnet", store: Opt
         if not tables_path(p, seed, v).is_file():
             save_tables(tables_path(p, seed, v), build_tables(p, fused(v, seed), store))
     apply_calibration(p, seed, ("val",), store)
+    write_curves(p, seed, store)
     return {"names": fit.names, "fit_years": fit.fit_years, "n_rows": fit.n_rows, "n_positive": fit.n_positive}
+
+
+def curves_path(p: Prepared, seed: int) -> Path:
+    return run_root(p) / "stnet" / f"stnet_curves_s{seed}.json"
+
+
+def write_curves(p: Prepared, seed: int, store: Optional[ScoreStore] = None) -> Path:
+    """Validation curves of the four candidate scores (recall and protected extremes flagged against the false-alarm budget, thresholds from clean
+    threshold years): the budgets of the protocol are chosen from these when the old daily pipeline is not trained."""
+    store = store or score_store(p)
+    names = [fused(v, seed, cal) for v in VARIANTS for cal in (False, True)]
+    write_json(curves_path(p, seed), validation_curves(p, names, store))
+    return curves_path(p, seed)
 
 
 # ---------------------------------------------------------------------------------------------- the selection rule
@@ -197,10 +211,35 @@ def worst_client(rows: Sequence[Dict]) -> Optional[float]:
     return float(max(rates)) if rates else None
 
 
+def reference_rows_from_file(path: Path, final_budget: float) -> Dict[str, Dict]:
+    """The old four-component daily fusions (logistic and boosted) from a COMMITTED ablation file (``ablate`` output, budget and held-out threshold
+    years as the rule uses them). Lets the rule run without retraining the old components. The rows carry ``from_file``: nothing about them is
+    stored in the score store, so they are never scored on a test year."""
+    import json
+    doc = json.loads(Path(path).read_text(encoding="utf-8"))
+    if abs(float(doc["budget"]) - final_budget) > 1e-9:
+        raise ValueError(f"{path} was made at budget {doc['budget']}, the rule compares at {final_budget}")
+    keep = ("recall", "event_recall", "false_per_1000", "protected_flagged", "pr_auc")
+    out = {}
+    for r in doc["rows"]:
+        if r.get("components") == "rules+slow+spatial+temporal" and r.get("variant") in ("logistic", "boosted") and r.get("recall") is not None:
+            out[f"committed:{Path(path).name}:{r['variant']}"] = {**{k: r.get(k) for k in keep}, "from_file": True}
+    if not out:
+        raise ValueError(f"{path} has no four-component logistic or boosted rows (components 'rules+slow+spatial+temporal')")
+    return out
+
+
 def decide(p: Prepared, seed: int, prefix: str = "stnet", final_budget: float = 1.0, min_recall_gain: float = 0.02, guard_factor: float = 2.0,
-           baselines: Optional[Sequence[str]] = None, store: Optional[ScoreStore] = None, n_boot: int = 200) -> Dict:
+           baselines: Optional[Sequence[str]] = None, store: Optional[ScoreStore] = None, n_boot: int = 200,
+           reference_file: Optional[Path] = None, reference_benchmark_hash: Optional[str] = None) -> Dict:
     """Evaluate the candidates and the old daily fusions on the held-out threshold years of the validation benchmark, apply ``choose`` and write the
-    result ONCE to ``stnet_choice.json``. No test or stress year is read."""
+    result ONCE to ``stnet_choice.json``. No test or stress year is read.
+
+    The reference is the best old daily fusion. If its scores are in the score store they are evaluated here. Otherwise (the old components were not
+    retrained) it is read from ``reference_file``, a committed ablation file, and ``reference_benchmark_hash`` must equal this run's benchmark hash:
+    the file's numbers were scored on that benchmark."""
+    import hashlib
+    from qc.benchmark import check_benchmark
     cp = choice_path(p)
     if cp.is_file():
         raise RuntimeError(f"{cp} already exists: the choice is made once and frozen before any test year is scored. Delete it only if starting the "
@@ -208,11 +247,22 @@ def decide(p: Prepared, seed: int, prefix: str = "stnet", final_budget: float = 
     store = store or score_store(p)
     years = holdout_years(p)
     first = p.split.years["val"][0]
-    base = [n for n in (baselines or tuple(f"{b}_s{seed}" for b in OLD_DAILY)) if store.has(n, "val", first)]
-    if not base:
-        raise RuntimeError("no old daily fusion scores found for validation: run phase 1 (fusion) first, or pass baselines")
     row = lambda comp: summary_row(evaluate_component(p, comp, "val", [final_budget], ("seen",), store, True, years), "seen", final_budget)
-    rows: Dict[str, Dict] = {n: row(n) for n in base}
+    base = [n for n in (baselines or tuple(f"{b}_s{seed}" for b in OLD_DAILY)) if store.has(n, "val", first)]
+    source: Dict = {"kind": "score store"}
+    if base:
+        rows: Dict[str, Dict] = {n: row(n) for n in base}
+    elif reference_file is not None and Path(reference_file).is_file():
+        bench_hash = check_benchmark(p)["hash"]
+        if reference_benchmark_hash and reference_benchmark_hash != bench_hash:
+            raise RuntimeError(f"the committed reference was scored on benchmark {reference_benchmark_hash}, this run's benchmark is {bench_hash}: "
+                               "the numbers are not comparable")
+        rows = reference_rows_from_file(reference_file, final_budget)
+        base = list(rows)
+        source = {"kind": "committed file", "file": str(reference_file), "sha256": hashlib.sha256(Path(reference_file).read_bytes()).hexdigest()[:16],
+                  "benchmark_hash": bench_hash, "note": "the old components were not retrained; their numbers are the committed ones"}
+    else:
+        raise RuntimeError("no old daily fusion scores found for validation and no reference file: run phase 1 (fusion), or pass reference_file")
     ref_name = max(base, key=lambda n: -1.0 if rows[n]["recall"] is None else rows[n]["recall"])
     guards: Dict[str, Optional[float]] = {}
     for v in VARIANTS:
@@ -224,7 +274,8 @@ def decide(p: Prepared, seed: int, prefix: str = "stnet", final_budget: float = 
             rows[name] = {**row(name), "candidate": True, "variant": v, "calibrated": cal}
             guards[name] = worst_client(rws)
     doc = choose(rows, guards, ref_name, final_budget, min_recall_gain, guard_factor)
-    doc.update({"label": LABEL, "prefix": prefix, "seed": seed, "reference": ref_name, "rows": rows, "client_guard_worst_false_per_1000": guards,
+    doc.update({"label": LABEL, "prefix": prefix, "seed": seed, "reference": ref_name, "reference_source": source, "rows": rows,
+                "client_guard_worst_false_per_1000": guards,
                 "evaluation_years": list(years), "commit": git_commit(), "chosen_on": datetime.date.today().isoformat(),
                 "fusion_models": str(models_dir(p))})
     write_json(cp, doc)
