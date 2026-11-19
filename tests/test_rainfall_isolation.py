@@ -13,7 +13,8 @@ LEGACY_PREFIXES = (
 SNIPPET = """
 import json, sys, importlib
 for m in ("backend.app.geo", "backend.app.rainfall.catalog", "backend.app.rainfall.daily", "backend.app.rainfall.scorer",
-          "backend.app.rainfall.service", "backend.app.rainfall.weather_union"):
+          "backend.app.rainfall.service", "backend.app.rainfall.weather_union",
+          "backend.app.validation.records", "backend.app.validation.ingest", "backend.app.validation.adapters"):
     importlib.import_module(m)
 print(json.dumps(sorted(m for m in sys.modules if m.startswith(("backend", "scripts")))))
 """
