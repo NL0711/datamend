@@ -8,17 +8,19 @@ Build slices, in order. Each fits one working session and leaves the app and its
 
 - [x] Live rain-gauge feed (Weather Union): catalogue, client with a call budget, 03 UTC daily total, one-station scorer (rules + neighbour check, NOT a trained model), `/api/rainfall`, `docs/RAINFALL_LIVE_FEED.md`, `tests/test_rainfall_feed.py` (27 pass on a mocked transport; one real poll of 9 Mumbai stations worked, all dry so no rain value seen). UNCONFIRMED: units and period of `rain_accumulation`; raw log kept to settle it when rain falls
 - [x] Documentation reduced and rewritten (README, ARCHITECTURE, shared-docs); decision map written
-- [ ] 1. Merge the rainfall branch into the main line; fix the three test files that fail to collect; decouple `tests/conftest.py` from legacy model training
+- [x] 1. Rainfall branch is already on `main` (`6bbe2fb`); the three test files now collect (missing `Any` import, `pydantic-settings` installed in the environment, stale version assertion); `tests/conftest.py` no longer trains models and pins a throwaway SQLite database. 401 tests collect; the full legacy suite was not run (it is scheduled for deletion)
 - [ ] 2. Move `haversine_distance_km` and the station catalogue CSV out of the legacy `spatial` and `sources` packages
 - [ ] 3. Input contract and the internal Reading and DailyTotal records, input-integrity checks, conformance suite
 - [ ] 4. Merge the two single-gauge scorers (`backend/app/rainfall/scorer.py`, `ml-service/qc/station.py`) into one check catalogue; correct the rain-day label to the end date
 - [ ] 5. Runs, results, report and JSON/CSV exports; new tables; 50-run cap
 - [ ] 6. Evidence payload, the `evidence-v1` JSON Schema, baseline explainer, explanations table, `NARRATOR_URL` call
-- [ ] 7. Dashboard: four-item rail (Runs, Run view, Live gauge feed, Settings), timeline over queue, server-side paging
+- [ ] 7. Dashboard: four-item rail (Runs, Run view, Live gauge feed, Settings), timeline over queue, server-side paging; plus an AI chat panel in the Run view (added 2026-11-19 by the owner): it sends the question and the selected row's evidence to `NARRATOR_URL`, shows replies badged AI-generated, and says "AI narrator not connected" when unset (NOT IMPLEMENTED until the teammate delivers; no canned answers)
 - [ ] 8. Place lookup in a new package; then delete the Locations code, tables and tab
 - [ ] 9. Delete the legacy backend top-down with its tests, then the legacy frontend views, scripts, data and the hardware folder
 - [ ] 10. Trim configuration and Docker files; drop legacy dependencies (`torch`, `shap`, `pyod`, `paho-mqtt`, `statsmodels`, `scikit-learn`; `scipy` stays)
 - [ ] Not built, outside this list: PDF export, Parquet input, unit conversion, MCP hosting in the platform, accounts, correction of values, alerting
+
+Direction from the owner, 2026-11-19: treat STNet as the intended trained architecture and build toward its score-provider seam. No STNet result exists yet, so nothing may be presented as trained or measured until the run finishes (spec section 12).
 
 Open facts to settle: the Weather Union accumulation mode (from the raw log, when it rains); the AI narrator team's MCP client revision and transport, token auth, payload limits and hosting.
 

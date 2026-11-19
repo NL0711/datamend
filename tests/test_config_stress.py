@@ -8,11 +8,12 @@ from backend.app.config import Settings
 from backend.app.main import app
 
 
-def test_default_settings():
-    """Validate default configuration parameters according to project specifications."""
-    cfg = Settings()
+def test_default_settings(monkeypatch):
+    """Validate the code defaults: no environment override (conftest pins a test database) and no .env file."""
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    cfg = Settings(_env_file=None)
     assert cfg.PROJECT_NAME == "DataMend"
-    assert cfg.VERSION == "0.1.0"
+    assert cfg.VERSION == "0.2.0"
     assert cfg.API_PREFIX == "/api"
     assert cfg.DEBUG is True
     assert cfg.HOST == "0.0.0.0"

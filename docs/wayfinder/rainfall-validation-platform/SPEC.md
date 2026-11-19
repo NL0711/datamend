@@ -109,6 +109,8 @@ Layout D, timeline over queue. Four rail items:
 3. **Live gauge feed.**
 4. **Settings:** feed city and interval, accumulation mode, narrator URL.
 
+**AI chat (owner addition, 2026-11-19):** a chat panel in the Run view. A question plus the selected row's evidence goes to the platform, which forwards it to `NARRATOR_URL` (same seam as "Explain", section 6); replies are stored as explanations, badged "AI-generated", and shown beside the evidence. With `NARRATOR_URL` unset the panel says "AI narrator not connected" and offers the baseline explanation; it never answers from canned text. It cannot change a verdict, score or evidence. NOT IMPLEMENTED until the teammate's narrator exists; the request and response shape still needs their confirmation.
+
 At real size: 50 flagged rows per page from the server, sorted by rule score, filtered by verdict, check or station; evidence loaded by one GET when a row opens; the chart shows one station at a time and downsamples long series on the server.
 
 Always on screen: the original row untouched, evidence with basis tags, the baseline explanation marked generated, the narrator slot marked NOT IMPLEMENTED until delivered, synthetic data labelled synthetic.
@@ -183,5 +185,7 @@ Gates, in order, before any trained score reaches the platform:
 1. Architecture validated (main run meets the bar; ablations answer the memory question).
 2. STNet kept or dropped as the daily component, then `scales`, `choose`, `budgets` and the single `test` pass (these freeze decisions and are deliberately not run during architecture validation). The frozen rule in `docs/qc-evaluation-protocol.md` decides between daily-only and cross-scale combinations; it does not decide STNet against the older daily components, so that comparison needs its own rule written down before the run (open).
 3. Score export through the score provider, and only then a new ticket and slice to wire it into the daily profile.
+
+Owner direction (2026-11-19): STNet is treated as the intended architecture and the seam is built toward it, without waiting for the run. The gates above still govern what may be claimed.
 
 Until gate 3 the platform's claim is the rule-based one in section 8, and "Not claimed" (section 9) includes every STNet result.
