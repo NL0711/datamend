@@ -206,7 +206,7 @@ export interface PipelineModel {
 }
 
 export interface TrainingJob {
-  id: number; created_at: string | null; snapshot_id: number; target: 'local' | 'kaggle'; name: string; slug: string | null;
+  id: number; created_at: string | null; snapshot_id: number; target: 'local' | 'kaggle' | 'aws'; name: string; slug: string | null;
   status: 'running' | 'complete' | 'failed'; error: string | null; model_id: number | null; finished_at: string | null;
 }
 export interface LineageNode {

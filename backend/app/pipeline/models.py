@@ -140,9 +140,9 @@ class TrainingJob(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     snapshot_id: Mapped[int] = mapped_column(Integer, index=True)
-    target: Mapped[str] = mapped_column(String(8))                            # local | kaggle
+    target: Mapped[str] = mapped_column(String(8))                            # local | kaggle | aws
     name: Mapped[str] = mapped_column(String(64), default="label-fusion")
-    slug: Mapped[Optional[str]] = mapped_column(String(96), nullable=True)    # the Kaggle notebook, user/slug
+    slug: Mapped[Optional[str]] = mapped_column(String(96), nullable=True)    # the Kaggle notebook, user/slug; for aws: aws:<region>:<instance id>
     status: Mapped[str] = mapped_column(String(10), default="running")        # running | complete | failed
     error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     model_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

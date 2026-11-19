@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.api.settings import require_admin
 from backend.app.db.database import get_db
 from backend.app.pipeline import audit as audit_svc
+from backend.app.pipeline import aws_trigger as aws_svc
 from backend.app.pipeline import jobs as jobs_svc
 from backend.app.pipeline import kaggle_trigger as kaggle_svc
 from backend.app.pipeline import lineage as lineage_svc
@@ -283,8 +284,11 @@ async def promote_model(model_id: int, session: AsyncSession = Depends(get_db)) 
 # ------------------------------------------------------------------------------------------------ retraining and lineage
 class TrainBody(BaseModel):
     snapshot_id: int
-    target: str = "local"                        # local (server CPU) | kaggle (a private notebook)
+    target: str = "local"                        # local (server CPU) | kaggle (a private notebook) | aws (one short-lived EC2 instance in the caller's account)
     name: str = Field("label-fusion", max_length=64)
+    instance_type: str = Field(aws_svc.DEFAULT_INSTANCE_TYPE, max_length=32)       # aws only; checked against an allowlist
+    max_minutes: int = aws_svc.DEFAULT_MINUTES                                    # aws only; the hard time cap, 1 to 120
+    spot: bool = False                                                            # aws only
 
 
 def kaggle_creds(x_kaggle_username: Optional[str] = Header(None), x_kaggle_key: Optional[str] = Header(None)) -> Optional[kaggle_svc.Credentials]:
@@ -295,31 +299,50 @@ def kaggle_creds(x_kaggle_username: Optional[str] = Header(None), x_kaggle_key: 
         raise _bad(e)
 
 
-@router.post("/train", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(require_admin)])
-async def train(body: TrainBody, session: AsyncSession = Depends(get_db), creds: Optional[kaggle_svc.Credentials] = Depends(kaggle_creds)) -> Dict[str, Any]:
-    """Retrain the label-fusion model from a snapshot. A finished run registers a challenger; only the gate can promote it. A Kaggle run uses
-    the caller's own Kaggle account when the X-Kaggle-Username and X-Kaggle-Key headers are sent, otherwise the server's."""
+def aws_request(x_aws_access_key_id: Optional[str] = Header(None), x_aws_secret_access_key: Optional[str] = Header(None),
+                x_aws_session_token: Optional[str] = Header(None), x_aws_region: Optional[str] = Header(None),
+                x_aws_bucket: Optional[str] = Header(None)) -> Optional[aws_svc.Request]:
+    """The caller's own AWS account, region and bucket from the headers, for this request only (never stored or echoed); None means use the server's."""
     try:
-        job = await train_svc.start(session, body.snapshot_id, body.target, body.name, creds)
+        return aws_svc.from_request(x_aws_access_key_id, x_aws_secret_access_key, x_aws_session_token, x_aws_region, x_aws_bucket)
+    except ValueError as e:
+        raise _bad(e)
+
+
+@router.post("/train", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(require_admin)])
+async def train(body: TrainBody, session: AsyncSession = Depends(get_db), creds: Optional[kaggle_svc.Credentials] = Depends(kaggle_creds),
+                aws_req: Optional[aws_svc.Request] = Depends(aws_request)) -> Dict[str, Any]:
+    """Retrain the label-fusion model from a snapshot. A finished run registers a challenger; only the gate can promote it. A Kaggle run uses
+    the caller's own Kaggle account when the X-Kaggle-Username and X-Kaggle-Key headers are sent, otherwise the server's. An AWS run starts one
+    short-lived EC2 instance in the caller's AWS account (the X-Aws-* headers, otherwise the server's); AWS bills the account owner."""
+    try:
+        job = await train_svc.start(session, body.snapshot_id, body.target, body.name, creds, aws_req, (body.instance_type, body.max_minutes, body.spot))
     except LookupError as e:
         raise _bad(e, status.HTTP_404_NOT_FOUND)
     except PermissionError as e:
         raise _bad(e, status.HTTP_409_CONFLICT)
     except ValueError as e:
         raise _bad(e)
-    return train_svc.job_dict(job)
+    out = train_svc.job_dict(job)
+    if body.target == "aws":
+        out.update(instance_type=body.instance_type, max_minutes=body.max_minutes, spot=body.spot)
+        if aws_svc.ALLOWED_INSTANCE_TYPES.get(body.instance_type):
+            out["gpu_note"] = aws_svc.GPU_NOTE
+    return out
 
 
 @router.get("/train/jobs")
 async def train_jobs(session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     rows = (await session.execute(select(TrainingJob).order_by(TrainingJob.id.desc()).limit(50))).scalars().all()
-    return {"jobs": [train_svc.job_dict(j) for j in rows], "kaggle_configured": kaggle_svc.configured(), "byo_supported": True}
+    return {"jobs": [train_svc.job_dict(j) for j in rows], "kaggle_configured": kaggle_svc.configured(), "byo_supported": True,
+            "aws_supported": True, "aws_configured": aws_svc.configured()}
 
 
 @router.post("/train/jobs/{job_id}/refresh", dependencies=[Depends(require_admin)])
-async def refresh_train_job(job_id: int, session: AsyncSession = Depends(get_db), creds: Optional[kaggle_svc.Credentials] = Depends(kaggle_creds)) -> Dict[str, Any]:
+async def refresh_train_job(job_id: int, session: AsyncSession = Depends(get_db), creds: Optional[kaggle_svc.Credentials] = Depends(kaggle_creds),
+                            aws_req: Optional[aws_svc.Request] = Depends(aws_request)) -> Dict[str, Any]:
     try:
-        job = await train_svc.refresh(session, job_id, creds)
+        job = await train_svc.refresh(session, job_id, creds, aws_req)
     except LookupError as e:
         raise _bad(e, status.HTTP_404_NOT_FOUND)
     except PermissionError as e:

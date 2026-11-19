@@ -4,9 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ClipboardCheck, Download, FileUp, Loader2, ShieldCheck } from 'lucide-react';
 import {
   checkJob, decideAudit, decideProposal, downloadSnapshot, drawAudit, getLineage, getPipelineStatus, ingestFile, listAudit, listJobs, listModels, listProposals,
-  listSnapshots, listTrainingJobs, makeProposals, makeSnapshot, promoteModel, refreshTrainingJob, registerModel, rememberKaggle, rollbackModel, startTraining, storedKaggle,
+  listSnapshots, listTrainingJobs, makeProposals, makeSnapshot, promoteModel, refreshTrainingJob, registerModel, rememberAws, rememberKaggle, rollbackModel,
+  startAwsTraining, startTraining, storedAws, storedKaggle, AWS_INSTANCE_TYPES,
 } from './api';
-import type { KaggleAccount } from './api';
+import type { AwsAccount, KaggleAccount } from './api';
 import { LineageGraph } from './LineageGraph';
 import { useAdmin } from './Login';
 import type { AuditEstimate, AuditItem, IngestJob, Lineage, PipelineModel, PipelineProposal, PipelineSnapshot, PipelineStatus, TrainingJob } from './types';
@@ -41,6 +42,11 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
   const [kUser, setKUser] = useState('');
   const [kKey, setKKey] = useState('');
   const [consent, setConsent] = useState(false);
+  const [awsOn, setAwsOn] = useState(false);
+  const [awsAccount, setAwsAccount] = useState<AwsAccount | null>(() => storedAws());
+  const [aws, setAws] = useState({ id: '', secret: '', token: '', region: 'ap-southeast-2', bucket: '' });
+  const [awsOpts, setAwsOpts] = useState({ instanceType: 't3.medium', maxMinutes: 30, spot: false });
+  const [awsConsent, setAwsConsent] = useState(false);
   const [msg, setMsg] = useState<{ tone: 'info' | 'error' | 'warn'; text: string } | null>(null);
   const [busy, setBusy] = useState('');
   const [cut, setCut] = useState(new Date().toISOString().slice(0, 10));
@@ -54,20 +60,21 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
     listJobs().then((r) => setJobs(r.jobs)).catch(fail);
     listSnapshots().then((r) => setSnaps(r.snapshots)).catch(fail);
     listModels().then((r) => setModels(r.models)).catch(fail);
-    listTrainingJobs().then((r) => { setTjobs(r.jobs); setKaggleOn(r.kaggle_configured); }).catch(fail);
+    listTrainingJobs().then((r) => { setTjobs(r.jobs); setKaggleOn(r.kaggle_configured); setAwsOn(!!r.aws_configured); }).catch(fail);
     getLineage().then(setLineage).catch(fail);
   }, []);
   useEffect(refresh, [refresh]);
 
-  // a Kaggle notebook runs on Kaggle's side: ask about it every 20 seconds while one is running (this also registers its result when it ends)
-  const kaggleRunning = tjobs.filter((t) => t.target === 'kaggle' && t.status === 'running').map((t) => t.id).join(',');
+  // a Kaggle notebook or an AWS instance runs on the other side: ask about it every 20 seconds while one is running (this also registers its
+  // result when it ends). Each request carries the headers of its own target.
+  const remoteRunning = tjobs.filter((t) => (t.target === 'kaggle' || t.target === 'aws') && t.status === 'running').map((t) => `${t.id}:${t.target}`).join(',');
   useEffect(() => {
-    if (!kaggleRunning) return;
+    if (!remoteRunning) return;
     const t = window.setInterval(() => {
-      void Promise.all(kaggleRunning.split(',').map((id) => refreshTrainingJob(Number(id)).catch(() => undefined))).then(refresh);
+      void Promise.all(remoteRunning.split(',').map((x) => { const [id, target] = x.split(':'); return refreshTrainingJob(Number(id), target as 'kaggle' | 'aws').catch(() => undefined); })).then(refresh);
     }, 20000);
     return () => window.clearInterval(t);
-  }, [kaggleRunning, refresh]);
+  }, [remoteRunning, refresh]);
 
   // while a job is queued or running, look again every 2 seconds
   const active = jobs.some((j) => j.status === 'queued' || j.status === 'running');
@@ -105,6 +112,21 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
   };
   const forgetKaggle = () => { rememberKaggle(null); setAccount(null); setKUser(''); setKKey(''); setConsent(false); };
   const kaggleReady = !!account || kaggleOn;
+
+  const saveAws = () => {
+    const id = aws.id.trim(), secret = aws.secret.trim(), token = aws.token.trim(), region = aws.region.trim(), bucket = aws.bucket.trim();
+    if (!/^[A-Za-z0-9]{16,128}$/.test(id)) { setMsg({ tone: 'warn', text: 'The access key id is letters and digits only (16 to 128 characters).' }); return; }
+    if (!secret || secret.length > 200 || /\s/.test(secret)) { setMsg({ tone: 'warn', text: 'Enter the secret access key without spaces (at most 200 characters).' }); return; }
+    if (token && /\s/.test(token)) { setMsg({ tone: 'warn', text: 'The session token must not contain spaces.' }); return; }
+    if (!/^[a-z]{2}(-[a-z]+){1,2}-[0-9]{1,2}$/.test(region)) { setMsg({ tone: 'warn', text: 'The region looks like ap-southeast-2.' }); return; }
+    if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(bucket) || bucket.includes('..')) { setMsg({ tone: 'warn', text: 'The bucket name is 3 to 63 lowercase letters, digits, dots and hyphens.' }); return; }
+    const a = { accessKeyId: id, secret, sessionToken: token, region, bucket };
+    rememberAws(a); setAwsAccount(a); setAws({ ...aws, secret: '', token: '' }); setMsg({ tone: 'info', text: 'AWS account saved for this tab only.' });
+  };
+  const forgetAws = () => { rememberAws(null); setAwsAccount(null); setAws({ id: '', secret: '', token: '', region: 'ap-southeast-2', bucket: '' }); setAwsConsent(false); };
+  const awsReady = !!awsAccount || awsOn;
+  const awsGpu = AWS_INSTANCE_TYPES.find((i) => i.id === awsOpts.instanceType)?.gpu ?? false;
+  const awsMinutesOk = Number.isInteger(awsOpts.maxMinutes) && awsOpts.maxMinutes >= 1 && awsOpts.maxMinutes <= 120;
 
   const regModel = () => {
     let metrics: Record<string, unknown>;
@@ -219,6 +241,38 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
           <p className="text-[10px] text-slate-500">Get a token from your Kaggle account settings, API section. It is kept in this browser tab only (cleared when the tab closes), sent with each Kaggle request, and
             held in the server's memory just for that request: the server does not store or log it. The notebook is created private, on CPU, without internet.</p>
         </div>
+        <div className="border border-[#D3DCE7] rounded px-3 py-2 space-y-2" aria-label="AWS account">
+          <div className="text-xs font-bold">AWS account <span className="font-normal text-slate-500">(optional: train on one short-lived instance in your own AWS account; AWS bills you)</span></div>
+          <div className="flex items-end gap-2 flex-wrap">
+            <label className="text-xs font-bold block">Access key id <input value={aws.id} onChange={(e) => setAws({ ...aws, id: e.target.value })} className={`${field} block w-44 font-mono`} autoComplete="off" spellCheck={false} /></label>
+            <label className="text-xs font-bold block">Secret access key <input type="password" value={aws.secret} onChange={(e) => setAws({ ...aws, secret: e.target.value })} className={`${field} block w-52`} autoComplete="off" /></label>
+            <label className="text-xs font-bold block">Session token (optional) <input type="password" value={aws.token} onChange={(e) => setAws({ ...aws, token: e.target.value })} className={`${field} block w-40`} autoComplete="off" /></label>
+            <label className="text-xs font-bold block">Region <input value={aws.region} onChange={(e) => setAws({ ...aws, region: e.target.value })} className={`${field} block w-32 font-mono`} autoComplete="off" spellCheck={false} /></label>
+            <label className="text-xs font-bold block">S3 bucket <input value={aws.bucket} onChange={(e) => setAws({ ...aws, bucket: e.target.value })} className={`${field} block w-48 font-mono`} autoComplete="off" spellCheck={false} /></label>
+            <button className={btn} disabled={!aws.id || !aws.secret || !aws.bucket} onClick={saveAws}>Save for this tab</button>
+            <button className={btnQuiet} disabled={!awsAccount && !aws.id && !aws.secret && !aws.bucket} onClick={forgetAws}>Forget</button>
+          </div>
+          <div className="flex items-end gap-2 flex-wrap">
+            <label className="text-xs font-bold block">Instance type
+              <select value={awsOpts.instanceType} onChange={(e) => setAwsOpts({ ...awsOpts, instanceType: e.target.value })} className={`${field} block`} aria-label="instance type">
+                {AWS_INSTANCE_TYPES.map((i) => <option key={i.id} value={i.id}>{i.id}{i.gpu ? ' (GPU, not used by this trainer)' : ''}</option>)}
+              </select></label>
+            <label className="text-xs font-bold block">Max minutes (1 to 120)
+              <input type="number" min={1} max={120} value={awsOpts.maxMinutes} onChange={(e) => setAwsOpts({ ...awsOpts, maxMinutes: Number(e.target.value) })} className={`${field} block w-24`} aria-label="max minutes" /></label>
+            <label className="text-xs flex items-center gap-1 pb-1.5"><input type="checkbox" checked={awsOpts.spot} onChange={(e) => setAwsOpts({ ...awsOpts, spot: e.target.checked })} />spot instance (cheaper, may be interrupted)</label>
+          </div>
+          {awsGpu && <p className="text-xs text-amber-800" data-testid="aws-gpu-note">The label-fusion trainer does not use a GPU: a GPU type only costs more, and AWS must have approved your quota for it first.</p>}
+          <p className="text-xs" data-testid="aws-status">
+            {awsAccount ? <>Training will use <b>your</b> AWS account (key <span className="font-mono">{awsAccount.accessKeyId.slice(0, 4)}…</span>, {awsAccount.region}, bucket <span className="font-mono">{awsAccount.bucket}</span>).</>
+              : awsOn ? <>No account of yours is set: training will use <b>the server's</b> AWS account and bucket.</>
+              : <>No AWS account: add yours to train on AWS (this server has none of its own).</>}
+          </p>
+          <label className="text-xs flex items-start gap-1.5"><input type="checkbox" className="mt-0.5" checked={awsConsent} onChange={(e) => setAwsConsent(e.target.checked)} />
+            <span>This uploads the snapshot (station-days and your labels) to your S3 bucket and starts an instance in your AWS account. AWS bills you for it.</span></label>
+          <p className="text-[10px] text-slate-500">Kept in this browser tab only (cleared when the tab closes), sent with each AWS request, and held in the server's memory just for that request: the server does not store or log it.
+            The instance has no role, no key pair and no open ports; it reaches S3 through two links that expire in an hour (they sit in the instance's user-data, which you can read in the EC2 console), runs the trainer, uploads the result and
+            shuts itself down. The platform enforces the time cap but cannot show your AWS cost or credits. Not tested against live AWS yet.</p>
+        </div>
         {snaps.length > 0 && (
           <ul className="space-y-1">{snaps.map((s) => (
             <li key={s.id} className="flex items-center gap-3 text-[11px] border border-[#E2E8F2] rounded px-2 py-1 flex-wrap">
@@ -231,6 +285,10 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
                 <button className={btnQuiet} disabled={!signedIn || !!busy || !kaggleReady || !consent}
                         title={!kaggleReady ? 'Add your Kaggle account above (the server has none of its own)' : !consent ? 'Tick the consent box above first' : 'Run the same training as a private Kaggle notebook'}
                         onClick={() => void run('kaggle' + s.id, () => startTraining(s.id, 'kaggle'), 'Sent to Kaggle. It is checked every 20 seconds and the result registers itself.')}>Train on Kaggle</button>
+                <button className={btnQuiet} disabled={!signedIn || !!busy || !awsReady || !awsConsent || !awsMinutesOk}
+                        title={!awsReady ? 'Add your AWS account above (the server has none of its own)' : !awsConsent ? 'Tick the AWS consent box above first' : !awsMinutesOk ? 'Max minutes must be a whole number from 1 to 120' : 'Run the same training on one short-lived instance in your AWS account'}
+                        onClick={() => void run('aws' + s.id, async () => { const j = await startAwsTraining(s.id, awsOpts); if (j.status === 'failed') throw new Error(j.error ?? 'could not start on AWS'); },
+                          'Started on AWS. It is checked every 20 seconds and the result registers itself.')}>Train on AWS</button>
                 <button className={btnQuiet} onClick={() => void downloadSnapshot(s.id).catch(fail)}><Download className="w-3 h-3 inline mr-1" />JSONL</button>
               </span>
             </li>))}</ul>)}
@@ -240,9 +298,9 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
               <span className="font-mono font-bold">training {t.id}</span><span>snapshot {t.snapshot_id}</span><span className="font-mono">{t.target}</span>
               <span className={t.status === 'failed' ? 'text-red-700 font-bold' : t.status === 'complete' ? 'text-emerald-700 font-bold' : 'text-sky-700 font-bold'}>{t.status}</span>
               {t.slug && <span className="font-mono text-slate-500">{t.slug}</span>}{t.error && <span className="text-red-700">{t.error}</span>}
-              {t.target === 'kaggle' && t.status === 'running' && <button className={`${btnQuiet} ml-auto`} onClick={() => void run('r' + t.id, () => refreshTrainingJob(t.id))}>Check now</button>}
+              {(t.target === 'kaggle' || t.target === 'aws') && t.status === 'running' && <button className={`${btnQuiet} ml-auto`} onClick={() => void run('r' + t.id, () => refreshTrainingJob(t.id, t.target as 'kaggle' | 'aws'))}>Check now</button>}
             </li>))}</ul>)}
-        <p className="text-[10px] text-slate-500">Retraining refits how much each check is trusted, from your labels (a small model, no GPU needed). It does not retrain the RF25 STNet. With few labels it refuses. Kaggle runs are private notebooks on your Kaggle account; the free quota cannot be read or a running notebook cancelled from here.</p>
+        <p className="text-[10px] text-slate-500">Retraining refits how much each check is trusted, from your labels (a small model, no GPU needed). It does not retrain the RF25 STNet. With few labels it refuses. Kaggle runs are private notebooks on your Kaggle account; the free quota cannot be read or a running notebook cancelled from here. AWS runs are one instance in your account with a hard time cap; AWS cost is yours and is not shown here.</p>
       </Section>
 
       <Section title="4. Models trained offline" hint="Train on a snapshot elsewhere (Kaggle or a GPU machine), then register the model with its metrics. The metrics are declared by the training job and are not verified here. A candidate becomes champion only when the gate passes.">

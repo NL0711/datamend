@@ -141,6 +141,22 @@ describe('pipeline functions', () => {
     await api.refreshTrainingJob(6);
     expect(lastCall()[0]).toBe('/api/pipeline/train/jobs/6/refresh'); expect(lastCall()[1].method).toBe('POST');
   });
+  it('AWS training sends its options and the X-Aws headers, and refresh sends them only for aws jobs', async () => {
+    api.rememberAws({ accessKeyId: 'AKIAFAKEFAKEFAKEFAKE', secret: 'FAKE-SECRET', sessionToken: '', region: 'ap-southeast-2', bucket: 'fake-bucket' });
+    await api.startAwsTraining(4, { instanceType: 'g4dn.xlarge', maxMinutes: 45, spot: true });
+    expect(lastCall()[0]).toBe('/api/pipeline/train');
+    expect(bodyOf()).toEqual({ snapshot_id: 4, target: 'aws', instance_type: 'g4dn.xlarge', max_minutes: 45, spot: true });
+    expect(headersOf()).toMatchObject({ 'X-Aws-Access-Key-Id': 'AKIAFAKEFAKEFAKEFAKE', 'X-Aws-Secret-Access-Key': 'FAKE-SECRET', 'X-Aws-Region': 'ap-southeast-2', 'X-Aws-Bucket': 'fake-bucket' });
+    expect(headersOf()['X-Aws-Session-Token']).toBeUndefined();
+    await api.refreshTrainingJob(9, 'aws');
+    expect(headersOf()['X-Aws-Bucket']).toBe('fake-bucket');
+    await api.refreshTrainingJob(9);
+    expect(headersOf()['X-Aws-Bucket']).toBeUndefined();
+    await api.startTraining(4, 'local');
+    expect(headersOf()['X-Aws-Access-Key-Id']).toBeUndefined();
+    api.rememberAws(null);
+    expect(api.storedAws()).toBeNull();
+  });
   it('model and lineage endpoints', async () => {
     await api.listModels();
     expect(lastCall()[0]).toBe('/api/pipeline/models'); expect(lastCall()[1].method).toBeUndefined();
