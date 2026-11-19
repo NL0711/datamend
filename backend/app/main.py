@@ -1,23 +1,21 @@
 """
 backend/app/main.py
-DataMend — Master FastAPI Application Entrypoint & Lifespan Management.
+DataMend — FastAPI entrypoint of the rainfall time-series validation platform.
 """
 
 from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.app.api.routes import router as api_router
 from backend.app.api.places import router as places_router
 from backend.app.api.rainfall import router as rainfall_router
 from backend.app.api.validation import router as validation_router
-from backend.app.api.websocket import router as ws_router
 from backend.app.config import settings
 from backend.app.db.database import close_db, init_db
-from backend.app.services.simulation_service import simulation_service
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,17 +26,9 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifespan context manager for application startup and shutdown events."""
+    """Startup and shutdown: create the tables, start the live rain-gauge feed if it is configured."""
     logger.info("Initializing %s v%s database...", settings.PROJECT_NAME, settings.VERSION)
     await init_db()
-    logger.info("Database initialized successfully.")
-    # Auto-start configured default data source so telemetry streams immediately upon launch
-    from backend.app.sources.manager import data_source_manager
-    try:
-        await data_source_manager.start()
-        logger.info("Telemetry data source manager auto-started.")
-    except Exception as exc:
-        logger.warning("Data source manager auto-start warning: %s", exc)
 
     from backend.app.api.rainfall import start_rainfall_service, stop_rainfall_service
     try:
@@ -50,7 +40,6 @@ async def lifespan(app: FastAPI):
 
     logger.info("Shutting down %s services...", settings.PROJECT_NAME)
     await stop_rainfall_service()
-    await data_source_manager.stop()
     await close_db()
     logger.info("Cleanup complete.")
 
@@ -58,11 +47,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="DataMend Real-Time Anomaly Detection & Sensor Health System for Automatic Weather Stations",
+    description="DataMend: rainfall time-series data validation platform (rules, statistics and a neighbour check; no trained model).",
     lifespan=lifespan,
 )
 
-# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -71,12 +59,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount REST and WebSocket routers
-app.include_router(api_router)
 app.include_router(places_router)
 app.include_router(rainfall_router)
 app.include_router(validation_router)
-app.include_router(ws_router)
 
 
 @app.get("/", tags=["system"])
