@@ -172,6 +172,7 @@ async def test_a_review_needs_the_admin_token(async_client: AsyncClient, monkeyp
     assert (await async_client.post(url, json=body)).status_code == 401
     assert (await async_client.post(url, json=body, headers={"X-Admin-Token": "wrong" * 8})).status_code == 401
     monkeypatch.setattr(settings, "ADMIN_TOKEN", "")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "")
     assert (await async_client.post(url, json=body, headers=H)).status_code == 403
     monkeypatch.setattr(settings, "ADMIN_TOKEN", TOKEN)
     ok = await async_client.post(url, json=body, headers=H)

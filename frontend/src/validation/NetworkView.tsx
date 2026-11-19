@@ -60,7 +60,7 @@ function CyclePanel({ c, onAudit, onOpenRun }: { c: StationCycle; onAudit: (s: s
         <div className="text-[11px]"><div className="text-[10px] uppercase font-mono text-slate-500">Reviewer decisions (latest per row)</div>
           <div className="flex flex-wrap gap-1 mt-0.5">{Object.entries(c.decisions).filter(([, n]) => n > 0).map(([d, n]) => <span key={d} className="px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 font-mono">{DECISION_LABEL[d] ?? d} {n}</span>)}</div></div>)}
       <div className="flex gap-2 flex-wrap pt-1">
-        <button disabled={c.flagged === 0} onClick={() => onAudit(c.station_id)} className="flex items-center gap-1 px-3 py-1.5 rounded bg-sky-600 text-white text-xs font-bold disabled:opacity-40"><ShieldCheck className="w-3.5 h-3.5" />Audit this station's flags</button>
+        <button disabled={c.flagged === 0} onClick={() => onAudit(c.station_id)} className="flex items-center gap-1 px-3 py-1.5 rounded bg-teal-700 text-white text-xs font-bold disabled:opacity-40"><ShieldCheck className="w-3.5 h-3.5" />Audit this station's flags</button>
         {c.latest_run_id !== null && <button onClick={() => onOpenRun(c.latest_run_id as number)} className="px-3 py-1.5 rounded border border-[#D3DCE7] bg-white text-xs font-bold">Open latest run</button>}
       </div>
       <p className="text-[10px] text-slate-500">State: <StateBadge s={state} />. An audit is one reviewer's judgement, not ground truth, and never changes a verdict, score or evidence.</p>
@@ -192,7 +192,7 @@ export function NetworkView({ onAudit, onOpenRun, go }: Props) {
         </div>
         {replay?.state === 'failed' && <p className="text-[11px] text-red-700 mt-1">{replay.message ?? 'The replay failed.'}</p>}
         {replay?.state === 'done' && replay.stations_ok < replay.stations.length && <p className="text-[11px] text-amber-700 mt-1">{replay.stations_ok} of {replay.stations.length} stations downloaded.</p>}
-        {replayError && <p className="text-[11px] text-red-700 mt-1">{replayError} (loading needs the admin token set in Settings)</p>}
+        {replayError && <p className="text-[11px] text-red-700 mt-1">{replayError} (loading the replay needs the admin sign-in: use Admin sign in in the left rail)</p>}
         <p className="text-[10px] text-slate-500 mt-1">{replay?.note}</p>
       </Panel>
 

@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     # Editing settings from the dashboard (api/settings.py) is DISABLED unless this is set; callers must send it as X-Admin-Token.
     # A long random string, in .env only. There are no user accounts: anyone who has this token can change the feed key and the narrator.
     ADMIN_TOKEN: str = ""
+    # The admin sign-in of the dashboard (api/auth.py). The defaults are for local and demo use ONLY: anyone who knows them can sign in, so
+    # set both in the server's environment on any public deployment. An empty ADMIN_PASSWORD switches the sign-in off.
+    ADMIN_EMAIL: str = "admin@admin.com"
+    ADMIN_PASSWORD: str = "admin"
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
@@ -81,6 +85,27 @@ class Settings(BaseSettings):
             return [str(p).strip().strip("\"'").rstrip("/") for p in v if str(p).strip().strip("\"'")]
         return v
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def _async_database_url(cls, v):
+        """Accept the string a host hands out (postgres://... ?sslmode=require) and make it work with the async driver."""
+        return normalize_database_url(v) if isinstance(v, str) else v
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+
+def normalize_database_url(url: str) -> str:
+    """postgres:// and postgresql:// become postgresql+asyncpg://; asyncpg does not know sslmode, so sslmode=X becomes ssl=X. SQLite is untouched."""
+    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+    s = url.strip().strip("\"'")
+    for prefix in ("postgres://", "postgresql://"):
+        if s.startswith(prefix):
+            s = "postgresql+asyncpg://" + s[len(prefix):]
+    if s.startswith("postgresql+asyncpg://"):
+        parts = urlsplit(s)
+        query = [("ssl" if k == "sslmode" else k, val) for k, val in parse_qsl(parts.query, keep_blank_values=True)]
+        s = urlunsplit(parts._replace(query=urlencode(query)))
+    return s
+
 
 settings = Settings()

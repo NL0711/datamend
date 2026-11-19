@@ -77,6 +77,12 @@ export const ADMIN_TOKEN_KEY = 'datamend-admin-token';
 export const storedToken = () => sessionStorage.getItem(ADMIN_TOKEN_KEY) ?? '';
 export const rememberToken = (v: string) => sessionStorage.setItem(ADMIN_TOKEN_KEY, v);
 
+/** Admin sign-in (api/auth). The session token is sent as X-Admin-Token like the older ADMIN_TOKEN. */
+export interface Me { signed_in: boolean; email: string | null; login_enabled: boolean }
+export const login = (email: string, password: string) => post<{ token: string; email: string; expires_in: number }>('/api/auth/login', { email, password });
+export const getMe = (token: string) => fetch('/api/auth/me', { headers: { 'X-Admin-Token': token } }).then((r) => json<Me>(r));
+export const logout = (token: string) => fetch('/api/auth/logout', { method: 'POST', headers: { 'X-Admin-Token': token } }).then(() => undefined);
+
 export const postReview = (id: number, rowId: number, body: { decision: Decision; note?: string; reviewer?: string }, token: string) =>
   fetch(`${V}/runs/${id}/rows/${rowId}/review`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token }, body: JSON.stringify(body) })
     .then((r) => json<ReviewItem>(r));

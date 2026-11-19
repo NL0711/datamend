@@ -1,7 +1,8 @@
-// Settings: the Weather Union feed (key, city, interval, accumulation mode) and the AI narrator (URL, token). Saving needs the admin token
-// (ADMIN_TOKEN in the server's .env); it is kept for this browser session only. Secrets are write-only: the server never sends them back.
+// Settings: the Weather Union feed (key, city, interval, accumulation mode) and the AI narrator (URL, token). Saving needs the admin sign-in
+// (Login.tsx); the session is kept for this browser tab only. Secrets are write-only: the server never sends them back.
 import { useCallback, useEffect, useState } from 'react';
-import { getSettings, rememberToken as saveToken, saveSettings, storedToken, testFeed } from './api';
+import { getSettings, saveSettings, testFeed } from './api';
+import { LoginForm, signOut, useAdmin } from './Login';
 import { buildSettingsUpdate } from './lib';
 import type { FeedTestResult, SettingsState } from './types';
 import { Notice, Panel, formatError } from './ui';
@@ -13,7 +14,7 @@ const Label = ({ children, hint }: { children: React.ReactNode; hint?: string })
 
 export function SettingsView() {
   const [state, setState] = useState<SettingsState | null>(null);
-  const [token, setToken] = useState(storedToken);
+  const { token, email, signedIn } = useAdmin();
   const [form, setForm] = useState({ apiKey: '', city: '', intervalMinutes: '', mode: '', narratorUrl: '', narratorToken: '' });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: 'info' | 'error' | 'warn'; text: string } | null>(null);
@@ -27,7 +28,6 @@ export function SettingsView() {
   useEffect(() => { void load(); }, [load]);
 
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const rememberToken = (v: string) => { setToken(v); saveToken(v); };
 
   const save = async (clear: string[] = []) => {
     if (!state) return;
@@ -51,20 +51,23 @@ export function SettingsView() {
 
   if (!state) return message ? <Notice tone={message.tone}>{message.text}</Notice> : <p className="text-xs text-slate-500">Loading…</p>;
   const wu = state.weather_union;
-  const can = state.editing_enabled && token.length > 0 && !busy;
+  const can = state.editing_enabled && signedIn && !busy;
 
   return (
     <div className="space-y-3 max-w-3xl">
       {!state.editing_enabled && (
-        <Notice tone="warn">Editing is switched off on this server. To enable it, put a long random <span className="font-mono">ADMIN_TOKEN</span> in the server's
-          <span className="font-mono"> .env</span> and restart (generate one with <span className="font-mono">python -c "import secrets; print(secrets.token_urlsafe(32))"</span>).
-          Until then you can read the settings here and change them in <span className="font-mono">.env</span>.</Notice>)}
+        <Notice tone="warn">Admin sign-in is switched off on this server. Set <span className="font-mono">ADMIN_PASSWORD</span> (and <span className="font-mono">ADMIN_EMAIL</span>) in
+          the server's environment and restart. Until then you can read the settings here and change them in the environment.</Notice>)}
       {message && <Notice tone={message.tone}>{message.text}</Notice>}
 
       {state.editing_enabled && (
-        <Panel className="p-3 space-y-1">
-          <Label hint="The value of ADMIN_TOKEN from the server's .env. Kept for this browser tab only; never shown again.">Admin token</Label>
-          <input type="password" value={token} onChange={(e) => rememberToken(e.target.value)} autoComplete="off" className={field} aria-label="admin token" />
+        <Panel className="p-4 space-y-2">
+          {signedIn ? (
+            <div className="flex items-center gap-3 flex-wrap text-sm">
+              <span>Signed in as <b>{email}</b>. You can change the settings below.</span>
+              <button onClick={() => void signOut()} className="px-3 py-1.5 rounded border border-slate-300 bg-white text-xs font-semibold">Sign out</button>
+            </div>)
+            : <LoginForm why="Sign in as the admin to change settings. Reading never needs it." />}
         </Panel>)}
 
       <Panel className="p-4 space-y-3">
@@ -87,7 +90,7 @@ export function SettingsView() {
               {state.accumulation_modes.map((m) => <option key={m} value={m}>{m}</option>)}</select></div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <button disabled={!can} onClick={() => void save()} className="px-3 py-1.5 rounded bg-sky-600 text-white text-xs font-bold disabled:opacity-40">{busy ? 'Working…' : 'Save and apply'}</button>
+          <button disabled={!can} onClick={() => void save()} className="px-3 py-1.5 rounded bg-teal-700 text-white text-xs font-bold disabled:opacity-40">{busy ? 'Working…' : 'Save and apply'}</button>
           <button disabled={!can || !wu.api_key_set || !wu.city} onClick={() => void runTest()} title="makes one call to Weather Union" className="px-3 py-1.5 rounded border border-sky-300 text-sky-800 text-xs font-bold disabled:opacity-40">Test connection</button>
           {wu.api_key_source === 'runtime' && <button disabled={!can} onClick={() => void save(['weather_union_api_key'])} className="px-2 py-1 text-[11px] text-red-700 underline disabled:opacity-40">Remove the saved key</button>}
         </div>

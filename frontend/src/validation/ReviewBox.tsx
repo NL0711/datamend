@@ -1,7 +1,8 @@
 // The admin review loop on one flagged row: past reviews, and a form to record a decision. A review is stored separately and never changes
 // the verdict, score or evidence. Writing needs the admin token (kept for this browser tab only); there are no accounts.
 import { useEffect, useState } from 'react';
-import { getReviews, postReview, rememberToken, storedToken } from './api';
+import { getReviews, postReview } from './api';
+import { LoginForm, useAdmin } from './Login';
 import { DECISION_LABEL } from './lib';
 import type { Decision, ReviewItem, Verdict } from './types';
 import { Notice, formatError } from './ui';
@@ -18,7 +19,7 @@ export function ReviewBox({ runId, rowId, verdict, onReviewed }: { runId: number
   const [decision, setDecision] = useState<Decision | null>(null);
   const [note, setNote] = useState('');
   const [reviewer, setReviewer] = useState('');
-  const [token, setToken] = useState(storedToken());
+  const { token, signedIn } = useAdmin();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const flagged = verdict === 'SUSPECT' || verdict === 'UNCERTAIN';
@@ -32,7 +33,6 @@ export function ReviewBox({ runId, rowId, verdict, onReviewed }: { runId: number
     if (!decision) return;
     setBusy(true); setError(null);
     try {
-      rememberToken(token);
       const r = await postReview(runId, rowId, { decision, note: note.trim() || undefined, reviewer: reviewer.trim() || undefined }, token);
       setReviews((prev) => [...prev, r]);
       setDecision(null); setNote('');
@@ -63,8 +63,9 @@ export function ReviewBox({ runId, rowId, verdict, onReviewed }: { runId: number
             <div className="grid md:grid-cols-2 gap-2">
               <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} rows={2} placeholder="Note (optional)" className={`${input} md:col-span-2`} aria-label="review note" />
               <input value={reviewer} onChange={(e) => setReviewer(e.target.value)} maxLength={60} placeholder="Your name (optional label)" className={input} aria-label="reviewer" />
-              <input type="password" value={token} onChange={(e) => setToken(e.target.value)} placeholder="Admin token" autoComplete="off" className={input} aria-label="admin token" />
-              <button disabled={busy || !token} onClick={() => void submit()} className="md:col-span-2 px-3 py-1.5 rounded bg-slate-900 text-white font-bold disabled:opacity-40">{busy ? 'Saving…' : `Save: ${DECISION_LABEL[decision]}`}</button>
+              {signedIn
+                ? <button disabled={busy} onClick={() => void submit()} className="md:col-span-2 px-3 py-1.5 rounded bg-teal-700 text-white font-bold disabled:opacity-40">{busy ? 'Saving…' : `Save: ${DECISION_LABEL[decision]}`}</button>
+                : <div className="md:col-span-2 rounded border border-slate-200 p-3"><LoginForm why="Sign in as the admin to save a review." /></div>}
             </div>)}
         </>)}
     </div>

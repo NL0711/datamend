@@ -1,7 +1,7 @@
 """Dashboard settings: the Weather Union feed (key, city, interval, accumulation mode) and the AI narrator (URL, token).
 
-Reading is open and never returns a secret. WRITING requires ADMIN_TOKEN (set in the server's .env) sent as the X-Admin-Token header; with
-no ADMIN_TOKEN configured, editing is disabled (403). There are no user accounts. Saved values override .env and apply at once: the live
+Reading is open and never returns a secret. WRITING requires the admin sign-in (api/auth.py; its session token is sent as X-Admin-Token) or
+the ADMIN_TOKEN itself; with neither ADMIN_PASSWORD nor ADMIN_TOKEN set, editing is disabled (403). Saved values override .env and apply at once: the live
 feed is restarted with the new settings.
 """
 from __future__ import annotations
@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel, Field
 
 from backend.app import runtime_settings as rs
+from backend.app.api import auth as auth_api
 from backend.app.api import rainfall as rainfall_api
 from backend.app.config import settings
 from backend.app.rainfall.service import pick_cluster
@@ -30,23 +31,31 @@ MAX_FAILURES, WINDOW_S = 10, 300.0
 _TEST_TRANSPORT: Optional[httpx.AsyncBaseTransport] = None      # tests inject a mocked transport; never set in production
 
 
+def editing_enabled() -> bool:
+    return bool(settings.ADMIN_TOKEN) or auth_api.login_enabled()
+
+
 def require_admin(x_admin_token: Optional[str] = Header(None)) -> None:
-    if not settings.ADMIN_TOKEN:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "editing settings is disabled: set ADMIN_TOKEN in the server's .env and restart")
+    """A write needs a signed-in admin session (api/auth.py) or, for scripts, the ADMIN_TOKEN itself."""
+    if not editing_enabled():
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "editing is disabled: set ADMIN_PASSWORD (or ADMIN_TOKEN) on the server and restart")
+    if auth_api.session_valid(x_admin_token):
+        return
     now = time.monotonic()
     while _failures and now - _failures[0] > WINDOW_S:
         _failures.popleft()
     if len(_failures) >= MAX_FAILURES:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "too many wrong tokens; wait a few minutes")
-    if not x_admin_token or not hmac.compare_digest(x_admin_token.encode(), settings.ADMIN_TOKEN.encode()):
-        _failures.append(now)
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "the admin token is missing or wrong")
+    if settings.ADMIN_TOKEN and x_admin_token and hmac.compare_digest(x_admin_token.encode(), settings.ADMIN_TOKEN.encode()):
+        return
+    _failures.append(now)
+    raise HTTPException(status.HTTP_401_UNAUTHORIZED, "sign in as admin first (the session is missing or has expired)")
 
 
 def _state() -> Dict[str, Any]:
     svc = rainfall_api.rainfall_service()
     view = rs.public_view()
-    view["editing_enabled"] = bool(settings.ADMIN_TOKEN)
+    view["editing_enabled"] = editing_enabled()
     view["cities"] = rs.cities()
     view["accumulation_modes"] = list(rs.ACCUMULATION_MODES)
     view["interval_limits_seconds"] = [rs.MIN_INTERVAL_S, rs.MAX_INTERVAL_S]

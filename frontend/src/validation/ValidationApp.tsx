@@ -8,6 +8,7 @@ import { Compass, Database, FileSearch, FlaskConical, ListChecks, MapPin, Networ
 import { ExplorerView } from './ExplorerView';
 import { LabView } from './LabView';
 import { LiveFeedView } from './LiveFeedView';
+import { AdminChip } from './Login';
 import { NetworkView } from './NetworkView';
 import { OverviewView, Tab } from './OverviewView';
 import { PlacesView } from './PlacesView';
@@ -81,10 +82,10 @@ export function ValidationApp() {
   return (
     <div className="rain-app min-h-screen flex flex-col md:flex-row text-slate-900">
       <nav className="rain-nav md:w-60 md:shrink-0 md:h-screen md:sticky md:top-0 p-3 flex md:block gap-1 overflow-x-auto md:overflow-y-auto" aria-label="main">
-        <div className="hidden md:flex items-center gap-2.5 px-3 pt-2 pb-3">
+        <a href="#/" title="Back to the home page" className="hidden md:flex items-center gap-2.5 px-3 pt-2 pb-3">
           <DropMark />
           <div className="leading-tight"><div className="font-semibold text-slate-900 text-[15px]">DataMend</div><div className="text-[11px] text-slate-500">Rainfall validation</div></div>
-        </div>
+        </a>
         {GROUPS.map((g) => (
           <div key={g.label} className="flex md:block gap-1">
             <div className="rain-nav-group hidden md:block">{g.label}</div>
@@ -96,6 +97,7 @@ export function ValidationApp() {
                   <Icon className="w-4 h-4" />{item.label}</button>);
             })}
           </div>))}
+        <div className="hidden md:block"><AdminChip onSignIn={() => setTab('settings')} /></div>
       </nav>
       <main className="flex-1 px-4 py-6 md:px-10 md:py-8 min-w-0 max-w-[1400px] space-y-6">
         <PageHead title={title} line={HEADINGS[tab]} />

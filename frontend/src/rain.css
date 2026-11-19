@@ -92,6 +92,14 @@ body { background: var(--ground); color: var(--ink); }
 .rain-meter { height: 6px; border-radius: 9999px; background: #E2E8F0; overflow: hidden; }
 .rain-meter > span { display: block; height: 100%; border-radius: 9999px; background: #0284C7; }
 
+/* ---- the home page ---------------------------------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+.landing section[id] { scroll-margin-top: 56px; }
+.landing a, .landing li { transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
+.landing a:active { transform: translateY(1px); }
+.landing a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) { .landing a, .landing li { transition: none; } .landing li:hover { transform: none !important; } }
+
 /* ---- scrollbars ------------------------------------------------------------------------------------------------------ */
 ::-webkit-scrollbar-track { background: #F1F5F9; }
 ::-webkit-scrollbar-thumb { background: #CBD5E1; }

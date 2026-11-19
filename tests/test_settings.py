@@ -49,9 +49,10 @@ async def test_get_shows_state_without_any_secret(async_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_editing_is_disabled_without_an_admin_token_in_the_environment(async_client: AsyncClient, monkeypatch):
     monkeypatch.setattr(settings, "ADMIN_TOKEN", "")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "")
     assert (await async_client.get("/api/settings")).json()["editing_enabled"] is False
     r = await async_client.put("/api/settings", json={"weather_union_city": "Mumbai"}, headers=H)
-    assert r.status_code == 403 and "ADMIN_TOKEN" in r.text
+    assert r.status_code == 403 and "ADMIN_PASSWORD" in r.text
     assert (await async_client.post("/api/settings/feed/test", headers=H)).status_code == 403
     assert not Path(os.environ["RUNTIME_SETTINGS_PATH"]).exists()
 
