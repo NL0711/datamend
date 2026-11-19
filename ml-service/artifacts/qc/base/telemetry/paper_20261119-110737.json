@@ -1,0 +1,40 @@
+{
+ "name": "paper",
+ "started": "2026-11-19T11:07:37",
+ "wall_seconds": 0.002989053726196289,
+ "meta": {
+  "run": "base",
+  "profile": null,
+  "seed": 42,
+  "config_digest": "7e6232de1ef47977"
+ },
+ "environment": {
+  "python": "3.11.14",
+  "platform": "Windows 10",
+  "numpy": "2.4.6",
+  "cpu_count": 16,
+  "torch": "2.15.0+cpu",
+  "cuda": null,
+  "cuda_available": false,
+  "gpu_names": [],
+  "ram_total_gb": 15.3,
+  "git_commit": "594aada467c6b6e36d8a4c90db88b8106f5ef113+dirty"
+ },
+ "gpu": {
+  "name": null,
+  "source": "none",
+  "samples": 1,
+  "available": false,
+  "note": "no GPU monitor found (no pynvml, no nvidia-smi)"
+ },
+ "cpu": {
+  "process_cpu_seconds": 0.0,
+  "avg_cpu_percent": 50.0,
+  "max_cpu_percent": 50.0,
+  "avg_rss_mb": 489.70703125,
+  "max_rss_mb": 489.70703125,
+  "energy_wh": "NOT AVAILABLE: no readable RAPL counters (Windows, container or no permission); not estimated"
+ },
+ "spans": {},
+ "metrics": {}
+}

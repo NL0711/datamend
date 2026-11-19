@@ -1,0 +1,743 @@
+MAUSAM, 65, 1 (January 2014), 1-18
+
+      Development of a new high spatial resolution (0.25° × 0.25°) Long Period
+              (1901-2010) daily gridded rainfall data set over India and its
+                    comparison with existing data sets over the region
+
+      D. S. PAI, LATHA SRIDHAR, M. RAJEEVAN*, O. P. SREEJITH, N.S. SATBHAI and B. MUKHOPADYAY
+                                              India Meteorological Department, Pune, India
+
+                        *Earth System Science Organization, Ministry of Earth Sciences, New Delhi, India
+                                                        (Received 13 September 2013)
+
+                                         e mail : sivapai@hotmail.com; ds67.pai@imd.gov.in
+
+     ABSTRACT. The study discusses development of a new daily gridded
+rainfall data set (IMD4) at a high spatial resolution (0.25° × 0.25°, latitude ×
+longitude) covering a longer period of 110 years (1901-2010) over the Indian
+main land. A comparison of IMD4 with 4 other existing daily gridded rainfall
+data sets of different spatial resolutions and time periods has also been discussed.
+For preparing the new gridded data, daily rainfall records from 6995 rain gauge
+stations in India were used, highest number of stations used by any studies so far
+for such a purpose. The gridded data set was developed after making quality
+control of basic rain-gauge stations. The comparison of IMD4 with other data
+sets suggested that the climatological and variability features of rainfall over
+India derived from IMD4 were comparable with the existing gridded daily
+rainfall data sets. In addition, the spatial rainfall distribution like heavy rainfall
+areas in the orographic regions of the west coast and over northeast, low rainfall
+in the lee ward side of the Western Ghats etc. were more realistic and better
+presented in IMD4 due to its higher spatial resolution and to the higher density
+of rainfall stations used for its development.
+
+     Key words ­ Daily gridded rainfall, , Rainfall climatology, Annual cycle,
+                        High resolution, Heavy rainfall
+
+1. Introduction                                                   engineers, planners, and managers working in water-
+                                                                  related sectors like agriculture, ecology, hydrology, hydro-
+      Rainfall and surface air temperature are the two key        electric power generation, and water resources. The
+elements of climate that are commonly used as indicators          accurate prediction of rainfall variability at various time
+of global climate change due to the availability of long          and spatial scales are also very valuable for these water-
+time series of these elements from most parts of the world.       related sectors. The variation in the timing, distribution
+Rainfall, a component of terrestrial hydrological cycle           and amount of rainfall, even if in a small scale, can
+determines the availability of water and the level of the         subsequently be a cause of significant societal
+soil moisture. The information regarding climatology,             consequences. Therefore, understanding the rainfall
+long term trends, variability, extreme events etc. of the         variability at various scales, identifying the mechanisms
+rainfall over a region are very valuable for scientists,          behind it and its prediction has always been one of the
+
+                                                             (1)
+2  MAUSAM, 65, 1 (January 2014)
+
+priorities of climate research globally. Its importance has    Indian main land at different spatial grids and temporal
+further increased due to the projected changes in the          periods were made available by India Meteorological
+rainfall patterns and frequency of extreme rainfall events
+over various parts of the globe in associated with the         Fig. 1. Network of 6955 rain gauge stationsused for development of
+global warming (IPCC, 2007) and its possible impacts on                  IMD4
+vulnerable sections of our society. Although, the station
+(sample point)data are the primary source for the              Department (IMD). These are two 1° × 1° gridded daily
+diagnostic studies of climate change and variability           rainfall datasets based on fixed network of rain
+studies, these observations are often biased and distributed   gaugestations (Rajeevan et al. 2006, Rajeevan et al.
+in homogeneously in space and time. There can be               2008), and a 0.5° × 0.5° gridded daily rainfall dataset
+missing data, unknown errors attributed to certain             based on a variable network of raingauge stations
+observation methodologies and more importantly a change        (Rajeevan et al. 2009). In addition, another daily gridded
+of methodology can lead to a time-varying bias. It is          rainfall data set over Indian region was made available as
+therefore necessary to convert the station data to a regular   a part of the larger data set developed for the monsoon
+space-time grid and to correct or remove the erroneous         Asia region under Asian Precipitation-Highly Resolved
+values before such observations can be used for diagnostic     Observational Data Integration Towards Evaluation of the
+studies.                                                       Water Resources (APHRODITE) project (Yatagai et al.
+                                                               2012).
+      Gridded data are also preferred for the model
+validations, as the model outputs are generated at fixed             In this study, as a part of IMD's efforts to make use
+spatial grid points. However, depending on the                 of all the available quality rain gauge data over the
+application, requirement of spatial and temporal resolution    country to prepare a high resolution daily rainfall data set
+of the gridded data can be different. For example, the         for various applications such as climate variability &
+spatial and temporal resolutions of the data required for      climate change studies, validation of model rainfall at
+examining intra-seasonal variation and validation of           various scales, hydrological modelling, drought
+mesoscale models are relatively higher than that required      monitoring etc., development of a new daily gridded
+for examining climate change and variability and               rainfall data set over India at a spatial resolution 0.25° ×
+validation of climate models. However, as mentioned            0.25° for 110 years (1901-2010) have been discussed. The
+earlier, for climate change studies requirement of length of   data set was prepared using the daily rainfall data from all
+data is very much higher than that for mesoscale studies.      the rain gauge stations over the country available in the
+There are several global, continental and regional gridded     IMD archive. Another objective of this study was to
+rainfall data sets available for use. These data sets are      compare the newly developed daily rainfall data set with
+however differ in terms of spatial resolution, temporal        the existing 4 daily rainfall datasets over India (3 IMD
+resolution, spatial and temporal coverage, types of basic
+data used (like raingauge, satellite based precipitation) and
+methods used for interpolation of data from the sample
+points (rainfall gauges) to the grid points.
+
+      Over India, daily rainfall data observations from
+most parts of the country are available for a very long time
+period (more than 125 years). A brief history of the
+rainfall data collection and archival in India can be
+obtained from Walker (1910) and Parthasarathy and
+Mooley (1978). Currently, these historical rainfall data
+are archived at the National Data Center (NDC), India
+Meteorological Department (IMD), Pune. The first
+gridded daily rainfall for Indian region was prepared by
+Hartman and Michelsen (1989). They prepared the grid
+point data at the 1° × 1° by grouping the station data into
+grid boxes using the IMD daily rainfall data of 1901-1970.
+Using this gridded rainfall data set, Hartman and
+Michelsen (1989), Krishnamurthy and Shukla (2000) and
+Krishnamurthy and Shukla (2007 & 2008) studied the
+intra-seasonal and interannual variability of rainfall over
+India. Recently, three daily gridded rainfall data sets over
+PAI et al. : DEVELOPMENT OF A NEW HIGH SPATIAL RESOLUTION                       3
+
+Fig. 2. Daily Variation of number of stations used for the development of IMD4
+
+data sets and the APHRODITE data set mentioned in the         the period 1901-2010 were used. The daily rainfall records
+earlier paragraph) to evaluate the capability of the new      from 6955 rain gauge stations with varying availability
+data set in representing the rainfall climatology and         periods were used for the study. The number of stations
+variability over the country at various special and           used for the preparation of the new grid point data (IMD4)
+temporal scales. This was achieved by comparing the           is nearly 900 more than that used by Rajeevan et al.
+various climatological and variability features of rainfall   (2009) for the preparation of 0.5° × 0.5° gridded daily
+over India prepared using the above 5 gridded daily           rainfall data. Out of these 6955 stations, 547 are IMD
+rainfall datasets over the region for some common data        observatory stations, 494 are hydro-meteorology
+period.                                                       observatories and 74 are Agromet observatories. The
+                                                              remaining are rainfall reporting stations maintained by the
+      The section 2 provides details of the basic rain gauge  State Governments. The locations of all the 6955 rain
+data used for the preparation of IMD4 and other data sets     gauge stations considered for preparing the new gridded
+used in this study. The section-3 discusses the               rainfall data are shown in Fig. 1. As seen in the Fig. 1, the
+methodology used for the preparation of the new data set      spatial density of the station points is not uniform
+and computation of area averaged rainfall over various        throughout the country. The density of the stations is
+regions from different gridded rainfall data sets. The        relatively high in the south Peninsula and relatively low
+section4 describes various results of the study and the       over northern most areas of the country, northwest India,
+section 5 presents summary and conclusions.                   northeast India, and eastern parts of central India. The
+                                                              daily variation of number of stations used for the analysis
+2. Data used                                                  is shown in Fig. 2. On an average, data from about 2600
+                                                              stations per year were available for the preparation of
+      2.1. Rainfall station data for the preparation of new   daily grid point data. However, the data density varied
+            gridded data set                                  from year to year from about 1450 in the first year (1901)
+                                                              to about 3950 during the period 1991-94. The data density
+      For the preparation of the new gridded daily rainfall   was relatively higher (3100 stations per day) from 1951
+data set (referred hereafter as IMD4), daily rainfall data    onwards except in the last 2-3 years when the density
+from the archive of National Data Centre, IMD, Pune for       reduced to about 1900 stations per day.
+4                                          MAUSAM, 65, 1 (January 2014)
+
+                                                               TABLE 1
+                                Details of gridded daily rainfall data sets used in the study
+
+   Data set               Short name used   Spatial resolution    Data period          Rain gauge Network             Interpolation method
+                            in this study  Latitude × longitude                used for preparing the gridded data
+
+   IMD (Rajeevan et al.   IMD1             1° × 1°                1951-2007    fixed network of 2140 rain gauge       Shepard (1968)
+       2006 & 2010)                                                                           stations
+
+   IMD (Rajeevan et al.   IMD2             1° × 1°                1901-1904    fixed network of 1380 rain gauge       Shepard (1968)
+            2008)                                                                             stations
+
+   IMD (Rajeevan et al.   IMD3             0.5° × 0.5°            1971-2005    varying network of 6076    rain gauge  Shepard (1968)
+            2009)                                                                               stations
+
+   APHRODITE (Yatagai et  APHRO            0.25° × 0.25°          1951-2007    varying network of rain gauge          Willmott et al. (1985)
+             al. 2012)                                                                       stations
+
+   Present Study          IMD4             0.25° × 0.25°          1901-2010    varying network of 6955    rain gauge  Shepard (1968)
+                                                                                                stations
+
+      2.2. The daily gridded rainfall data sets over India        network were available. In this study, hereafter this
+                                                                  updated data set has been referred as IMD1.
+      Four daily rainfall data sets over the region were
+used in this study to compare with the newly developed                  Another daily 1° × 1°, gridded rainfall data set
+rainfall data set (Table 1 for the brief details of the data      (hereafter referred as IMD2) extending for a period of
+sets). The first data set at the spatial grid of 1° × 1° for the  1901-2004 was developed by Rajeevan et al. (2008) for
+period 1951-2003 was initially developed by Rajeevan et           examining variability and long-term trends of extreme
+al. (2006) using a fixed network of 1803 rain gauge               rainfall events over central India. IMD2 was prepared
+stations that having minimum 90% data availability during         based on a fixed network of only 1380 rain gauge stations
+the analysis period and was used to analyse the break and         that having at least 70% data availability during the
+active events in the south monsoon rainfall over India.           analysis period. For mesoscale studies and model
+Goswami et al. (2006)used this data set to examine the            validation, Rajeevan et al. (2009) developed a daily
+frequency and the magnitude of extreme rain events over           0.5° × 0.5° gridded rainfall data set (hereafter referred as
+central India during the monsoon season for the period            IMD3) for the period of 1971-2004. IMD3was prepared
+1951-2000. Krishnamurthy and Ajayamohan (2010)                    based on a varying network of 6076 rain gauge stations.
+extended the data set for the period 1901-1950 by                 All the above 3 IMD daily rainfall data sets over India
+following exactly the same procedure of Rajeevan et al.           used Shepard (1968) interpolation method for
+(2006) and the resultant data set for the period 1901-2003        interpolating daily rainfall from rain gauge (sample)
+was used to examine the daily rainfall variability                points to grid points. The directional effects and barriers
+associated with the formation of low pressure systems in          were also included.
+the Indian monsoon region during the period and its
+impact on the seasonal mean rainfall. To improve the data               The fourth daily rainfall data set used to compare the
+quality over northern part of India, Rajeevan et al. (2010)       newly developed rainfall data in this study is the
+reconstructed the data set of Rajeevan et al. (2006) using a      APHRODITE daily rainfall data set (APHRO_V1101)
+fixed network of 2140 that having minimum 90% data                which is available at the spatial resolutions of 0.25° ×
+availability and the data period was extended up to 2007.         0.25° and 0.5° × 0.5° for the period 1951-2007. The
+For the IMD operational purposes, this data set was               dataset, used rain gauge observation data from thousands
+extended up to 2010 using the same network of 2140 rain           of Asian stations in addition to those reporting to the
+gauge stations, which is a subset of the 6955 stations data       WMO Global Telecommunications System. This data set
+used in this study. As the number of presently available          was prepared using the basic algorithm of Xie et al.
+stations within the fixed network during each day of the          (2007). Details of the project and the data set are
+period (2004-2007) was more than that used by Rajeevan            discussed in Yatagai et al. (2012). The daily
+et al. (2010) by about 400 to 600, the gridded data for the       APHRODITE data set is available at
+period 2004 to 2007 was recalculated with increased               http://www.chikyu.ac.jp/precip/. In this study the
+number of stations from the fixed network. For the period         APHRODITE data set with spatial resolution at 0.25° ×
+2004-2010, around 1050 stations per day from the fixed            0.25° has been used (hereafter referred as APHRO).
+PAI et al. : DEVELOPMENT OF A NEW HIGH SPATIAL RESOLUTION       5
+
+      2.3. Other data sets used                                 Fig. 3. Spatial distribution of the mean annual rainfall over India
+                                                                          computed for the period 1901-2010
+      One of the additional data set used for this study was
+the time series of area weighted rainfall over the Indian       statistical relationship among the station rainfall data).
+land region during the southwest monsoon rainfall and           Because of this, geostatistical techniques not only have the
+that during the full year (annual) for the period 1901-2010     capability of producing an estimation surface of the
+which is being currently used by IMD for operational            variable but also provide some measure of the certainty or
+purpose. The data set was obtained from National Data           accuracy of the estimations. Kriging is an advanced geo-
+Center, IMD, Pune. This data set was computed as the            statistical procedure (Zhang and Wang 2010) that
+area weighted average of the district rainfall data which       generates an estimated surface from a scattered set of
+are computed from rainfall data of variable subset of about     points.
+3500 stations. In this study, the IMD operational time
+series of all India rainfall is referred as IMD_OP.                   For the development of the new data set, as in
+                                                                Rajeevan et al. (2006, 2008, 2009 & 2010), we have used
+      Another data set used in this study is the number of      the simplest form of inverse distance weighted
+monsoon low pressure areas (monsoon lows) and                   interpolation (IDW) scheme proposed by Shepard (1968).
+monsoon depressions formed over Indian region for the           In this method, interpolated values were computed from a
+period 1901-2010. The data were obtained from the daily         weighted sum of the observations. Inverse distance
+weather reports published by the IMD.                           weighted methods are based on the assumption that the
+                                                                interpolating surface should be influenced most by the
+3. Methodology                                                  nearby points and less by the more distant points. The
+                                                                interpolating surface is a weighted average of the station
+      3.1. Development of the new gridded daily rainfall        rainfall around the interpolation grid point and the weight
+            data over India                                     assigned to each station data diminishes as the distance
+                                                                from the interpolation point to the station point increases.
+      Before quality checking and interpolation of the          To speed up the computation, we used only rainfall data
+station rainfall data, verification of the location             from few nearest neighbour stations (minimum of 1 point
+information of the station and checking of coding and           and maximum of 4 points) within a radial distance of 1.5
+typographic errors in the data were carried out. After          degree around the grid point to calculate weighted
+applying the standard quality control tests such as tests for   average. The scheme was locally modified by including
+typing and coding errors, missing data, duplicate station       the directional effects and barriers as proposed by Shepard
+check, extreme value check etc. on the daily station point      (1968). More details about the interpolation method used
+rainfall data, the data were interpolated at fixed spatial      in the study are given in Rajeevan et al. (2006).
+grid points of 0.25° × 0.25° resolution.
+
+      A common approach used for converting station
+rainfall data into grid point data is the spatial
+interpolation, which assumes that spatially distributed
+station rainfall values are spatially correlated or that the
+stations, which are close together tend to have similar
+rainfall characteristics. There are a variety of interpolation
+methods, which can be broadly divided into deterministic
+and geostatistical methods. The deterministic interpolation
+methods assign values to grid points based on the
+measured rainfall from surrounding stations (at sample
+points) and on specified mathematical formulas that
+calculate the rainfall values at grid points based either on
+the degree of similarity [e.g., inverse distance weighting
+(Cressman 1959, Shepard 1968 & 1984), natural
+neighbour (Sibson 1981)], or the degree of smoothing in
+relation with neighboring station data points (e.g., trend
+analysis [(Edwards 1973, Hughes 1982), multi-quadratic
+surface fitting (Hardy 1971, Shaw 1994)]. The
+geostatistical methods useboth mathematical and
+statistical methods that include autocorrelation (the
+6  MAUSAM, 65, 1 (January 2014)
+
+   Fig. 4. Time series of all India daily rainfall for the period 1901-2010
+
+      3.2. Computation of area weighted rainfall                orography. The Western Ghats of the peninsula and the
+                                                                great Himalayan arc extending from Kashmir to Assam in
+      In this study, the grid point rainfall data at different  the north and hills of Burma and Khasi and Jaintia Hills of
+resolutions have been used for preparing the daily rainfall     Meghalaya have profound effect on the rainfall of India.
+over various spatial regions. The daily rainfall over a         The heavy orographic rainfall on the windward side of hill
+given region was computed as the area weighted rainfall         ranges of Western Ghats, and the rapid decrease of rainfall
+over all the grid boxes over the region. The area weight        on the leeward side of the hills. The mean annual rainfall
+assigned to each grid box was taken as the fractional grid      along the west coast was 4 mm/day with many areas in
+box area enclosed by the outer boundaries of the reference      the Konkan and coastal region exceeding 8 mm/day. East
+region multiplied by a cosine factor (the cosine of the         of the western Ghats, there is a large north-south oriented
+latitude of the centre point of the grid box). The cosine       area, which receives mean annual rainfall 2mm/day.
+factor is required to account for the convergence of the        Across the sub Himalayan regions of west Bengal,
+meridians which lessens the impact of high-latitude grid        Sikkim, Assam and Meghalaya, Arunachal Pradesh etc.,
+points that represent a small area of the globe.                the mean annual rainfall exceeded 4 mm/day with some
+                                                                areas receiving 8mm/day. Annual rainfall of
+4. Results                                                      4 mm/day was also observed over some isolated areas of
+                                                                Himachal Pradesh, Uttarakhand and hills of West Uttar
+      The spatial domain of the IMD4extended from               Pradesh. However, western Rajasthan and Northern parts
+6.5° N to 38.5° N in latitude (129 points), and from            of Saurashtra and Kutch receives annual rainfall of
+66.5° E to 100° E in longitude (135 points) covering the        <1mm/day.
+main land region of India (excluding the island parts). The
+temporal domain of the data set extends from 1stJanuary,              Fig. 4 is a time series of IMD4annual cycle of daily
+1901 to 31st December, 2010. Fig. 3 depicts the spatial         rainfall over the Indian main land. The daily rainfall over
+distribution of mean annual rainfall over India computed        the main land was computed as the area weighted rainfall
+using IMD4 data for the entire period of 1901-2010. As          over all the grid points over the main land. As seen in the
+seen in the Fig. 3, the spatial distribution of rainfall        Fig. 4, both inter-annual and intra-seasonal variability are
+immediately brings out its strong dependence on the             present in the daily rainfall series embedded with extreme
+PAI et al. : DEVELOPMENT OF A NEW HIGH SPATIAL RESOLUTION                                                                7
+
+Fig. 5. Mean annual climatology of rainfall over India based on 5 gridded rainfall data sets over the region. (a) IMD4,
+          (b) IMD1, (c) IMD2, (d) IMD3 and (e) APHRO. The climatology of IMD3 was computed using data for the
+          period 1971-2000 & that of other data sets were computed using data for the period 1951-2000
+
+rainfall events over the 110-year record. The annual cycle   period is given in the last column of the Table 2. As seen
+of the rainfall over the country is linked to the movement   in this table, the all India mean annual rainfall and mean
+of Inter-tropical Convergence Zone (ITCZ) across the         seasonal rainfall for the southwest monsoon season (June-
+tropical Indian Ocean and land regions. During the           September) for the total period (1901-2010) were
+monsoon season, the ITCZ shifts northwards from the          3.09 mm/day and 6.99 mm/day respectively.
+equatorial Indian Ocean region to the Indian main land
+associated with the progress of the southwest monsoon.             4.1. Comparison of the new gridded data set with
+Climatologically, the annual rainfall maximum over India                    the existing gridded rainfall data sets over
+typically develops during the middle of the monsoon                         India
+season (JJAS), when the (ITCZ) merges with the monsoon
+trough. The north-south meandering of the monsoon                  4.1.1. Spatial distribution of mean annual and
+trough within the season causes the intraseasonal variation                 seasonal rainfall
+of the rainfall across the region. The maximum in the
+annual rainfall is followed by the annual minimum during           In this section, a comparison of various
+the months of December through May when the ITCZ             climatological features of rainfall over India based on
+shifts back to the oceanic region south of the country.      IMD4 with that based on the other four rainfall datasets
+From the above discussion, it is clear that the              over India (IMD1, IMD2, IMD3 and APHRO) were
+IMD4reflects well known large scale mean and variability     examined. The climatological features examined were
+features of the rainfall over India.                         spatial distribution of mean annual and seasonal rainfall
+                                                             over the country, annual cycle of mean monthly and daily
+      The monthly, seasonal and annual mean values of all    rainfall averaged over the country as a whole. As
+India rainfall based on IMD4 data for the entire data        discussed in the Section-2, the data periods of these data
+8           MAUSAM, 65, 1 (January 2014)
+
+   Fig. 6.  Mean climatology of rainfall over India during the winter season (January-February) based on 5 gridded rainfall
+            data sets over the region. (a) IMD4, (b) IMD1, (c) IMD2, (d) IMD3 and (e) APHRO. The climatology of IMD3
+            was computed using data for the period 1971-2000 & that of other data sets were computed using data for the
+            period 1951-2000
+
+sets were different. Therefore, climatological features of  of rainfall areas of  4mm/day along the windward side of
+rainfall using IMD3 were prepared using data for the        the Western Ghatsis narrower in Figs. 5(a, d-e) compared
+common period of 1971-2000 and that of other data sets      to Figs. 5(b&c). On the other hand, relatively more
+were prepared using the period of 1951-2000.                (less)areas of rainfall 8mm/daycan be seen along the
+                                                            west coast and over Assam & Meghalaya (Arunachal
+      Fig. 5 shows the comparison of maps showing           Pradesh) in the maps of higher resolution data sets
+spatial distribution of mean annual rainfall over India     compared to that of the lower resolution data sets.
+computed based on all the 5 rainfall data sets. All the     Similarly higher resolution data sets depict relatively drier
+annual rainfall climatology maps depicted nearly similar    climatology over northern parts of Jammu and Kashmir.
+large scale features such as maximum rainfall areas along
+the west coast and over northeast India, rapid decrease of        The rainfall climatology maps of higher resolution
+rainfall in the leeward side of the Western Ghats, and      data sets show closer resemblance except along the west
+minimum rainfall over northwest India. As expected the      coast, where the zone of maximum rainfall areas is
+major difference was that the maps [Figs. 5(b&c)] based     slightly narrower and the areas of rainfall 8mm/day are
+on lower resolution (IMD1 & IMD2) data sets depict          relatively more in IMD4compared to that in IMD3 &
+smoother patterns but with less details of spatial          APHRO. Another difference is that the areas of
+distribution of annual mean rainfall compared to that        2mm/day in the leeward side of the Western Ghats,
+[Figs. 5(a, d-e)] based on higher resolution data sets      north Jammu & Kashmir and a thin belt along northern
+(IMD4, IMD3 & APHRO). For e.g., the north-south zone        parts of Uttarakhand are relatively more in APHRO
+         PAI et al. : DEVELOPMENT OF A NEW HIGH SPATIAL RESOLUTION                                                    9
+
+Fig. 7.  Mean climatology of rainfall over India during the pre-monsoon season (March-May) based on 5 gridded
+         rainfall data sets over the region. (a) IMD4, (b) IMD1, (c) IMD2, (d) IMD3 and (e) APHRO. The climatology
+         of IMD3 was computed using data for the period 1971-2000 & that of other data sets were computed using data
+         for the period 1951-2000
+
+compared to the other two data sets. Relatively drier       resolution data sets. However, like in the case of annual
+annual rainfall climatology is seen also over north         climatology (Fig. 5), the most noticeable point was the
+Saurashtra and Kutch, northern part of east coast, Sikkim,  relatively drier climatology over North Jammu & Kashmir
+and Arunachal Pradesh in APHRO compared to other two        and a thin belt along northern parts of Uttarakhand,
+data sets. Overall, the annual climatology patterns in      northern parts of east coast, Sikkim and Arunachal
+IMD4&IMD3 showed highest resemblance mainly due to          Pradesh in APHRO compared to the 4 IMD data sets
+the near same basic station rainfall data and commonality   during all the four seasons. Similarly, relatively drier
+in the method of interpolation used for the preparation of  rainfall climatology during the southwest monsoon season
+these two data sets.                                        is seen over many areas in the leeward side of the Western
+                                                            Ghats in APHRO compared to other data sets. Relatively
+      For the visualisation of comparison of seasonal       narrower zone of higher rainfall (15mm/day) along the
+rainfall climatology based on the same five data sets,      west coast during southwest monsoon season is also seen
+Figs. 6 to 9 are presented here. These figures depict the   in the higher resolution data sets.
+seasonal rainfall climatology over Indian main land
+computed for the four seasons [winter (January-                   4.1.2. Mean annual cycle of all India rainfall
+February), pre-monsoon (March-May), southwest
+monsoon (June-September) & northeast monsoon season               In this section the mean annual cycle of the all India
+(October-December)] of India. It is seen from the Figures   daily, monthly, seasonal rainfall computed using various
+6 to 9 that during all the seasons, the large scale         data sets were compared. The Fig. 10 shows the mean
+climatology features were nearly same in all the data sets  annual cycle of the daily rainfall averaged over the Indian
+except for higher spatial details seen in the higher        main land based on various data sets. The base period
+10           MAUSAM, 65, 1 (January 2014)
+
+    Fig. 8.  Mean climatology of rainfall over India during the southwest monsoon season (June-September)
+             based on 5 gridded rainfall data sets over the region. (a) IMD4, (b) IMD1, (c) IMD2, (d) IMD3
+             and (e) APHRO. The climatology of IMD3 was computed using data for the period 1971-2000
+             & that of other data sets were computed using data for the period 1951-2000
+
+    Fig. 9.  Mean climatology of rainfall over India during the post monsoon season (October-December)
+             based on 5 gridded rainfall data sets over the region. (a) IMD4, (b) IMD1, (c) IMD2, (d) IMD3
+             and (e) APHRO. The climatology of IMD3 was computed using data for the period 1971-2000
+             & that of other data sets were computed using data for the period 1951-2000
+PAI et al. : DEVELOPMENT OF A NEW HIGH SPATIAL RESOLUTION                                                    11
+
+Fig. 10. Annual cycle of the all India daily mean rainfall. The climatology of IMD3 was computed
+             using data for the period 1971-2000 & that of other data sets were computed using data for the
+             period 1951-2000
+
+used for computing mean annual cycle of IMD3 was           base period of 1971-2000 is given in the next two
+1971-2000 and that for other 4 data sets was 1951-2000.    columns. All the values are expressed in terms of mm/day.
+The mean annual cycle with peak during the middle of the   The monthly mean values of all the data sets showed very
+monsoon season and minimum during the winter season is     similar annual cycles with peak in July and minimum
+seen in all the data sets. However, it is seen that        during December- January period. However, the most
+throughout the annual cycle, the daily mean values in      noticeable point is that the lowest mean values in all the
+APHRO is the lowest. The daily average rainfall in IMD2    categories (monthly, seasonal and annual)were observed
+was the highest in peak segment of the annual cycle (from  in APHRO.
+around end of June to around end of September). Average
+daily values of IMD1were the highest during most days of         For the 1951-2000 climatology, the highest mean
+the first 3 months and many days in the last segment of    monthly values are observed in IMD1 for the first 3
+the annual cycle. Over other parts of the annual cycle,    months of the year (January to March), June and the last 3
+daily values of either IMD3 orIMD4 were the highest. The   months of the year (October to December), in IMD2 for
+difference between highest mean daily rainfall values in   the last 3 months (July to September) of the southwest
+IMD2 and APHRO was 1.86mm/dayand that between              monsoon season, and in IMD4 for the 2 pre-monsoon
+IMD2and IMD4was 0.68mm/day. Another striking feature       months (April - May). Accordingly, the highest mean
+was the near coincidence of the mean annual cycles in      seasonal values are observed in IMD1 for the winter and
+IMD3&IMD4 irrespective of the difference in the base       post monsoon seasons, in IMD2 for the southwest
+periods used for computing the averages.                   monsoon season, and in IMD4 for the pre-monsoon
+                                                           season. The mean annual rainfall is also the highest in
+      The first 4 columns of the Table 2 show the mean     IMD1. The difference between highest and lowest mean
+monthly, seasonal and annual area weighted rainfall over   annual rainfall is 0.53 mm/day. The difference of the all
+the Indian main land derived from IMD1, IMD2, IMD4         India mean annual rainfall in IMD4 with the highest mean
+and APHRO for the base period of 1951-2000. The same       annual rainfall and is about 0.12 mm/day and that with the
+information derived from IMD4 and IMD3 but for the         lowest mean annual rainfall is 0.41 mm/day. i.e., The all
+12                                   MAUSAM, 65, 1 (January 2014)
+
+                                                                                  TABLE 2
+
+Climatology of area weighted rainfall over the country as a whole (all India) for the all the 12 months, 4 season and annual computed using
+                            various gridded daily rainfall data sets used in this study. All figures are expressed in mm/day
+
+                    IMD1   IMD2      APHRO                   IMD4         IMD4      IMD3            IMD4
+                                                                                                 (1901-2010)
+    Month / Season   0.65            (1951-2000)              0.55            (1971-2000)
+                     0.78                                     0.69                                   0.56
+        January      0.89  0.50                   0.40        0.87            0.54         0.52      0.73
+        February     1.14                                     1.19                                   0.83
+         March       1.92  0.60                   0.47        1.93            0.79         0.76      1.21
+                     5.37                                     5.22                                   1.89
+          April      9.33  0.67                   0.59        8.97            0.93         0.88      5.28
+          May        8.45                                     8.10                                   9.01
+          June       5.74  0.98                   0.87        5.52            1.28         1.20      8.01
+          July       2.56                                     2.45                                   5.55
+         August      0.94  1.80                   1.59        0.90            1.96         1.89      2.35
+       September     0.54                                     0.49                                   0.95
+        October      0.71  5.34                   4.61        0.61            5.39         5.42      0.45
+       November      1.32                                     1.33                                   0.64
+       December      7.25  9.58                   8.02        6.98            8.84         8.85      1.31
+            JF       1.35                                     1.29                                   6.99
+         MAM         3.21  8.67                   7.28        3.09            8.08         8.07      1.25
+          JJAS                                                                                       3.09
+          OND              5.77                   4.80                        5.36         5.26
+         Annual
+                           2.54                   2.13                        2.39         2.27
+
+                           0.92                   0.79                        1.00         0.91
+
+                           0.47                   0.39                        0.52         0.48
+
+                           0.55                   0.44                        0.66         0.64
+
+                           1.15                   1.02                        1.39         1.33
+
+                           7.37                   6.20                        6.94         6.92
+
+                           1.31                   1.11                        1.30         1.22
+
+                           3.17                   2.68                        3.11         3.06
+
+                                                                                TABLE 3
+
+    The statistical measures of difference of the all India monthly rainfall time series computed using IMD4with that computed using
+      IMD1, IMD2, IMD3 & APHRO for the annual and various seasons. The statistical measures for the IMD1, IMD2 & APHRO
+                    were computed for the period 1951-2000 & and that for IMD3 were computed for the period 1971-2000
+
+                           JF                     MAM               JJAS                   OND   ANNUAL
+
+    Data            RMSD BIAS CC RMSD BIAS CC RMSD BIAS CC RMSD BIAS CC RMSD BIAS CC
+
+                           (mm/day)               (mm/day)          (mm/day)        (mm/day)     (mm/day)
+
+IMD4 vs IMD1 (1951-2000) 0.16 -0.10 0.92 0.17 0.01 0.96 0.36 -0.27 0.99 0.14 -0.07 0.99 0.24 -0.12 0.99
+
+IMD4 vs IMD2 (1951-2000) 0.13 0.07 0.92 0.25 0.18 0.95 0.54 -0.39 0.99 0.14 -0.03 0.99 0.35 -0.08 0.99
+
+IMD4 vs IMD3 (1971-2000) 0.04 0.02 0.99 0.09 0.07 0.99 0.15 0.02 0.99 0.11 0.08 0.99 0.11 0.05 0.99
+
+IMD4 vs APHRO (1951-2000) 0.21 0.18 0.93 0.35 0.31 0.96 0.82 0.77 0.99 0.23 0.18 0.99 0.52 0.41 0.99
+
+India annual mean rainfall in IMD4 is drier than that in     mm/day for southwest monsoon season. Among the
+IMD1 by about 4% and wetter than that in APHRO by            months, the maximum difference between highest and
+about 13%. Among the seasons, the difference between         lowest mean month rainfall in the data sets is maximum
+highest and lowest mean season rainfall in the data sets is  (1.56 mm/day) for July and minimum (0.15 mm/day) for
+highest (1.17mm/day) for southwest monsoon season and        December. The difference between the highest mean
+minimum (0.27mm/day) for winter season. The difference       monthly rainfall in all data sets and the mean monthly
+between the highest mean season rainfall in all data sets    rainfall in IMD4 was highest in July (0.61 mm/day) and
+and the mean season rainfall value in IMD4 is about 0.39     lowest in March (0.28 mm/day).
+          PAI et al. : DEVELOPMENT OF A NEW HIGH SPATIAL RESOLUTION                                                        13
+
+Fig. 11.  Scatter plots of all India monthly rainfall computed using IMD1, IMD2, IMD3 & APHRO against that computed
+          using the IMD4. The time series plots of their differences are also given side by side. (a) IMD1, (b) IMD2, (c)
+          IMD3 and (d) APHRO. The plots in respect of IMD3 was prepared using data for the period 1971-2000 & that
+          with respect to other data sets were prepared using data for the period 1951-2000
+14            MAUSAM, 65, 1 (January 2014)
+
+    Fig. 12.  Time series of all India rainfall for the southwest monsoon season computed using the 5 gridded data sets used in this study
+              along with the IMD operational (IMD_OP) time series. Time series in respect each data sets are presented for their
+              respective data periods; IMD1 for 1951-2007, IMD2 for 1901-2004, IMD3 for 1971-2005, IMD4 for 1901-2010, APHRO
+              for 1951-2007 & IMD_OP for 1901-2010
+
+      It is seen in the last two columns of Table 2 that the  difference (Bias) and root mean square difference
+1971-2000 based mean monthly, season and annual               (RMSD) of the all India monthly rainfall derived from
+rainfall over the Indian main land in both the higher         IMD4 with that derived from IMD1, IMD2, APHRO &
+resolution versions of the IMD data sets (IMD4 and            IMD3 were computed for each of the four seasons during
+IMD3) are very close to each other. However, in most of       the period considered and for the total period (Annual)
+these cases (except for June & July), the mean values in      and is given in the Table 3. All quantities except the
+IMD4 are slightly higher than that in IMD3. The monthly       C.Care expressed in mm/day. About 76% of the annual
+values are higher by (0.01-0.12 mm/day), seasonal values      rainfall over the country as a whole is obtained during the
+are higher by (0.02-0.08mm/day) and annual rainfall is        southwest monsoon season (June to September) and its
+higher by 0.05 mm/day. The all India annual rainfall in       year to year variation has profound impact on the sectors
+IMD4 is wetter than that in IMD3 by about 1.5%. On            like agriculture, Hydro-electric power generation. So it is
+comparing with 1971-2000 mean values in (IMD1 and             important to examine how the internannual variability of
+IMD2 (not shown here) the mean southwest monsoon              all India southwest monsoon rainfall is represented in
+season and annual rainfall averaged over the Indian main      IMD4 data set. Therefore, the all India southwest
+land in the higher resolution versions of the IMD data sets   monsoon season rainfall derived from IMD4 was
+(IMD4 and IMD3) show dry bias of the order of about           compared with that derived from various gridded rainfall
+0.11 to 0.13 mm/day compared to that in the lower             data sets. A comparison was also carried out with the
+resolution versions (IMD1 and IMD2). The main reason          IMD_OP all India southwest monsoon season rainfall
+for the same is the relatively narrower zone of higher        time series.
+rainfall along the west coast during south west monsoon
+season in the higher resolution data sets.                          The Fig. 11(a) shows the scatter plot of the all India
+                                                              monthly rainfall derived from IMD1 against that derived
+      4.1.3. Temporal variation of all India rainfall         from IMD4 and time series plot of the difference between
+                                                              these two series. Figs. 11(b-d) are similar to Fig. 11(a) but
+      In this section, monthly area weighted all India        for IMD2, IMD3 &APHRO respectively plotted against
+(averaged over the country as a whole) rainfall derived       IMD4. The 3 plots [Figs. 11(a, b&d)] were derived for the
+from IMD4 was compared with that derived from IMD1,           period of Jan1951 to Dec2000 and the Fig. 11(c) was
+IMD2, APHRO & IMD3. For this, various statistical             derived for the period Jan1971 to 2000. It is seen from the
+quantities such as correlation coefficient (C.C), average     Table 3 and the Figs. 11(a-d), when all the months of the
+PAI et al. : DEVELOPMENT OF A NEW HIGH SPATIAL RESOLUTION                                       15
+
+                                                                                    TABLE 4
+
+The statistical measures of difference of the all India seasonal and annual rainfall time series computed using IMD4 with that computed using
+          IMD1, IMD2, IMD3& APHRO. The statistical measures for each of the data sets were computed using all the available data.
+             The statistical measures of all India rainfall series computed using IMD4 with the IMD operational time series computed
+                                                          for the period 1901-2010 have also been presented
+
+                                                               JJAS               ANNUAL
+
+                 Data       RMSD                               BIAS   C.C.  RMSD  BIAS    C.C.
+
+  IMD4 Vs IMD1 (1951-2010)  (mm/day)                                        (mm/day)
+  IMD4Vs IMD2 (1901-2004)
+  IMD4Vs IMD3 (1971-2005)   0.32                               -0.25  0.96  0.14  -0.11   0.96
+ IMD4Vs APHRO (1951-2007)
+IMD4 Vs IMD_OP (1901-2010)  0.42                               -0.37  0.96  0.12  -0.08   0.96
+
+                            0.34                               -0.04  0.90  0.11  0.03    0.94
+
+                            0.84                               0.81   0.95  0.43  0.42    0.95
+
+                            0.32                               -0.26  0.97  0.18  -0.16   0.95
+
+period are considered (annual),all the four data sets are            expressed in mm/day. Table 4 also shows similar
+                                                                     measures for the interannual variation of the all India
+highly consistent with that of IMD4 as all the C.Cs are              annual rainfall.
+
+nearly 1. The differences were the least with IMD3 (Bias                   A first look in the Fig. 12 reveals that the year to
+                                                                     year variation in the all India southwest monsoon season
+= 0.05mm/day RMSD = 0.11mm/day) and highest with                     time series in respect of IMD4 is in phase with the time
+                                                                     series derived from other gridded rainfall data sets during
+APHRO (Bias = 0.41mm/day    RMSD = 0.52                              most part of the respective common data periods. This is
+                                                                     also reflected in the significant C.C. values (0.90 to 0.97)
+mm/day). However, IMD4 show dry bias with IMD1 and                   shown in the Table 4. In the Fig. 12, it can also see that
+                                                                     the all India southwest monsoon season rainfall derived
+IMD2 and wet bias against APHRO& IMD3. In fact,                      from APHRO have the lowest values among all the time
+                                                                     series during all the years of its data period (1951-2007).
+IMD4 shows wet bias with IMD3 & APHRO during all                     On the other hand, the IMD2 time series have relatively
+                                                                     higher values among all the time series during most of the
+the seasons of the year. IMD4 shows dry bias with IMD1               years of its data period (1901-2004). The time series of
+                                                                     IMD1 shows slightly higher values compared to that of
+during all the seasons except MAM, and show dry bias                 IMD4 during most of the years of 1951-2010. On the
+                                                                     hand, IMD3 & IMD4 time series nearly match each other
+with IMD2 during JJAS & OND and wet bias during the                  during most of the period (1971-2005) except in 2005
+                                                                     when the IMD3 value was more than IMD4 value by
+other two seasons. Among various seasons, in all the data            about 2mm/day. Only because of the large difference of
+                                                                     values in 2005, the C.C. between the all India time series
+sets, highest consistency and the differences with IMD4              of IMD3 & IMD4 was reduced (0.90 for southwest
+                                                                     monsoon season). On removing the year 2005 the C.C
+were observed during the monsoon season. On the other                between IMD3 & IMD4 series was 0.98.
+
+hand, the consistency and differences of IMD4 with other                   As seen in the Table 4, in respect of all India
+                                                                     southwest monsoon season rainfall, IMD4 showed dry
+data sets were least during the winter season. Among all             bias against IMD1, IMD2 & IMD3 and wet bias against
+                                                                     APHRO. The highest difference (RMSD = 0.91 mm/day
+the data sets, IMD3 showed highest consistency and least             and Bias = 0.84 mm/day) was observed against APHRO.
+                                                                     The lowest RMSD (0.42 mm/day) was against IMD2 and
+difference with IMD4.                                                lowest bias (-0.05mm/day) was against IMD3. The
+
+      Fig. 12 show the year to year variation of the all
+India southwest monsoon season (June to September)
+derived from each of the 5 gridded rainfall data sets used
+in this study along with IMD_OP time series. As
+discussed in the section 2, each of the data sets are of
+different periods and for preparing Fig. 12 all the available
+data were used. Thus the time series derived from IMD3 is
+available for the period 1971-2005. Whereas the all India
+time series derived from the IMD4 and IMD_OP are
+available for the period 1901-2010.All the values are
+expressed in mm/day. Table 4 shows various statistical
+measures (C.C, Bias and RMSD) relating interannual
+variability of all India summer monsoon rainfall derived
+from IMD4 with that that derived from IMD1, IMD2,
+APHRO, IMD3 & IMD-OP. These statistical measures
+were computed using all the available data and are
+16  MAUSAM, 65, 1 (January 2014)
+
+interannual variation of IMD4 series was also highly            IMD2 & IMD3. For the period 1901-2010, the all India
+consistent with that of IMD_OP series with a C.C of 0.97        annual and southwest monsoon season mean rainfalls
+for the period 1901-2010. The difference (RMSD of 0.32          computed using IMD4 were 3.09mm/day and 6.99mm/day
+mm/day, Bias = -0.26mm/day) of IMD4 seasonal times              respectively with standard deviations of 0.27mm/day &
+series against the IMD_OP series was also lower than that       0.66mm/day respectively.
+with the seasonal time series derived from the gridded
+rainfall data sets. The results of statistical measures in            The large climatological features of rainfall over
+respect of all India annual rainfall presented in the Table 4   India examined for the comparison of various gridded data
+can be considered as more or less consistent with that in       sets were (a) large scale spatial patterns of mean annual
+respect of all India seasonal rainfall.                         rainfall and mean rainfall during all the four seasons
+                                                                [winter (January-February), pre-monsoon (March-May),
+      Thus, it can be summarised that though there is some      southwest monsoon (June-September) & post monsoon
+bias among the various time series, there is strong             (October-December)], (b) annual mean cycle of all India
+consistency in all these time series in respect of their year   daily, monthly and seasonal rainfall. Each of these data
+to year variation. Further the southwest monsoon rainfall       sets was of different spatial resolutions and data periods.
+time series derived from the IMD4 closely matched with          Therefore, comparison of climatology features in IMD4
+the IMD_OP series throughout the total data period (1901-       with IMD3 was done for the common period of 1971-
+2010). It was also observed that the highest 10 rainfall        2000 & that with other 3 data sets was done for the
+years and lowest 10 rainfall years in the time series of        common period of 1951-2000. The variability features of
+both the IMD4 & IMD_OP were nearly same except for              rainfall in the various gridded rainfall data sets examined
+the difference in the order of rank.                            for comparison were the temporal variation of monthly all
+                                                                India rainfall for the year and that for the four seasons.
+5. Summary and conclusions                                      The interannual variation of all India southwest monsoon
+                                                                season rainfall derived from the various gridded data sets
+      Development of a new daily gridded rainfall data set      was also compared.
+(IMD4) at a very high spatial resolution (0.25° × 0.25°,
+latitude × longitude) covering a long period of 110 years             It was observed that the large scale climatological
+(1901-2010) over Indian main land and its comparison            features in the mean annual rainfall and the seasonal mean
+with 4 existing daily gridded rainfall data sets over the       rainfall patterns during each of the four seasons were
+region have been discussed. Out of these existing               nearly similar in all the data sets. For example, in all the
+4 gridded daily rainfall data sets over India, two were         data sets, the spatial distribution of the annual and
+1° × 1° gridded daily rainfall data sets [IMD1 (Rajeevan et     southwest monsoon season rainfall climatology depicted
+al. 2006) & IMD2 (Rajeevan et al. 2008)] based on fixed         the large scale features such as maximum rainfall areas
+network of rain gauge stations, and third was 0.5° × 0.5°       along the west coast and over northeast India, rapid
+gridded daily rainfall data set (IMD3) based on a variable      decrease of rainfall in the leeward side of the Western
+network of rain gauge stations (Rajeevan et al. 2009). The      Ghats and minimum rainfall over northwest India.
+fourth data set (APHRO) was of spatial resolution 0.25° ×       However, the zone of higher rainfall areas along the west
+0.25°, which was developed as a part of the larger data set     coast was narrower in the higher resolution data sets
+for the monsoon Asia region under APHRODITE project             [IMD3, IMD4 & APHRO (narrowest in IMD4)] compared
+(Yatagai et al. 2012).                                          to that in IMD1 & IMD2. The mean annual cycle of all
+                                                                India rainfall in all the data sets was also identical with
+      For the development of IMD4, daily rainfall records       peak during the middle of the monsoon season and
+from 6995 rain gauge stations from the country for the          minimum during the winter season. Throughout the
+period 1901-2010 sourced from the archive of IMD were           annual cycle (whether in daily, monthly or seasonal scale),
+used, which is the highest ever number of stations over         APHRO showed dry bias against all the other data sets
+Indian mainland used by any studies so far to prepare           and the all India values in IMD3 & IMD4 were nearly
+gridded rainfall over the region. For the preparation of the    equal with annual cycle of rainfall in IMD4 being slightly
+gridded data for each day of the data period, on an             wetter than that in IMD3 in all time scales (daily,
+average, about 3500 stations that varied between 1450 &         monthly, seasonal & annual). However, the highest values
+3900 were used. Various standard quality checking tests         during the peak segment (July- September) of the annual
+were applied on the data before the interpolation of the        cycle were observed in IMD2 and that during most of the
+station rainfall data on to fixed spatial grid points. For the  other segments were observed in IMD1. The all India
+interpolation, the study used the well tested inverse           mean annual rainfall was highest in IMD1 (3.21mm/day)
+distance weighted interpolation (IDW) scheme of Shepard         and lowest in AHRO (2.68mm/day) with that in IMD4
+(1968), which was also used for the preparation of IMD1,        being drier than the former value by about 4% and wetter
+PAI et al. : DEVELOPMENT OF A NEW HIGH SPATIAL RESOLUTION       17
+
+than later value by about 13%. The wetter all India annual      encouragement and support. We thank officers and staff of
+and southwest monsoon season climatologies in IMD1 &            National Data Center & Hydrology Section for their help
+IMD2 compared to that in IMD3 & IMD4 were due to                in the scrutiny and various other issues related to the basic
+relatively narrower zone of higher rainfall along the west      rain gauge data used in this study. We appreciate support
+coast in the higher resolution data sets.                       provided by our colleagues in the Long Range Forecasting
+                                                                Division and National Climate Centre during various
+      The comparative study of the interannual variation of     stages of the data analysis.
+the all India southwest monsoon season rainfall derived
+from various rainfall gridded data sets along with IMD                                               References
+operational all India rainfall time series (IMD_OP)
+showed that though there is some bias among the various         Cressman, G. P., 1959, "An operational objective analysis system", Mon.
+time series, there is strong consistency in all the time                  Wea. Rev., 87, 367-374.
+series. Further the southwest monsoon rainfall time series
+derived from the IMD4 closely matched with the                  Edwards, K. A., 1973, "Estimating areal rainfall by fitting surfaces to
+IMD_OP series throughout the total data period (1901-                     irregularly spaced data. In : Proc. of the International
+2010). It was also observed that the highest 10 rainfall                  Symposium on the Distribution of Precipitation in Mountainous
+years and lowest 10 rainfall years in the time series of                  Areas", WMO No. 326, Vol. II, Geneva, 565-587.
+both the IMD4 & IMD_OP were nearly same except for
+the difference in the rank.                                     Goswami, B. N., Venugopal, V., Sengupta, D., Madhusoodanan, M. S.
+                                                                          and Prince, K. Xavier, 2006, "Increasing Trend of Extreme Rain
+      Thus, the comparison of IMD4 with other data sets                   Events over India in a Warming Environment", Science, 314,
+suggested that the climatological and variability features                1442-1445.
+of rainfall over India derived from IMD4 based on the
+daily varying network or rain gauges were comparable            Hardy, R. L., 1971, "Muitiquadratic equations of topography and other
+with the existing gridded daily rainfall data sets (IMD1 &                irregular surfaces", J. Geophys. Res., 76, 8, 1905-1915.
+IMD2) based on the fixed network of rain gauges as well
+as those (IMD3 & APHRO) that based on the varying               Hartman, D. L. and Michelsen, M. L., 1989, "Intra-seasonal periodicities
+network of rain gauges. In addition, the rainfall                         in Indian rainfall", J. Atmos. Sci., 46, 2838-2862.
+distribution features like known heavy rainfall areas in the
+orographic regions of the west coast and over northeast,        Hughes D.A., 1982: The relationship between mean annual rainfall and
+decreased rainfall in the lee ward side of the Western                    physiographic variables applied to the coastal region of southern
+Ghats etc. were more realistic and better presented in                    Africa; South Afr. Geogr. J., 64, 41-50.
+IMD4 due to its higher spatial resolution and to the higher
+density of rainfall stations used for its development. The      IPCC, 2007, "Summary for policy-makers, climate change 2007 :
+use of daily varying network of sufficient number of rain                 Mitigation, contribution of working Group III to the fourth
+gauges from all parts of the country for gridding has given               assessment report of the IPCC", In B. Metz, O.R. Davidson,
+an opportunity to make use of observations from huge                      P.R. Bosch, R. Dave, L.A. Meyer eds. Cambridge University
+number of rain gauges throughout the county for the                       Press, Cambridge, United Kingdom and New York, NY, USA.
+preparation of IMD4. However, it may be mentioned that
+the data availability from these rain gauges showed large       Krishnamurthy, V. and Shukla, J., 2000, "Intra-seasonal and Inter-annual
+variation. This method has also provided opportunity to                   variability of rainfall over India", J. Climate, 13, 4366-4377.
+make use observations from new rain gauges likely to get
+established in the country. At the same time the closure of     Krishnamurthy, V., Shukla, J., 2007, "Intra-seasonal and seasonally
+any of the existing rain gauges in future will not have any               persisting patterns of Indian monsoon rainfall", J. Climate, 20,
+effect on the real time preparation of the data. As IMD                   3-20.
+will be updating this data set in real time, the data can also
+be used for important operational services such as real         Krishnamurthy, V. and Shukla, J., 2008, "Seasonal persistence and
+time drought monitoring at various spatial and temporal                   propagation of intra-seasonal patterns over the Indian summer
+scales, flood forecasting, stream flow forecasting etc.                   monsoon region", Climate Dynamics, 30, 353-369.
+
+Acknowledgements                                                Krishnamurthy, V. and Ajayamohan, R. S., 2010, "The composite
+                                                                          structure of monsoon low pressure systems and its relation to
+      We are thankful to Dr. L. S. Rathore, DGM and                       Indian Rainfall", J. Climate, 23, 4285-4305.
+Mr. S. Krishnaiah, ADGM (Research) for their
+                                                                Parthasarathy, B. and Mooley, D. A., 1978, "Some features of a long
+                                                                          homogenous series of Indian summer monsoon rainfall", Mon.
+                                                                          Wea. Rev., 106, 771-781.
+
+                                                                Rajeevan, M., Bhate, J., Kale, J. D. and Lal, B., 2006, "High resolution
+                                                                          daily gridded rainfall data for the Indian region : Analysis of
+                                                                          break and active monsoon spells", Curr. Sci., 91, 3, 296-306.
+18  MAUSAM, 65, 1 (January 2014)
+
+Rajeevan, M., Bhate, J. and Jaswal, A. K., 2008, "Correction to Analysis   Sibson, R., 1981, "A Brief Description of Natural Neighbor
+          of variability and trends of extreme rainfall events over India            Interpolation", chapter 2 in Interpolating Multivariate Data.
+          using 104 years of gridded daily rainfall data", Geophys. Res.             New York: John Wiley & Sons, 21-36.
+          Lett., 35, L23701, doi:10.1029/ GL036105.
+                                                                           Walker, G. T., 1910, "On the meteorological evidence for supposed
+Rajeevan, M. and Bhate, J., 2009, "A high resolution daily gridded                   changes of climate in India", Indian Meteor. Memo, 21, Part-I,
+          rainfall data set (1971-2005) for mesoscale meteorological                 1-21.
+          studies", Current Science, 96, 4, 558-562.
+                                                                           Xie, P., Yatagai, A., Chen, M., Hayasaka, Fukushima, Y., Liu, C. and
+Rajeevan, M., Sulochana, Gadgil and Jyoti, Bhate, 2010, "Active and                  Yang, S., 2007, "A gauge-based analysis of daily precipitation
+          break spells of the Indian Summer Monsoon", Journal of Earth               over East Asia", Journal of Hydrometeorology, 8, 607-627.
+          System Science, 119, 3, 229-247.
+                                                                           Yatagai, Akiyo, Kenji, Kamiguchi, Osamu, Arakawa, Atsushi, Hamada,
+Shaw, E. M., 1994, "Hydrology in Practice", Chapman and Hall, 569.                   Natsuko, Yasutomi and Akio, Kitoh, 2012, "APHRODITE:
+                                                                                     Constructing a long-term daily gridded precipitation dataset for
+Shepard, D., 1968, "A two-dimensional interpolation function for                     Asia Based on a Dense network of rain gauges", Bull. Amer.
+          irregularly spaced data", Proc. 1968 ACM Nat. Conf, 517-524.               Meteor. Soc., 93, 1401-1415.
+
+Shepard, D. S., 1984, "Computer mapping : The SYMAP interpolation          Zhang, H., Wang, H., 2010, "Kriging and cross-validation for massive
+          algorithm", In Spatial Statistics and Models, Gaile, G. L. and             spatial data", Environmetrics, 21, 290-304.
+          Willmott, C. J., eds. Dordrecht, Netherlands: D. Reidel
+          Publishing Company, 133-145.
+
