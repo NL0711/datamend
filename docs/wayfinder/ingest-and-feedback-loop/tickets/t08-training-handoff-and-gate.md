@@ -4,7 +4,7 @@ labels: [wayfinder:grilling]
 status: open
 assignee:
 parent: MAP
-blocked_by: [t06-reviewer-workflow-and-proposals, t07-station-to-cell-mapping]
+blocked_by: [t06-reviewer-workflow-and-proposals]
 ---
 
 ## Question

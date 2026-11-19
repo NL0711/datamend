@@ -4,13 +4,14 @@
 // (synthetic faults) and Locations (place lookup). The old Sensor Health and alerting views stay out: they were about hardware health
 // trends and notifications, which are outside this platform.
 import { useState } from 'react';
-import { Compass, Database, FileSearch, FlaskConical, ListChecks, MapPin, Network, Radio, Settings, ShieldCheck } from 'lucide-react';
+import { Compass, Database, FileSearch, FlaskConical, ListChecks, MapPin, Network, Radio, Settings, ShieldCheck, Workflow } from 'lucide-react';
 import { ExplorerView } from './ExplorerView';
 import { LabView } from './LabView';
 import { LiveFeedView } from './LiveFeedView';
 import { AdminChip } from './Login';
 import { NetworkView } from './NetworkView';
 import { OverviewView, Tab } from './OverviewView';
+import { PipelineView } from './PipelineView';
 import { PlacesView } from './PlacesView';
 import { ReviewView } from './ReviewView';
 import { RunView } from './RunView';
@@ -24,6 +25,7 @@ const NAV: { id: Tab; label: string; icon: typeof ListChecks }[] = [
   { id: 'run', label: 'Run view', icon: FileSearch },
   { id: 'explorer', label: 'Data explorer', icon: Database },
   { id: 'review', label: 'Review queue', icon: ShieldCheck },
+  { id: 'pipeline', label: 'Data pipeline', icon: Workflow },
   { id: 'lab', label: 'Anomaly lab', icon: FlaskConical },
   { id: 'places', label: 'Locations', icon: MapPin },
   { id: 'live', label: 'Live gauge feed', icon: Radio },
@@ -38,6 +40,7 @@ const HEADINGS: Record<Tab, string> = {
   run: 'One run: the series, its flags and the evidence behind each.',
   explorer: 'Browse the rows of a run by station, time and verdict.',
   review: 'Flagged rows waiting for a reviewer\'s decision.',
+  pipeline: 'Bring in bulk station data, check it, review proposed corrections, and gate models trained offline.',
   lab: 'Generate synthetic faults and see whether the checks catch them.',
   places: 'Look up a point on the RF25 grid, and browse the gauge catalogue.',
   live: 'Weather Union rain gauges, polled within a daily call budget.',
@@ -47,7 +50,7 @@ const HEADINGS: Record<Tab, string> = {
 /** Rail groups: the items stay in the same order, the group labels only help the eye. */
 const GROUPS: { label: string; ids: Tab[] }[] = [
   { label: 'Monitor', ids: ['overview', 'network', 'live'] },
-  { label: 'Validate', ids: ['runs', 'run', 'explorer', 'review'] },
+  { label: 'Validate', ids: ['pipeline', 'runs', 'run', 'explorer', 'review'] },
   { label: 'Tools', ids: ['lab', 'places', 'settings'] },
 ];
 
@@ -109,6 +112,7 @@ export function ValidationApp() {
           : <RunView key={runId} runId={runId} />)}
         {tab === 'explorer' && <ExplorerView key={runId ?? 'none'} initialRunId={runId} />}
         {tab === 'review' && <ReviewView key={auditStation || 'all'} station={auditStation} onClearStation={() => setAuditStation('')} />}
+        {tab === 'pipeline' && <PipelineView onOpenRun={open} />}
         {tab === 'lab' && <LabView onOpenRun={open} />}
         {tab === 'places' && <PlacesView />}
         {tab === 'live' && <LiveFeedView onOpenRun={open} />}

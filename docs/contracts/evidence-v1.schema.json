@@ -15,7 +15,7 @@
       "properties": {
         "id": {"type": "integer"},
         "profile": {"enum": ["reading", "daily"]},
-        "source": {"enum": ["upload", "live", "replay"]},
+        "source": {"enum": ["upload", "live", "replay", "pipeline"]},
         "synthetic": {"type": "boolean", "description": "true when the uploader declared the data synthetic"}
       }
     },

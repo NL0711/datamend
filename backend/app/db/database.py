@@ -94,9 +94,15 @@ async def init_db() -> None:
     """Creates the validation platform tables (validation_runs, validation_results, validation_check_hits, explanations) if missing.
     No data is seeded: the platform stores only what a user uploads or the live feed polls."""
     from backend.app.validation import models as _validation_models  # noqa: F401  (registers the tables)
+    from backend.app.pipeline import models as _pipeline_models  # noqa: F401  (raw store, jobs, proposals, labels, registry)
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    if not is_sqlite:
+        from backend.app.pipeline.store import ensure_timescale
+        done = await ensure_timescale(engine)
+        if done:
+            logger.info("Timescale set up: %s", ", ".join(done))
     logger.info("Validation platform tables are ready.")
 
 

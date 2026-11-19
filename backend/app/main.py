@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.auth import require_login, router as auth_router
+from backend.app.api.pipeline import router as pipeline_router
 from backend.app.api.places import router as places_router
 from backend.app.api.rainfall import router as rainfall_router
 from backend.app.api.replay import router as replay_router
@@ -32,6 +33,13 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown: create the tables, start the live rain-gauge feed if it is configured."""
     logger.info("Initializing %s v%s database...", settings.PROJECT_NAME, settings.VERSION)
     await init_db()
+    from backend.app.pipeline.jobs import fail_interrupted_jobs
+    try:
+        n_cut = await fail_interrupted_jobs()
+        if n_cut:
+            logger.warning("%d ingest job(s) were interrupted by the restart and marked failed", n_cut)
+    except Exception as exc:
+        logger.warning("Could not clean up interrupted ingest jobs: %s", exc)
 
     from backend.app.api.rainfall import start_rainfall_service, stop_rainfall_service
     try:
@@ -74,6 +82,7 @@ app.include_router(rainfall_router)
 app.include_router(validation_router)
 app.include_router(replay_router)
 app.include_router(auth_router)
+app.include_router(pipeline_router)
 app.include_router(settings_router)
 
 

@@ -162,12 +162,13 @@ async def _store_rows(session: AsyncSession, run: ValidationRun, records: Sequen
 
 async def prune_runs(session: AsyncSession, cap: int = RUN_CAP) -> int:
     """Keep at most `cap` runs, deleting the oldest. An open live run is never pruned. Returns the number deleted."""
-    total = (await session.execute(select(func.count()).select_from(ValidationRun))).scalar_one()
+    # pipeline runs hold reviewer labels that feed training, so they are never pruned and do not count against the cap
+    total = (await session.execute(select(func.count()).select_from(ValidationRun).where(ValidationRun.source != "pipeline"))).scalar_one()
     excess = total - cap
     if excess <= 0:
         return 0
     # rejected uploads go first, so repeated bad files cannot evict completed runs (and their explanations); then the oldest
-    ids = (await session.execute(select(ValidationRun.id).where(ValidationRun.status != "open")
+    ids = (await session.execute(select(ValidationRun.id).where(ValidationRun.status != "open", ValidationRun.source != "pipeline")
                                  .order_by((ValidationRun.status != "failed"), ValidationRun.id).limit(excess))).scalars().all()
     await _delete_runs(session, list(ids))
     return len(ids)

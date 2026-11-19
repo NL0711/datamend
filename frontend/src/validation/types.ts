@@ -16,7 +16,7 @@ export interface Headline {
 export interface NotRun { check: string; reason: string; station_id?: string }
 
 export interface RunSummary {
-  id: number; created_at: string | null; profile: Profile; source: 'upload' | 'live' | 'replay'; label: string | null;
+  id: number; created_at: string | null; profile: Profile; source: 'upload' | 'live' | 'replay' | 'pipeline'; label: string | null;
   status: 'completed' | 'failed' | 'open'; error: string | null; n_rows: number; n_stations: number;
   duration_ms: number | null; synthetic: boolean; rain_day: string | null; storage: string; headline: Headline | null;
 }
@@ -55,7 +55,7 @@ export interface Tagged<T> { value: T; basis: Basis }
 
 export interface Evidence {
   schema: 'evidence-v1';
-  run: { id: number; profile: Profile; source: 'upload' | 'live' | 'replay'; synthetic: boolean };
+  run: { id: number; profile: Profile; source: 'upload' | 'live' | 'replay' | 'pipeline'; synthetic: boolean };
   row: { id: number; row_ref: string; station_id: string; time: string | null; verdict: Verdict; rule_score: number; severity: Severity };
   check: string; layer: string; kind: 'fault' | 'uncertain' | 'info'; weight?: number; profile: string;
   time_basis: 'observed' | 'received'; reason: string;
@@ -169,6 +169,40 @@ export interface ReplayStatus {
   stations: { id: string; name: string | null; ok: boolean; totals: number; error: string | null }[]; stations_ok: number;
   message: string | null; default_stations: number; year: number; note: string;
   stored_run_id: number | null; stored_run_label: string | null; on_start: boolean;
+}
+
+/** The bulk-ingest and feedback loop (backend/app/api/pipeline.py). */
+export interface PipelineStatus {
+  observations: number; stations: number; jobs: number; proposals_pending: number; snapshots: number; champions: PipelineModel[];
+  sources: string[]; max_upload_mb: number; not_implemented: string[];
+}
+export interface IngestJob {
+  id: number; created_at: string | null; source: string; filename: string; sha256: string | null; size_bytes: number;
+  status: 'queued' | 'running' | 'done' | 'failed'; rows_read: number; rows_inserted: number; rows_duplicate: number; rows_bad: number;
+  stations: number; bad_samples: { row: number; problem: string }[]; assumptions: Record<string, string>; error: string | null;
+  started_at: string | null; finished_at: string | null; run_id: number | null;
+}
+export interface PipelineProposal {
+  id: number; run_id: number; row_ref: string; station_id: string; kind: string; original_mm: number | null; proposed_mm: number | null;
+  text: string; generator: string; generated: true; label: string; status: 'pending' | 'accepted' | 'rejected';
+  decided_by: string | null; decided_at: string | null; created_at: string | null;
+}
+export interface AuditItem {
+  id: number; run_id: number; row_ref: string; station_id: string; inclusion_probability: number; weight: number;
+  decision: 'ok' | 'missed_fault' | 'unsure' | null; note: string | null; reviewer: string | null; decided_at: string | null;
+}
+export interface AuditEstimate {
+  run_id: number; drawn: number; decided: number; unsure: number; missed_faults: number; missed_fault_rate: number | null;
+  interval_95: number[] | null; note: string;
+}
+export interface PipelineSnapshot {
+  id: number; created_at: string | null; cut_day: string; n_rows: number; sha256: string;
+  manifest: { excluded_years: number[]; skipped: Record<string, number>; label_counts: Record<string, number>; random_sample_rows: number; notes: string[] };
+}
+export interface PipelineModel {
+  id: number; created_at: string | null; name: string; version: string; artifact_sha256: string | null; artifact_uri: string | null;
+  snapshot_id: number | null; metrics: Record<string, unknown>; gate: { passed: boolean; checks: { rule: string; passed: boolean; detail: string }[] } | null;
+  alias: 'champion' | 'challenger' | 'archived' | 'rejected'; notes: string | null; metrics_basis: string;
 }
 
 export interface StationCycleResponse {

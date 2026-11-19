@@ -21,6 +21,14 @@ A locked **spec** plus ordered build slices (added to `TODO.md`) for the next Da
 
 - [Destination and scope (chart-time decisions)](tickets/t00-destination-and-scope.md): spec as destination, current build is the demo; extend the MLOps spec with a real reviewer; training runs offline and the server holds the label store, registry, scoring and gate; rainfall station sources only, each with a recorded licence check; AI only proposes, reviewer decisions become labels; stations reach the RF25 model through derived cell-day aggregation.
 
+- [What are the CWC hourly rainfall data terms and file shape?](tickets/t03-cwc-terms-and-shape.md): licence reads only "Other (Open)", no name; the portal copyright policy allows free reproduction with accurate use and prominent source credit; nothing covers storing or redistributing derived flags, so ask the portal in writing; 83 state-period CSVs with timestamp, station id and rainfall, but columns, units, time zone and station coordinates are not verified.
+
+- [How do station points map onto RF25 cells for scoring?](tickets/t07-station-to-cell-mapping.md): no India station-to-cell aggregation exists in code (only a point-to-cell lookup; the UK path uses inverse-distance on a 0.1 degree grid); an RF25 cell is about 23 to 28 km; ISD stations cover 9.3% of land cells (one station per occupied cell mostly) and Weather Union only 1.8% in 30 city clusters; the neighbour-dependent components were never run on sparse fields; aggregation error is unquantified, and station-versus-own-cell comparisons are not independent.
+
+- [What does one real CWC file look like?](tickets/t04-first-file-download.md): the Tripura 2021-2025 file has station, coordinates, `dd-mm-yyyy hh:mm` time (zone not stated) and hourly mm for 5 stations and 4,354 rows; only non-zero hours are present (smallest value 0.5 mm), so absence cannot be read as dry or missing; 59 values above 100 mm an hour (max 423) need a decision; coverage is patchy.
+
+- Build v1 (2026-11-20, owner asked for the pipeline to be ready instead of stopping at a spec): the storage schema, ingest jobs, reviewer workflow (proposals, corrections, labels, audit sample) and the training hand-off and gate were decided by building them on branch `feature/ingest-pipeline`; see `TODO.md` for what is built and what is NOT IMPLEMENTED. The tickets for those four areas stay open as the written decision record to confirm, and the measurement ticket on Tiger is still unrun.
+
 ## Not yet specified
 
 - Monitoring and alerting (flag rate per station, drift) beyond what the MLOps spec section 8 says.
@@ -40,4 +48,4 @@ A locked **spec** plus ordered build slices (added to `TODO.md`) for the next Da
 
 ## Open tickets
 
-Frontier (unblocked): [Measure row size and compression on Tiger](tickets/t02-measure-row-size.md), [Read the CWC data terms and shape](tickets/t03-cwc-terms-and-shape.md), [How do station points map onto RF25 cells?](tickets/t07-station-to-cell-mapping.md). Blocked: the others, see `blocked_by` in each ticket.
+Frontier (unblocked): [Measure row size and compression on Tiger](tickets/t02-measure-row-size.md) (needs the owner's OK to create and drop test tables). Blocked on it: the storage schema, then ingest jobs and the reviewer workflow, then the training hand-off. Blocked: the others, see `blocked_by` in each ticket.

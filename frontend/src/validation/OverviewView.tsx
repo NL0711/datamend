@@ -6,7 +6,7 @@ import type { NarratorStatus, Overview, ReviewSummary, Verdict } from './types';
 import { Notice, Panel, SyntheticBadge, formatError } from './ui';
 
 type Feed = Awaited<ReturnType<typeof getFeed>>;
-export type Tab = 'overview' | 'network' | 'runs' | 'run' | 'explorer' | 'review' | 'lab' | 'places' | 'live' | 'settings';
+export type Tab = 'overview' | 'network' | 'runs' | 'run' | 'explorer' | 'review' | 'pipeline' | 'lab' | 'places' | 'live' | 'settings';
 
 const Tile = ({ label, value, sub }: { label: string; value: string | number; sub?: string }) => (
   <div className="rounded border border-[#D3DCE7] bg-[#F4F6FA] px-3 py-2"><div className="text-[10px] uppercase font-mono text-slate-500">{label}</div>

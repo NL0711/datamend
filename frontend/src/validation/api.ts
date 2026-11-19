@@ -2,6 +2,7 @@
 import type {
   Decision, Evidence, ExplanationItem, ExplorerPage, FeedStation, FeedStatus, FeedTestResult, ImdStationsResponse, LabOptions, LabResult,
   MapLayers, NarratorStatus, ReplayStatus, StationCycleResponse,
+  AuditEstimate, AuditItem, IngestJob, PipelineModel, PipelineProposal, PipelineSnapshot, PipelineStatus,
   Overview, PlaceInfo, GaugeStation, Profile, QueuePage, ReviewItem, ReviewSummary, RowContext, RowDetail, RowsPage, RunFull, RunSummary,
   Series, SettingsState, SettingsUpdate,
 } from './types';
@@ -81,6 +82,38 @@ export const getStationCycle = () => get<StationCycleResponse>(`${V}/stations`);
 export const getReplayStatus = () => get<ReplayStatus>(`${V}/replay/isd`);
 export const startReplay = (token: string) =>
   fetch(`${V}/replay/isd`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token } }).then((r) => json<ReplayStatus>(r));
+
+/** The ingest and feedback loop (/api/pipeline). */
+const P = '/api/pipeline';
+export const getPipelineStatus = () => get<PipelineStatus>(`${P}/status`);
+export const listJobs = () => get<{ jobs: IngestJob[] }>(`${P}/jobs`);
+export async function ingestFile(file: File, source: string): Promise<IngestJob> {
+  const fd = new FormData();
+  fd.append('file', file); fd.append('source', source);
+  return json<IngestJob>(await call(`${P}/ingest`, { method: 'POST', body: fd }));
+}
+export const checkJob = (id: number) => post<RunSummary>(`${P}/jobs/${id}/check`, {});
+export const makeProposals = (runId: number) => post<{ created: number; proposals: PipelineProposal[] }>(`${P}/runs/${runId}/proposals`, {});
+export const listProposals = (runId: number, status = 'pending') => get<{ proposals: PipelineProposal[]; note: string }>(`${P}/proposals?run_id=${runId}&status=${status}`);
+export const decideProposal = (id: number, accept: boolean, reviewer?: string) => post<PipelineProposal>(`${P}/proposals/${id}/decide`, { accept, reviewer: reviewer || null });
+export const drawAudit = (runId: number, n: number) => post<{ drawn: number; items: AuditItem[] }>(`${P}/runs/${runId}/audit`, { n });
+export const listAudit = (runId: number) => get<{ items: AuditItem[]; estimate: AuditEstimate }>(`${P}/runs/${runId}/audit`);
+export const decideAudit = (id: number, decision: string, reviewer?: string) => post<AuditItem>(`${P}/audit/${id}/decide`, { decision, reviewer: reviewer || null });
+export const makeSnapshot = (cutDay: string, allowTestYears: boolean) => post<PipelineSnapshot>(`${P}/snapshots`, { cut_day: cutDay, allow_test_years: allowTestYears });
+export const listSnapshots = () => get<{ snapshots: PipelineSnapshot[] }>(`${P}/snapshots`);
+export async function downloadSnapshot(id: number): Promise<void> {
+  const res = await call(`${P}/snapshots/${id}/data.jsonl`);
+  if (!res.ok) throw new ApiError(res.status, await readError(res));
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url; a.download = `snapshot-${id}.jsonl`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+export const listModels = () => get<{ models: PipelineModel[]; not_implemented: string[] }>(`${P}/models`);
+export const registerModel = (body: { name: string; version: string; metrics: Record<string, unknown>; snapshot_id?: number }) => post<PipelineModel>(`${P}/models`, body);
+export const promoteModel = (id: number) => post<PipelineModel>(`${P}/models/${id}/promote`, {});
+export const rollbackModel = (name: string) => post<PipelineModel>(`${P}/models/${encodeURIComponent(name)}/rollback`, {});
 
 /** The admin token is kept for this browser tab only (sessionStorage). Reviews and Settings need it; reading never does. */
 export const ADMIN_TOKEN_KEY = 'datamend-admin-token';
