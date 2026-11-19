@@ -55,7 +55,7 @@ A locked **spec** plus ordered build slices (added to `TODO.md`) for the next Da
 
 The pipeline is built (branch `feature/ingest-pipeline`; `TODO.md` lists what is built and NOT IMPLEMENTED). Each open ticket below needs an owner decision or approval, not more building.
 
-- [Measure row size and compression on Tiger](tickets/t02-measure-row-size.md): unrun; needs the owner's OK to create and drop test tables in the Tiger service.
+- [Measure row size and compression on Tiger](tickets/t02-measure-row-size.md): measured 2026-11-20 (synthetic data, throwaway schema, dropped); numbers in the ticket and `TODO.md`. Unblocks t01.
 - [Storage schema](tickets/t01-storage-schema.md): built and decided in part; open for retention, the compact-verdict question and the t02 numbers. Has a `## Needs the owner` list.
 - [Training hand-off and gate](tickets/t08-training-handoff-and-gate.md): built; open for the label minimums (20 faults, 100 clean), the 5 per 1,000 budget, where the threshold is fixed, Kaggle and the licence, and the gate design. Has a `## Needs the owner` list.
 - [May CWC data from 2018 to 2025 be used?](tickets/t09-test-years-and-cwc-data.md): the locked test years block the only real CWC file by default.
