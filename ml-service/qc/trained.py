@@ -26,7 +26,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from qc import paths
+from qc import paths, telemetry
 from qc.batches import View, mask_unreadable, to_torch
 from qc.evaluate import compute_scores, evaluate_component, score_store
 from qc.extremes import find_extremes
@@ -238,6 +238,9 @@ def train_component(p: Prepared, component: str, seed: int, run: RunDir, max_yea
     opt = torch.optim.AdamW(model.parameters(), lr=float(tr.lr), weight_decay=float(tr.weight_decay))
     amp = bool(cfg.compute.amp) and device.type == "cuda"
     scaler = torch.amp.GradScaler(enabled=amp)
+    n_params = sum(q.numel() for q in model.parameters())
+    telemetry.record(f"model.{component}.parameters", n_params, "count")
+    telemetry.record(f"model.{component}.size_mb", n_params * 4 / 2 ** 20, "MB")
 
     years = list(p.split.years["train"])
     if max_years:
@@ -266,7 +269,9 @@ def train_component(p: Prepared, component: str, seed: int, run: RunDir, max_yea
         order = np.random.default_rng([seed, epoch]).permutation(len(years))
         year = years[int(order[i])]
         rng = np.random.default_rng([seed, epoch, year])
-        losses = year_steps(p, component, model, opt, scaler, amp, device, year, rng, steps, bs, readable, targets, gen, pad)
+        with telemetry.span(f"train.{component}.year_visit", units=steps * bs, unit="samples"):
+            losses = year_steps(p, component, model, opt, scaler, amp, device, year, rng, steps, bs, readable, targets, gen, pad)
+        telemetry.gpu_peak(f"train.{component}")
         done += 1
         last_loss = float(np.mean(losses)) if losses else None
         log_rows.append({"epoch": epoch, "year": year, "loss": last_loss})

@@ -1,0 +1,389 @@
+{
+ "budget_per_1000": 1.0,
+ "threshold": 0.718565821647644,
+ "overall": {
+  "n": 29098,
+  "recall": 0.07189497559969757
+ },
+ "strong": {
+  "n": 1888,
+  "recall": 0.11175847457627118
+ },
+ "share_of_fault_cell_days": {
+  "change_under_1mm": 0.5613787889202007,
+  "weight_under_0.5": 0.8663825692487456,
+  "strong": 0.064884184480033
+ },
+ "by_change_mm": {
+  "0-0.1": {
+   "n": 6038,
+   "recall": 0.026995693938390197
+  },
+  "0.1-1": {
+   "n": 10297,
+   "recall": 0.06079440613771001
+  },
+  "1-5": {
+   "n": 6980,
+   "recall": 0.09183381088825215
+  },
+  "5-20": {
+   "n": 3567,
+   "recall": 0.11718530978413233
+  },
+  "20-100": {
+   "n": 2004,
+   "recall": 0.1027944111776447
+  },
+  "100-inf": {
+   "n": 212,
+   "recall": 0.1792452830188679
+  }
+ },
+ "by_weight": {
+  "0-0.25": {
+   "n": 20709,
+   "recall": 0.07870973972668888
+  },
+  "0.25-0.5": {
+   "n": 4501,
+   "recall": 0.04332370584314597
+  },
+  "0.5-0.75": {
+   "n": 1297,
+   "recall": 0.06245181187355436
+  },
+  "0.75-1": {
+   "n": 2591,
+   "recall": 0.0717869548436897
+  }
+ },
+ "by_kind": {
+  "combination": {
+   "all": {
+    "n": 12428,
+    "recall": 0.1598004505954297
+   },
+   "centre_cells": {
+    "n": 986,
+    "recall": 0.12880324543610547
+   },
+   "strong": {
+    "n": 1093,
+    "recall": 0.16925892040256177
+   },
+   "change_under_1mm_share": 0.4460894753781783
+  },
+  "drift": {
+   "all": {
+    "n": 5303,
+    "recall": 0.01225721289835942
+   },
+   "centre_cells": {
+    "n": 604,
+    "recall": 0.054635761589403975
+   },
+   "strong": {
+    "n": 152,
+    "recall": 0.07894736842105263
+   },
+   "change_under_1mm_share": 0.7735244201395437
+  },
+  "phantom_rain": {
+   "all": {
+    "n": 4196,
+    "recall": 0.0019065776930409914
+   },
+   "centre_cells": {
+    "n": 411,
+    "recall": 0.019464720194647202
+   },
+   "strong": {
+    "n": 0,
+    "recall": null
+   },
+   "change_under_1mm_share": 0.778836987607245
+  },
+  "scale": {
+   "all": {
+    "n": 1700,
+    "recall": 0.0029411764705882353
+   },
+   "centre_cells": {
+    "n": 146,
+    "recall": 0.03424657534246575
+   },
+   "strong": {
+    "n": 121,
+    "recall": 0.03305785123966942
+   },
+   "change_under_1mm_share": 0.5311764705882352
+  },
+  "spike": {
+   "all": {
+    "n": 1212,
+    "recall": 0.0024752475247524753
+   },
+   "centre_cells": {
+    "n": 78,
+    "recall": 0.0
+   },
+   "strong": {
+    "n": 134,
+    "recall": 0.0
+   },
+   "change_under_1mm_share": 0.1551155115511551
+  },
+  "stuck": {
+   "all": {
+    "n": 3343,
+    "recall": 0.004486987735566856
+   },
+   "centre_cells": {
+    "n": 252,
+    "recall": 0.03571428571428571
+   },
+   "strong": {
+    "n": 340,
+    "recall": 0.023529411764705882
+   },
+   "change_under_1mm_share": 0.5130122644331438
+  },
+  "zeroed": {
+   "all": {
+    "n": 916,
+    "recall": 0.010917030567685589
+   },
+   "centre_cells": {
+    "n": 114,
+    "recall": 0.03508771929824561
+   },
+   "strong": {
+    "n": 48,
+    "recall": 0.041666666666666664
+   },
+   "change_under_1mm_share": 0.6713973799126638
+  }
+ },
+ "by_kind_radius_centre": {
+  "combination": {
+   "single cell": {
+    "n": 529,
+    "recall": 0.166351606805293
+   },
+   "radius 1.5-2.5": {
+    "n": 131,
+    "recall": 0.1297709923664122
+   },
+   "radius 2.5-4": {
+    "n": 326,
+    "recall": 0.06748466257668712
+   },
+   "radius above 4": {
+    "n": 0,
+    "recall": null
+   }
+  },
+  "drift": {
+   "single cell": {
+    "n": 316,
+    "recall": 0.028481012658227847
+   },
+   "radius 1.5-2.5": {
+    "n": 135,
+    "recall": 0.07407407407407407
+   },
+   "radius 2.5-4": {
+    "n": 153,
+    "recall": 0.0915032679738562
+   },
+   "radius above 4": {
+    "n": 0,
+    "recall": null
+   }
+  },
+  "phantom_rain": {
+   "single cell": {
+    "n": 234,
+    "recall": 0.03418803418803419
+   },
+   "radius 1.5-2.5": {
+    "n": 73,
+    "recall": 0.0
+   },
+   "radius 2.5-4": {
+    "n": 104,
+    "recall": 0.0
+   },
+   "radius above 4": {
+    "n": 0,
+    "recall": null
+   }
+  },
+  "scale": {
+   "single cell": {
+    "n": 75,
+    "recall": 0.06666666666666667
+   },
+   "radius 1.5-2.5": {
+    "n": 22,
+    "recall": 0.0
+   },
+   "radius 2.5-4": {
+    "n": 49,
+    "recall": 0.0
+   },
+   "radius above 4": {
+    "n": 0,
+    "recall": null
+   }
+  },
+  "spike": {
+   "single cell": {
+    "n": 30,
+    "recall": 0.0
+   },
+   "radius 1.5-2.5": {
+    "n": 19,
+    "recall": 0.0
+   },
+   "radius 2.5-4": {
+    "n": 29,
+    "recall": 0.0
+   },
+   "radius above 4": {
+    "n": 0,
+    "recall": null
+   }
+  },
+  "stuck": {
+   "single cell": {
+    "n": 132,
+    "recall": 0.06060606060606061
+   },
+   "radius 1.5-2.5": {
+    "n": 58,
+    "recall": 0.017241379310344827
+   },
+   "radius 2.5-4": {
+    "n": 62,
+    "recall": 0.0
+   },
+   "radius above 4": {
+    "n": 0,
+    "recall": null
+   }
+  },
+  "zeroed": {
+   "single cell": {
+    "n": 64,
+    "recall": 0.0625
+   },
+   "radius 1.5-2.5": {
+    "n": 26,
+    "recall": 0.0
+   },
+   "radius 2.5-4": {
+    "n": 24,
+    "recall": 0.0
+   },
+   "radius above 4": {
+    "n": 0,
+    "recall": null
+   }
+  }
+ },
+ "by_radius_all": {
+  "single cell": {
+   "n": 1380,
+   "recall": 0.08840579710144927
+  },
+  "radius 1.5-2.5": {
+   "n": 5724,
+   "recall": 0.05433263452131377
+  },
+  "radius 2.5-4": {
+   "n": 21994,
+   "recall": 0.07542966263526417
+  },
+  "radius above 4": {
+   "n": 0,
+   "recall": null
+  }
+ },
+ "by_memory_days": {
+  "memory 90-179 d": {
+   "all": {
+    "n": 7820,
+    "recall": 0.08721227621483375
+   },
+   "drift": {
+    "n": 696,
+    "recall": 0.0028735632183908046
+   },
+   "scale": {
+    "n": 63,
+    "recall": 0.031746031746031744
+   },
+   "zeroed": {
+    "n": 24,
+    "recall": 0.0
+   }
+  },
+  "memory 180-269 d": {
+   "all": {
+    "n": 6349,
+    "recall": 0.03543865175618208
+   },
+   "drift": {
+    "n": 2032,
+    "recall": 0.028051181102362203
+   },
+   "scale": {
+    "n": 195,
+    "recall": 0.015384615384615385
+   },
+   "zeroed": {
+    "n": 254,
+    "recall": 0.007874015748031496
+   }
+  },
+  "memory 270-364 d": {
+   "all": {
+    "n": 8434,
+    "recall": 0.019089400047427083
+   },
+   "drift": {
+    "n": 1990,
+    "recall": 0.001507537688442211
+   },
+   "scale": {
+    "n": 1391,
+    "recall": 0.0
+   },
+   "zeroed": {
+    "n": 420,
+    "recall": 0.014285714285714285
+   }
+  },
+  "memory 365+ d": {
+   "all": {
+    "n": 6495,
+    "recall": 0.15765973826020016
+   },
+   "drift": {
+    "n": 585,
+    "recall": 0.005128205128205128
+   },
+   "scale": {
+    "n": 51,
+    "recall": 0.0
+   },
+   "zeroed": {
+    "n": 218,
+    "recall": 0.009174311926605505
+   }
+  }
+ },
+ "component": "stnet_l2_drift_s42"
+}

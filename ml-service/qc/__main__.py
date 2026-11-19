@@ -152,6 +152,66 @@ def cmd_untrained(cfg, args) -> int:
     return 0
 
 
+def cmd_stnet(cfg, args) -> int:
+    """Train and evaluate STNet (qc/stnet.py): the spatiotemporal fault detector with short- and long-range memory."""
+    from qc.prepare import load_prepared
+    from qc.stnet import STConfig, run_stnet
+
+    p = load_prepared(cfg)
+    seeds = args.seeds if args.seeds is not None else [int(cfg.train.seeds[0])]
+    sc = STConfig(width=args.width, c_feat=args.c_feat, long_hidden=args.long_hidden, use_gru=not args.no_gru, use_long=not args.no_long,
+                  use_disc=not args.no_disc, use_robust=not args.no_robust, holdout_kinds=tuple(args.holdout_kinds or ()),
+                  epochs=args.epochs, steps=args.steps, batch=args.batch, window=args.window, burn=args.burn, crop=args.crop,
+                  long_epochs=args.long_epochs, long_steps=args.long_steps, long_years=args.long_years, long_skip=not args.no_skip,
+                  probe=not args.no_probe, prefix=args.prefix)
+    for seed in seeds:
+        out = run_stnet(p, seed, sc, ("val",), args.max_train_years, args.time_cap_hours, args.overwrite, init_from=args.init_from)
+        if out["status"] != "done":
+            print(f"seed {seed}: stopped at the time cap ({out['done']}/{out['total']} steps); run again to resume")
+            continue
+        print(f"== STNet {args.prefix}, seed {seed}, validation years, SYNTHETIC faults"
+              f"{', held-out kinds: ' + ','.join(sc.holdout_kinds) if sc.holdout_kinds else ''}")
+        for b in args.show_budgets:
+            print_table([m for (n, s), m in out["metrics"].items() if s == "val"], b)
+            print_table([m for (n, s), m in out["metrics"].items() if s == "val"], b, "seen")
+    return 0
+
+
+def cmd_ceiling(cfg, args) -> int:
+    """Where the recall is lost: recall by change size, footprint weight and fault kind (validation years, stored scores)."""
+    from qc.ceiling import run_ceiling
+    from qc.fusion import fused_name
+    from qc.prepare import load_prepared
+
+    names = args.components or [fused_name("logistic", args.seed), fused_name("boosted", args.seed), "rules"]
+    p = load_prepared(cfg)
+    results = run_ceiling(p, names, args.budget, tag=args.tag, min_day=args.min_day)
+    from qc import paths
+    out = paths.out_dir(cfg) / str(cfg.name) / "ceiling"
+    md = out / (f"ceiling_{args.tag}.md" if args.tag else "ceiling.md")
+    print(md.read_text(encoding="utf-8"))
+    print(f"wrote {md}. SYNTHETIC faults, validation years only.")
+    return 0
+
+
+def cmd_offline_score(cfg, args) -> int:
+    """Score the offline reference models (offline.artifacts in the config) on the VALIDATION years only."""
+    from qc.offline import run_offline_validation
+    from qc.prepare import load_prepared
+    from qc.trained import resolve_device
+
+    results, not_run = run_offline_validation(load_prepared(cfg), str(resolve_device(cfg)), args.overwrite)
+    for label, why in not_run.items():
+        print(f"{label}: {why}")
+    if not results:
+        print("nothing was scored: set offline.artifacts.<arch> (for example --set offline.artifacts.lstm_ae=artifacts/offline/lstm_ae)")
+        return 1
+    for b in args.show_budgets:
+        print_table(list(results.values()), b)
+    print("NON-CAUSAL reference (the model reads days on both sides), validation years only, SYNTHETIC faults.")
+    return 0
+
+
 def shard_units(units, spec):
     """The units of work this process takes. ``spec`` is "I/N": unit k goes to shard k % N, so N processes (for example one
     per GPU) split the work with no overlap. None = everything."""
@@ -225,18 +285,25 @@ def cmd_fusion(cfg, args) -> int:
 
 
 def cmd_ablate(cfg, args) -> int:
-    from qc.ablate import format_rows, run_ablation
+    from qc.ablate import RESIDUAL_SUBSETS, format_rows, run_ablation
     from qc.prepare import load_prepared
     from qc.runs import RunDir, write_json
 
     p = load_prepared(cfg)
-    rows = run_ablation(p, args.seed, args.budget)
+    from qc.ablate import FULL
+    subsets = RESIDUAL_SUBSETS if args.residual_only else None
+    if args.subset:
+        subsets = [FULL] + [tuple(s.split("+")) for s in args.subset]
+    rows = run_ablation(p, args.seed, args.budget, subsets)
     print(f"Fusion ablation, seed {args.seed}, validation years (held out from the fusion fit), budget {args.budget} false alerts per 1,000 "
           "clean cell-days, synthetic faults:")
     print(format_rows(rows))
     out = RunDir(paths.out_dir(cfg) / str(cfg.name), "ablation")
     out.start(cfg, int(cfg.seed), {"split_manifest_hash": p.manifest["hash"], "seed": args.seed})
-    write_json(out.file("ablation_s%d.json" % args.seed), {"budget": args.budget, "seed": args.seed, "rows": rows})
+    kind = "custom" if args.subset else ("residual" if args.residual_only else "full")
+    fname = {"custom": "ablation_custom_%s_s%d.json", "residual": "ablation_residual_s%d.json", "full": "ablation_s%d.json"}[kind]
+    fname = fname % ((args.tag, args.seed) if kind == "custom" else args.seed)                # never overwrite the full ablation
+    write_json(out.file(fname), {"budget": args.budget, "seed": args.seed, "rows": rows, "subsets": kind})
     out.mark_done("ablation")
     return 0
 
@@ -506,7 +573,7 @@ def cmd_paper(cfg, args) -> int:
 COMMANDS = {"uk-grid": cmd_uk_grid, "uk-labels": cmd_uk_labels, "test-score": cmd_test_score, "federated": cmd_federated, "fusion": cmd_fusion, "ablate": cmd_ablate, "calibrate": cmd_calibrate, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
             "train": cmd_train, "paper": cmd_paper,
             "period-benchmark": cmd_period_benchmark, "scale-select": cmd_scale_select, "cross-scale": cmd_cross_scale, "choose-architecture": cmd_choose_architecture,
-            "cross-scale-test": cmd_cross_scale_test, "regions-report": cmd_regions_report}
+            "cross-scale-test": cmd_cross_scale_test, "regions-report": cmd_regions_report, "offline-score": cmd_offline_score, "ceiling": cmd_ceiling, "stnet": cmd_stnet}
 
 
 SEED_HELP = "default: the first of train.seeds in the config"
@@ -520,6 +587,7 @@ def main(argv=None) -> int:
         s.add_argument("--config", default=str(paths.ASSETS.parent / "configs" / "base.yaml"))
         s.add_argument("--profile", choices=available_profiles(), default=None)
         s.add_argument("--set", action="append", metavar="KEY=VALUE", help="config override, e.g. clients.buffer_cells=6")
+        s.add_argument("--no-telemetry", action="store_true", help="do not record time, GPU energy, memory and latency (qc/telemetry.py)")
     sub.choices["client-map"].add_argument("--force", action="store_true")
     sub.choices["client-map"].add_argument("--nest-imd", default=None, metavar="FILE", help="re-cut the existing map so each client is a union of whole IMD sub-divisions (needs the file from scripts/fetch_imd_regions.py)")
     sub.choices["prepare"].add_argument("--skip-contract", action="store_true",
@@ -529,6 +597,46 @@ def main(argv=None) -> int:
     u.add_argument("--splits", nargs="+", default=["val"], choices=["val", "test", "stress"])
     u.add_argument("--overwrite", action="store_true")
     u.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
+    sn = sub.choices["stnet"]
+    sn.add_argument("--seeds", nargs="+", type=int, default=None, help="default: the first of train.seeds in the config")
+    sn.add_argument("--prefix", default="stnet", help="score-name prefix (use another one for each ablation, for example stnet_nomem)")
+    sn.add_argument("--width", type=int, default=32)
+    sn.add_argument("--c-feat", type=int, default=16)
+    sn.add_argument("--long-hidden", type=int, default=64)
+    sn.add_argument("--epochs", type=int, default=3, help="stage 1 passes over the training years")
+    sn.add_argument("--steps", type=int, default=40, help="stage 1 gradient steps per year visit")
+    sn.add_argument("--batch", type=int, default=2, help="samples per step; GPU memory grows with batch x window x crop^2")
+    sn.add_argument("--window", type=int, default=16, help="days per training window")
+    sn.add_argument("--burn", type=int, default=6, help="first days of a window without loss (memory warm-up)")
+    sn.add_argument("--crop", type=int, default=48, help="side of the loss region in cells")
+    sn.add_argument("--long-epochs", type=int, default=1)
+    sn.add_argument("--long-steps", type=int, default=20)
+    sn.add_argument("--long-years", type=int, default=3, help="last training years kept for stage 2 only (the encoder never sees them)")
+    sn.add_argument("--holdout-kinds", nargs="*", default=None, choices=["spike", "stuck", "scale", "phantom_rain", "zeroed", "drift"],
+                    help="fault kinds removed from training (both stages); they stay in the validation benchmark")
+    sn.add_argument("--init-from", default=None, metavar="PREFIX",
+                    help="take the finished stage-1 encoder of the run with this prefix (same seed) and train only stage 2 with the new "
+                         "--long-* settings; encoder settings and --long-years must match that run")
+    sn.add_argument("--no-gru", action="store_true", help="ablation: no short-range ConvGRU memory")
+    sn.add_argument("--no-long", action="store_true", help="ablation: no long-range LSTM")
+    sn.add_argument("--no-disc", action="store_true", help="ablation: no masked-disc head")
+    sn.add_argument("--no-robust", action="store_true", help="ablation: no neighbourhood-residual input channels")
+    sn.add_argument("--no-skip", action="store_true", help="ablation: no raw residual skip into the long memory")
+    sn.add_argument("--no-probe", action="store_true")
+    sn.add_argument("--max-train-years", type=int, default=None)
+    sn.add_argument("--time-cap-hours", type=float, default=None)
+    sn.add_argument("--overwrite", action="store_true")
+    sn.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
+    ce = sub.choices["ceiling"]
+    ce.add_argument("--components", nargs="+", default=None, help="stored score names (default: the seed's logistic and boosted fusion, and rules)")
+    ce.add_argument("--budget", type=float, default=1.0, help="false alerts per 1,000 clean cell-days")
+    ce.add_argument("--min-day", type=int, default=0, help="only days of the year at or after this (0-based); 275 keeps days where a 365-day memory that "
+                    "starts 90 days before the year is full")
+    ce.add_argument("--tag", default="", help="write ceiling_<tag>.md instead of ceiling.md, so an earlier result is not overwritten")
+    ce.add_argument("--seed", type=int, default=None, help=SEED_HELP)
+    o = sub.choices["offline-score"]
+    o.add_argument("--overwrite", action="store_true")
+    o.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
     t = sub.choices["train"]
     t.add_argument("--components", nargs="+", default=["spatial", "temporal", "plain_gru"], choices=["spatial", "temporal", "plain_gru"])
     t.add_argument("--seeds", nargs="+", type=int, default=None, help="default: train.seeds from the config")
@@ -599,6 +707,11 @@ def main(argv=None) -> int:
     ab = sub.choices["ablate"]
     ab.add_argument("--seed", type=int, default=None, help=SEED_HELP)
     ab.add_argument("--budget", type=float, default=1.0, help="false alerts per 1,000 clean cell-days the components are compared at")
+    ab.add_argument("--subset", action="append", default=None, metavar="A+B+C",
+                    help="a custom subset of stored score names joined by +, for example rules+stnet_fault+stnet_clean+stnet_disc; repeatable; "
+                         "the four-component fusion is added for comparison. Written to ablation_custom_<tag>_s<seed>.json")
+    ab.add_argument("--tag", default="custom", help="with --subset: the name used in the output file")
+    ab.add_argument("--residual-only", action="store_true", help="only the subsets with the neighbour-residual scores (qc.residual), written to ablation_residual_s<seed>.json")
     cb = sub.choices["calibrate"]
     cb.add_argument("--seed", type=int, default=None, help=SEED_HELP)
     cb.add_argument("--budget", type=float, default=1.0)
@@ -613,7 +726,10 @@ def main(argv=None) -> int:
         cfg = load_config(args.config, args.set, args.profile)
         if getattr(args, "seed", 0) is None:      # --seed not given: the first training seed of the config, never a silent 0
             args.seed = int(cfg.train.seeds[0])
-        return COMMANDS[args.cmd](cfg, args)
+        from qc import telemetry
+        with telemetry.session(paths.out_dir(cfg) / str(cfg.name) / "telemetry", args.cmd, on=not args.no_telemetry,
+                               run=str(cfg.name), profile=args.profile, seed=getattr(args, "seed", None), config_digest=cfg.digest()):
+            return COMMANDS[args.cmd](cfg, args)
     except (ConfigError, ContractError, LeakageError, FileNotFoundError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

@@ -14,7 +14,7 @@ from typing import Callable, Dict, List, Optional, Sequence
 
 import numpy as np
 
-from qc import paths
+from qc import paths, telemetry
 from qc.benchmark import check_benchmark, load_bench_year
 from qc.extremes import find_extremes
 from qc.metrics import YearScores, budget_thresholds, clean_reference, evaluate, pr_auc
@@ -48,7 +48,10 @@ def compute_scores(p: Prepared, component: str, fn: ScoreFn, splits: Sequence[st
     for tag, year, split in jobs:
         if store.has(component, tag, year) and not overwrite:
             continue
-        score = fn(make_block(p, year, split, pad))
+        with telemetry.span("data.make_block"):
+            block = make_block(p, year, split, pad)
+        with telemetry.span(f"score.{component}", units=block.days * p.grid.n_land, unit="cell-days"):
+            score = fn(block)
         store.save(component, tag, year, score)
         log.info("%s: scored %s %d", component, tag, year)
 
@@ -64,9 +67,12 @@ def compute_scores_many(p: Prepared, fns: Dict[str, ScoreFn], splits: Sequence[s
         todo = [n for n in fns if overwrite or not store.has(n, tag, year)]
         if not todo:
             continue
-        block = make_block(p, year, split, pad)
+        with telemetry.span("data.make_block"):
+            block = make_block(p, year, split, pad)
         for name in todo:
-            store.save(name, tag, year, fns[name](block))
+            with telemetry.span(f"score.{name}", units=block.days * p.grid.n_land, unit="cell-days"):
+                out = fns[name](block)
+            store.save(name, tag, year, out)
             log.info("%s: scored %s %d", name, tag, year)
 
 

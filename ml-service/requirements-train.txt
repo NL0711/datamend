@@ -12,3 +12,5 @@ matplotlib
 pyyaml
 pyarrow
 kagglehub
+psutil
+nvidia-ml-py
