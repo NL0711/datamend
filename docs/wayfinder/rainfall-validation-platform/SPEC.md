@@ -36,7 +36,7 @@ Layered and explainable: deterministic checks, statistics, an optional trained s
 |---|---|---|
 | Input adapters | Upload, `weather_union`, `isd_replay` all produce one `Reading` or `DailyTotal` record; raw values kept untouched beside derived ones | t02 |
 | Check catalogue | One catalogue; each check declares its needs; unmet needs give "not run: reason" | t01 |
-| Score provider | Optional seam for trained scores; NOT IMPLEMENTED until a real RF25 run exists | t01, t09 |
+| Score provider | Optional seam for trained scores; NOT IMPLEMENTED until a real RF25 run exists and an architecture is chosen (section 12) | t01, t09 |
 | Run store | `validation_runs`, `validation_results`, `validation_check_hits`, `explanations`; 50-run cap | t05, t04 |
 | Explainer | One interface, two implementations (baseline, narrator) | t04 |
 | Place lookup | Stateless `locate(lat, lon)` in `backend/app/places`: RF25 cell, land/sea, client region | t09 |
@@ -72,7 +72,7 @@ Layered and explainable: deterministic checks, statistics, an optional trained s
 - Neighbour check needs at least 3 stations with coordinates within 10 km in the same run.
 - A lone gauge's heavy value is **UNCERTAIN**, not SUSPECT. Confirmation of an extreme comes only from neighbours or a grid.
 - Verdicts: `OK`, `SUSPECT`, `UNCERTAIN`, `NO_DATA`. Severity is three bands of the rule score: high at 0.7 or above, medium from 0.3 up to 0.7, low below 0.3 (design choice).
-- Excluded from v1: the slow 30/90-day component and the trained spatial and temporal models.
+- Excluded from v1: the slow 30/90-day component and every trained model (the spatial and temporal components and STNet; section 12).
 - `scipy` stays; `scikit-learn`, `torch`, `shap`, `pyod`, `statsmodels`, `paho-mqtt` go.
 
 ## 5. Results and reports (t05)
@@ -88,7 +88,7 @@ Layered and explainable: deterministic checks, statistics, an optional trained s
 
 ## 6. Evidence and Explainer contract (t04)
 
-**Evidence per fired check:** `check`, `layer`, `profile`; `observed` (value, unit); `threshold` (value and why); `window` (readings or days with `row_ref`, capped at 24 readings or 14 days, with a link to the rest); `neighbours` (ids, distances, values) when used; `time_basis`; `reason` (one plain sentence). **Every number carries `basis`: `measured`, `assumed` or `derived`.** A `provider` block (per-fault-type scores, ensemble disagreement, `calibrated`, `label_tier: synthetic`) exists only when a score provider ran.
+**Evidence per fired check:** `check`, `layer`, `profile`; `observed` (value, unit); `threshold` (value and why); `window` (readings or days with `row_ref`, capped at 24 readings or 14 days, with a link to the rest); `neighbours` (ids, distances, values) when used; `time_basis`; `reason` (one plain sentence). **Every number carries `basis`: `measured`, `assumed` or `derived`.** A `provider` block (per-fault-type scores, `calibrated`, `label_tier: synthetic`, and an ensemble-disagreement value only if the provider has one) exists only when a score provider ran. STNet has no disagreement score (section 12), so that field is absent for it.
 
 **Explainer:** `explain(flag, evidence) -> Explanation { text, contributions[], model_id, generated: true }`. The baseline fills a template from the evidence. The narrator is a second implementation. The platform computes no confidence for an explanation.
 
@@ -161,5 +161,27 @@ Evaluation numbers (section 8) are produced after slice 4 for the daily profile 
 
 - Weather Union accumulation mode (from the raw log, when it rains).
 - The narrator team's MCP client revision and transport, token auth, payload limits and hosting.
+- Which trained architecture, if any, becomes the score provider (STNet architecture validation is running; section 12).
 - Whether `psycopg2-binary` and `asyncpg` stay, which depends on the persistence decision; SQLite on a free Render tier resets on restart.
 - Image size and the 512 MB figure on the real Render image, not verified.
+
+## 12. Trained layer: STNet (`ml-service/qc/stnet.py`, optional, outside the build slices)
+
+Status: code on `main` (commit `2b44526`, later fixes through `477dd94`), unit-tested on generated data only. The architecture-validation run is in progress on the training machine and **no STNet result exists yet**. It is not an established method; its design note and a falsifiable prediction are in `docs/research/spatiotemporal-memory-architectures-for-rainfall-qc.md` (on branch `docs-reduction`, commit `a6dfd6f`, not yet on `main`).
+
+What it is, in the terms of this spec: a gridded daily model with a fault map (any fault plus six kinds: spike, stuck, scale, phantom_rain, zeroed, drift), a clean-value residual, a masked-disc residual and optional short- and long-range memory. Its stored scores go through the existing calibrated fusion (`ablate --subset`). Trained and scored on synthetic faults only.
+
+Consequences for the platform, none of which change a ticket decision:
+- **It fits the score-provider seam** (section 2, t01, t04): per-kind scores can fill the `provider` block, `calibrated` is true only at a chosen clean-period budget, and `label_tier` is `synthetic`. It has no ensemble-disagreement score (NOT IMPLEMENTED), so that evidence field is absent.
+- **It cannot score a lone gauge or a live reading.** It needs a whole RF25 grid and months of context (the long memory starts 90 days before the year). A gauge gets a provider score only through its RF25 cell (`places.locate`, t09) for years where stored cell scores exist. The `reading` profile never gets one. Scoring live gauges with it stays NOT IMPLEMENTED.
+- **Dependencies:** `torch` leaves the backend (slice 10) but stays in `ml-service` (`requirements-train.txt`). The platform imports nothing from `ml-service/qc/stnet.py`.
+- **Evaluation (section 8) is unchanged:** provider results are reported separately, at the frozen budgets, with the held-out fault-type split (`--holdout-kinds`) and per-kind recall on strong cell-days (`qc ceiling`).
+
+Success bar fixed in the research note before the run (strong cell-days, budget 1 false alert per 1,000 clean cell-days): scale >= 0.60, zeroed >= 0.60, drift >= 0.30. Recall before STNet: scale 0.29, zeroed 0.00, drift 0.07 (from the note's `ceiling.md`, not re-measured here). The ablation schedule (memory, residual inputs, disc head, held-out kinds, older daily components trained longer) is in the training session's run plan; the main run is read first, and the ablations only follow if it is not hopeless.
+
+Gates, in order, before any trained score reaches the platform:
+1. Architecture validated (main run meets the bar; ablations answer the memory question).
+2. STNet kept or dropped as the daily component, then `scales`, `choose`, `budgets` and the single `test` pass (these freeze decisions and are deliberately not run during architecture validation). The frozen rule in `docs/qc-evaluation-protocol.md` decides between daily-only and cross-scale combinations; it does not decide STNet against the older daily components, so that comparison needs its own rule written down before the run (open).
+3. Score export through the score provider, and only then a new ticket and slice to wire it into the daily profile.
+
+Until gate 3 the platform's claim is the rule-based one in section 8, and "Not claimed" (section 9) includes every STNet result.
