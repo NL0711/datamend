@@ -19,7 +19,7 @@ from backend.app.rainfall.catalog import Station, load_catalog, neighbours as ca
 from backend.app.rainfall.daily import DailyAccumulator, rain_day
 from backend.app.rainfall.scorer import score_reading
 from backend.app.rainfall.weather_union import BudgetExhausted, CallBudget, RainObservation, WeatherUnionClient
-from backend.app.spatial.consensus import haversine_distance_km
+from backend.app.geo import haversine_distance_km
 
 logger = logging.getLogger(__name__)
 

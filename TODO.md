@@ -9,7 +9,7 @@ Build slices, in order. Each fits one working session and leaves the app and its
 - [x] Live rain-gauge feed (Weather Union): catalogue, client with a call budget, 03 UTC daily total, one-station scorer (rules + neighbour check, NOT a trained model), `/api/rainfall`, `docs/RAINFALL_LIVE_FEED.md`, `tests/test_rainfall_feed.py` (27 pass on a mocked transport; one real poll of 9 Mumbai stations worked, all dry so no rain value seen). UNCONFIRMED: units and period of `rain_accumulation`; raw log kept to settle it when rain falls
 - [x] Documentation reduced and rewritten (README, ARCHITECTURE, shared-docs); decision map written
 - [x] 1. Rainfall branch is already on `main` (`6bbe2fb`); the three test files now collect (missing `Any` import, `pydantic-settings` installed in the environment, stale version assertion); `tests/conftest.py` no longer trains models and pins a throwaway SQLite database. 401 tests collect; the full legacy suite was not run (it is scheduled for deletion)
-- [ ] 2. Move `haversine_distance_km` and the station catalogue CSV out of the legacy `spatial` and `sources` packages
+- [x] 2. `haversine_distance_km` now lives in `backend/app/geo.py` (the legacy `spatial.consensus` re-exports it); the station catalogue CSV moved to `backend/app/rainfall/data/`; `tests/test_rainfall_isolation.py` fails if the rainfall modules import any legacy package
 - [ ] 3. Input contract and the internal Reading and DailyTotal records, input-integrity checks, conformance suite
 - [ ] 4. Merge the two single-gauge scorers (`backend/app/rainfall/scorer.py`, `ml-service/qc/station.py`) into one check catalogue; correct the rain-day label to the end date
 - [ ] 5. Runs, results, report and JSON/CSV exports; new tables; 50-run cap

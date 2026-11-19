@@ -5,7 +5,7 @@ Source list: https://b.zmtcdn.com/data/file_assets/65fa362da3aa560a92f0b8aeec0df
 
 Usage (pdftotext comes with poppler):
     pdftotext -layout stations.pdf stations.txt
-    python scripts/build_weather_union_catalog.py stations.txt backend/app/sources/data/weather_union_stations.csv
+    python scripts/build_weather_union_catalog.py stations.txt backend/app/rainfall/data/weather_union_stations.csv
 
 Output columns: locality_id, city, place, latitude, longitude, device_type (1 = automated weather system, 2 = rain gauge system).
 The PDF text sometimes separates city and locality by one space only, so `place` keeps the full "city locality" text and

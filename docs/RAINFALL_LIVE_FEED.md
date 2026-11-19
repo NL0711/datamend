@@ -6,7 +6,7 @@ reading has been seen yet). Code: `backend/app/rainfall/`, endpoints under `/api
 
 ## Source
 Weather Union by Zomato, free key, 1000 calls per day (reset after 12 AM). About 580 stations in 30 cities (313 automated weather
-systems, 267 rain gauges), catalogue in `backend/app/sources/data/weather_union_stations.csv` (built by
+systems, 267 rain gauges), catalogue in `backend/app/rainfall/data/weather_union_stations.csv` (built by
 `scripts/build_weather_union_catalog.py` from Zomato's published list). Header `x-zomato-api-key`; endpoint
 `GET /get_locality_weather_data?locality_id=...` returns `rain_intensity` and `rain_accumulation` (rain-gauge stations return only those).
 

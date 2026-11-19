@@ -21,7 +21,8 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-EARTH_RADIUS_KM = 6371.0088
+from backend.app.geo import EARTH_RADIUS_KM, haversine_distance_km  # noqa: F401  (moved to backend/app/geo.py; re-exported for the legacy code)
+
 DEFAULT_SEARCH_RADIUS_KM = 50.0
 MIN_CORROBORATING_NEIGHBORS = 2
 AGREEMENT_Z_LIMIT = 2.5
@@ -47,16 +48,6 @@ class SpatialConsensusResult(BaseModel):
     genuine_event_shield: bool = Field(False, description="True if Genuine-Weather-Event Safety Shield triggered")
     nearest_station_distance_km: Optional[float] = Field(None, description="Distance to closest neighboring station (km)")
     message: str = Field("Spatial consensus check complete.", description="Human-readable spatial diagnostic summary")
-
-
-def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Calculates great-circle distance between two coordinates on Earth in kilometers using Haversine formula."""
-    p1, p2 = math.radians(lat1), math.radians(lat2)
-    dphi = math.radians(lat2 - lat1)
-    dlmb = math.radians(lon2 - lon1)
-    a = (math.sin(dphi / 2.0) ** 2 +
-         math.cos(p1) * math.cos(p2) * (math.sin(dlmb / 2.0) ** 2))
-    return float(2.0 * EARTH_RADIUS_KM * math.atan2(math.sqrt(a), math.sqrt(1.0 - a)))
 
 
 def compute_robust_z(value: float, median_val: float, mad_val: float, eps: float = 1e-4) -> float:
