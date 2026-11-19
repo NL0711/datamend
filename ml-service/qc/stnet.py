@@ -674,9 +674,29 @@ def _targets(p: Prepared, device) -> Tuple[torch.Tensor, Tuple[torch.Tensor, tor
     return padded, (torch.from_numpy(r.astype(np.int64)).to(device), torch.from_numpy(c.astype(np.int64)).to(device))
 
 
+INIT_MUST_MATCH = ("width", "c_feat", "use_gru", "use_robust", "use_disc", "use_long", "holdout_kinds", "long_years")
+
+
+def _load_stage1(p: Prepared, run_root: Path, init_from: str, seed: int, sig: Dict, device) -> Dict:
+    """The finished stage-1 encoder of another run (same seed, prefix ``init_from``). Everything that shapes the encoder or the years it saw
+    must match, otherwise stage 2 would train on features of years the encoder was fitted on."""
+    src = run_root / f"{init_from}_s{seed}" / "checkpoints" / f"{init_from}_s{seed}_final.pt"
+    if not src.is_file():
+        raise FileNotFoundError(f"--init-from {init_from}: no finished run at {src}")
+    ck = torch.load(src, map_location=device, weights_only=False)
+    bad = [k for k in INIT_MUST_MATCH if ck["sig"].get(k) != sig.get(k)]
+    if bad:
+        raise ValueError(f"--init-from {init_from} was trained with different {', '.join(bad)}: {[ck['sig'].get(k) for k in bad]} against "
+                         f"{[sig.get(k) for k in bad]}")
+    _require_finite(ck, src)
+    return ck
+
+
 def run_stnet(p: Prepared, seed: int, cfg: STConfig, splits: Sequence[str] = ("val",), max_years: Optional[int] = None,
-              time_cap_hours: Optional[float] = None, overwrite_scores: bool = False, pinned: bool = True) -> Dict:
-    """Train (stage 1 then stage 2, resumable), score the benchmark and clean threshold years, evaluate like every other component."""
+              time_cap_hours: Optional[float] = None, overwrite_scores: bool = False, pinned: bool = True,
+              init_from: Optional[str] = None) -> Dict:
+    """Train (stage 1 then stage 2, resumable), score the benchmark and clean threshold years, evaluate like every other component.
+    ``init_from`` takes the finished stage-1 encoder of another run and trains only stage 2 (new long-memory settings, minutes, not hours)."""
     device = resolve_device(p.cfg)
     torch.manual_seed(seed)
     name = f"{cfg.prefix}_s{seed}"
@@ -718,6 +738,11 @@ def run_stnet(p: Prepared, seed: int, cfg: STConfig, splits: Sequence[str] = ("v
             long.load_state_dict(ck["long"]); opt_long.load_state_dict(ck["opt_long"])
         done, log_rows = ck["done"], ck["log"]
         log.info("%s: resuming at step %d of %d + %d", name, done, total1, total2)
+    elif init_from:
+        ck = _load_stage1(p, run.path.parent, init_from, seed, sig, device)
+        model.load_state_dict(ck["model"])
+        done = total1                                                          # stage 1 is the other run's; only stage 2 trains here
+        log.info("%s: stage-1 encoder taken from %s_s%d; training stage 2 only (%d visits)", name, init_from, seed, total2)
 
     gen = FaultGenerator(p.grid)
     stat = Static(p, device)

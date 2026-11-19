@@ -165,7 +165,7 @@ def cmd_stnet(cfg, args) -> int:
                   long_epochs=args.long_epochs, long_steps=args.long_steps, long_years=args.long_years, long_skip=not args.no_skip,
                   probe=not args.no_probe, prefix=args.prefix)
     for seed in seeds:
-        out = run_stnet(p, seed, sc, ("val",), args.max_train_years, args.time_cap_hours, args.overwrite)
+        out = run_stnet(p, seed, sc, ("val",), args.max_train_years, args.time_cap_hours, args.overwrite, init_from=args.init_from)
         if out["status"] != "done":
             print(f"seed {seed}: stopped at the time cap ({out['done']}/{out['total']} steps); run again to resume")
             continue
@@ -614,6 +614,9 @@ def main(argv=None) -> int:
     sn.add_argument("--long-years", type=int, default=3, help="last training years kept for stage 2 only (the encoder never sees them)")
     sn.add_argument("--holdout-kinds", nargs="*", default=None, choices=["spike", "stuck", "scale", "phantom_rain", "zeroed", "drift"],
                     help="fault kinds removed from training (both stages); they stay in the validation benchmark")
+    sn.add_argument("--init-from", default=None, metavar="PREFIX",
+                    help="take the finished stage-1 encoder of the run with this prefix (same seed) and train only stage 2 with the new "
+                         "--long-* settings; encoder settings and --long-years must match that run")
     sn.add_argument("--no-gru", action="store_true", help="ablation: no short-range ConvGRU memory")
     sn.add_argument("--no-long", action="store_true", help="ablation: no long-range LSTM")
     sn.add_argument("--no-disc", action="store_true", help="ablation: no masked-disc head")
