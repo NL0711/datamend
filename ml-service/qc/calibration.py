@@ -87,6 +87,43 @@ def check_budget(p: Prepared, name: str, budget: float, store: Optional[ScoreSto
     return rows
 
 
+def check_budget_regional(p: Prepared, name: str, budget: float, store: Optional[ScoreStore] = None, n_boot: int = 200) -> List[Dict]:
+    """The ``regional`` rule: every client, held-out ones included, gets its OWN threshold from its own clean cell-days of one threshold year and is
+    checked on the other. This is what deploying on a new region means when its clean history is available for calibration: no label is used, only
+    the region's own scores. Rows have the same shape as ``check_budget`` rows, with rule ``regional``. Validation data only."""
+    store = store or score_store(p)
+    years = list(p.split.years["threshold"])
+    if len(years) < 2:
+        raise ValueError("need at least two threshold years to check thresholds out of sample")
+    clients = sorted(int(c) for c in np.unique(p.cell_client))
+    heldout = {int(c) for c in p.split.heldout}
+    rng = np.random.default_rng([int(p.cfg.seed), 12])
+    data = {y: _usable(p, name, y, store) for y in years}
+    acc: Dict = {}
+    for cal in years:
+        s_c, k_c = data[cal]
+        thr = {}
+        for c in clients:
+            ref = s_c[k_c & (p.cell_client == c)[None, :]]
+            if ref.size:
+                thr[c] = budget_thresholds(ref, [budget])[float(budget)]
+        for chk in (y for y in years if y != cal):
+            s, k = data[chk]
+            for c in clients:
+                if c not in thr:
+                    continue
+                m = k & (p.cell_client == c)[None, :]
+                acc.setdefault(c, ([], []))
+                acc[c][0].append(((s > thr[c]) & m).sum(axis=1))
+                acc[c][1].append(m.sum(axis=1))
+    rows = []
+    for c, (es, ts) in sorted(acc.items()):
+        rate, ci = _rate_ci(np.concatenate(es), np.concatenate(ts), rng, n_boot)
+        rows.append({"client": c, "role": "held-out" if c in heldout else "training", "rule": "regional", "budget": budget,
+                     "false_per_1000": rate, "ci95": ci, "clean_cell_days": int(np.concatenate(ts).sum())})
+    return rows
+
+
 def _cell(r: Dict) -> str:
     if r["false_per_1000"] is None:
         return "n/a".rjust(9) + " " * 22

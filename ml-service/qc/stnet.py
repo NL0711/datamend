@@ -674,6 +674,42 @@ def _targets(p: Prepared, device) -> Tuple[torch.Tensor, Tuple[torch.Tensor, tor
     return padded, (torch.from_numpy(r.astype(np.int64)).to(device), torch.from_numpy(c.astype(np.int64)).to(device))
 
 
+def final_checkpoint_path(p: Prepared, prefix: str, seed: int) -> Path:
+    n = f"{prefix}_s{seed}"
+    return paths.out_dir(p.cfg) / str(p.cfg.name) / n / "checkpoints" / f"{n}_final.pt"
+
+
+def load_final(p: Prepared, prefix: str, seed: int, device) -> Tuple[STNet, Optional[LongMemory], STConfig]:
+    """A finished run's network, long memory and settings, rebuilt from the checkpoint (which carries its own settings)."""
+    path = final_checkpoint_path(p, prefix, seed)
+    if not path.is_file():
+        raise FileNotFoundError(f"no finished STNet run at {path}")
+    ck = torch.load(path, map_location=device, weights_only=False)
+    _require_finite(ck, path)
+    sig = dict(ck["sig"])
+    sig["holdout_kinds"] = tuple(sig.get("holdout_kinds", ()))
+    cfg = STConfig(**sig)
+    model = STNet(cfg.width, cfg.c_feat, cfg.use_gru).to(device)
+    model.load_state_dict(ck["model"])
+    long = None
+    if cfg.use_long and ck.get("long") is not None:
+        long = LongMemory(cfg.c_feat + N_OUT + (N_RESID if cfg.long_skip else 0), cfg.long_hidden).to(device)
+        long.load_state_dict(ck["long"])
+    return model, long, cfg
+
+
+def score_checkpoint(p: Prepared, prefix: str, seed: int, splits: Sequence[str], heads: Sequence[str] = ("fault",),
+                     overwrite: bool = False) -> List[str]:
+    """Score the benchmark years of ``splits`` (and the clean threshold years) with a finished run, storing the chosen heads
+    (``fault``, ``clean``, ``disc`` or a kind). Nothing is trained or tuned here. Returns the stored names."""
+    device = resolve_device(p.cfg)
+    model, long, cfg = load_final(p, prefix, seed, device)
+    fns = score_functions(p, model, long, cfg, device, seed)
+    keep = {n: f for n, f in fns.items() if any(n == f"{cfg.prefix}_{h}_s{seed}" for h in heads)}
+    compute_scores_many(p, keep, tuple(splits), score_store(p), overwrite)
+    return sorted(keep)
+
+
 INIT_MUST_MATCH = ("width", "c_feat", "use_gru", "use_robust", "use_disc", "use_long", "holdout_kinds", "long_years")
 
 

@@ -29,6 +29,20 @@ Applies to `python -m qc choose-architecture`, which reads `cross_scale_validati
 |---|---|---|---|---|
 | 2026-11-18 | as above | | not made | |
 
+## STNet candidate decision rule (frozen 2026-11-19, before any test year is scored)
+
+Applies to `python -m qc choose-stnet`, which writes `stnet_choice.json` once. SYNTHETIC faults, held-out threshold years of the validation benchmark only. It decides whether the fused score of the untrained rules and the STNet fault head replaces the best old daily fusion (`fusion_logistic`, `fusion_boosted`).
+
+- **Provenance, stated plainly.** STNet was designed and its validation results were seen (2026-11-19) before this rule was written. The first three criteria are the cross-scale rule unchanged. The fourth was added after seeing that the unseen north-east client (3) had out-of-sample false alarms of 3.1 to 4.8 per 1,000 at a budget of 1.0. It is declared here, before any test year is scored.
+- At the final budget (1.0) the candidate replaces the old daily fusion only if all four hold: recall at least **0.02 higher** (absolute) than the better old fusion; false alarms per 1,000 clean cell-days not above the budget; protected extremes flagged not higher; and **every client's** out-of-sample false-alarm rate, held-out clients included, **not above 2.0 times the budget** (`qc/calibration.py`: calibrate on one threshold year, check on the other).
+- Candidates: `boosted` and `logistic` fusion of (rules, STNet fault head), each plain (one global threshold, guard checked with the `global` rule) and calibrated (each client's scores mapped through the distribution of its own clean cell-days in the threshold years, guard checked with the `regional` rule). No label is used in the calibration. If a calibrated candidate is chosen, a new region must be calibrated on its own clean history before its flags are used. The plain candidate wins over the calibrated one, then the higher recall. If none qualifies the choice is the old daily pipeline.
+- The fusion, the regional tables and the STNet checkpoint are frozen with the choice. The single test pass (`python -m qc stnet-test`, own lock `stnet_test.lock.json`, after the daily test pass and the budgets) scores only the chosen candidate, the old daily fusions and the untrained baselines. Nothing is refitted on a test year.
+- Not tested by this rule, and not claimed: generalisation to fault kinds the generator never produced (the held-out-kinds run has not been done), and real RF25 data. Report recall on strong cell-days and event recall next to the cell-day recall; this is a reporting choice made after the results were seen, so it carries no weight in the decision.
+
+| date | rule frozen | commit | choice made (after the run) | commit of the choice |
+|---|---|---|---|---|
+| 2026-11-19 | as above | | not made | |
+
 ## Benchmark hash (changed 2026-11-18)
 
 The pin on the frozen daily benchmark (`benchmark.expected_hash`, previously 442851b03d5f95a4) was removed by the owner. The hash is still computed and written into the benchmark manifest, the budgets log and the test report, so a changed benchmark is visible in every result, but scoring no longer refuses a different one. The check that the benchmark was built for the same split manifest still applies. Say which benchmark hash a result used whenever a result is reported.

@@ -152,6 +152,41 @@ def cmd_untrained(cfg, args) -> int:
     return 0
 
 
+def cmd_stnet_fuse(cfg, args) -> int:
+    """Fit and freeze the fusion of the rules and the STNet fault head, build the regional tables, store the validation scores of every candidate."""
+    from qc.prepare import load_prepared
+    from qc.stnet_arch import prepare_validation
+
+    info = prepare_validation(load_prepared(cfg), args.seed, args.prefix)
+    print(f"frozen fusion on {info['names']} (fitted on {info['n_positive']} fault rows of {info['n_rows']}, fusion-fit years {info['fit_years']}); "
+          "candidate scores stored for the validation and clean years. SYNTHETIC faults.")
+    return 0
+
+
+def cmd_choose_stnet(cfg, args) -> int:
+    """Apply the selection rule on validation data and write stnet_choice.json ONCE. Commit it before any test year is scored."""
+    from qc.prepare import load_prepared
+    from qc.stnet_arch import choice_path, decide, format_choice
+
+    p = load_prepared(cfg)
+    doc = decide(p, args.seed, args.prefix, args.final_budget, args.min_recall_gain, args.guard_factor, args.baselines)
+    print(format_choice(doc))
+    print(f"\nwrote {choice_path(p)}. Log it in docs/qc-evaluation-protocol.md and commit BEFORE any test year is scored.")
+    return 0
+
+
+def cmd_stnet_test(cfg, args) -> int:
+    """The single-use STNet test pass (after the daily test pass, the choice and the budgets)."""
+    from qc.prepare import load_prepared
+    from qc.stnet_test import report_dir, run_stnet_test
+
+    p = load_prepared(cfg)
+    report = run_stnet_test(p, tuple(args.splits), resume=args.resume)
+    print(f"STNet test pass done: {report['chosen']['component']}. wrote {report_dir(p) / 'stnet_test_report.md'}. SYNTHETIC faults. "
+          "The test years cannot be scored again.")
+    return 0
+
+
 def cmd_stnet(cfg, args) -> int:
     """Train and evaluate STNet (qc/stnet.py): the spatiotemporal fault detector with short- and long-range memory."""
     from qc.prepare import load_prepared
@@ -392,7 +427,12 @@ def cmd_set_budgets(cfg, args) -> int:
     curves = paths.out_dir(cfg) / str(cfg.name) / "fusion" / "validation" / f"curves_s{args.seed}.json"
     choice_file = paths.out_dir(cfg) / str(cfg.name) / "scales" / "architecture_choice.json"
     component = None
-    if choice_file.is_file():
+    stnet_file = paths.out_dir(cfg) / str(cfg.name) / "stnet" / "stnet_choice.json"
+    stnet_choice = json.loads(stnet_file.read_text(encoding="utf-8")) if stnet_file.is_file() else None
+    if stnet_choice and stnet_choice["chosen"]["architecture"] == "stnet":
+        component = stnet_choice["chosen"]["component"]
+        print(f"the budgets apply to the chosen STNet candidate's score: {component}")
+    elif choice_file.is_file():
         component = json.loads(choice_file.read_text(encoding="utf-8"))["chosen"]["component"]
         print(f"the budgets apply to the chosen architecture's fused score: {component}")
     else:
@@ -573,7 +613,8 @@ def cmd_paper(cfg, args) -> int:
 COMMANDS = {"uk-grid": cmd_uk_grid, "uk-labels": cmd_uk_labels, "test-score": cmd_test_score, "federated": cmd_federated, "fusion": cmd_fusion, "ablate": cmd_ablate, "calibrate": cmd_calibrate, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
             "train": cmd_train, "paper": cmd_paper,
             "period-benchmark": cmd_period_benchmark, "scale-select": cmd_scale_select, "cross-scale": cmd_cross_scale, "choose-architecture": cmd_choose_architecture,
-            "cross-scale-test": cmd_cross_scale_test, "regions-report": cmd_regions_report, "offline-score": cmd_offline_score, "ceiling": cmd_ceiling, "stnet": cmd_stnet}
+            "cross-scale-test": cmd_cross_scale_test, "regions-report": cmd_regions_report, "offline-score": cmd_offline_score, "ceiling": cmd_ceiling, "stnet": cmd_stnet,
+            "stnet-fuse": cmd_stnet_fuse, "choose-stnet": cmd_choose_stnet, "stnet-test": cmd_stnet_test}
 
 
 SEED_HELP = "default: the first of train.seeds in the config"
@@ -627,6 +668,17 @@ def main(argv=None) -> int:
     sn.add_argument("--time-cap-hours", type=float, default=None)
     sn.add_argument("--overwrite", action="store_true")
     sn.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
+    for name in ("stnet-fuse", "choose-stnet"):
+        sub.choices[name].add_argument("--seed", type=int, default=None, help=SEED_HELP)
+        sub.choices[name].add_argument("--prefix", default="stnet", help="prefix of the finished STNet run whose fault head is fused with the rules")
+    cs_ = sub.choices["choose-stnet"]
+    cs_.add_argument("--final-budget", type=float, default=1.0, help="false alerts per 1,000 clean cell-days at which the rule compares")
+    cs_.add_argument("--min-recall-gain", type=float, default=0.02, help="absolute recall gain over the best old daily fusion")
+    cs_.add_argument("--guard-factor", type=float, default=2.0, help="every client's out-of-sample false-alarm rate must stay within this multiple of the budget")
+    cs_.add_argument("--baselines", nargs="+", default=None, help="old daily fusion score names to compare against (default fusion_logistic_s<seed> and fusion_boosted_s<seed>)")
+    st_ = sub.choices["stnet-test"]
+    st_.add_argument("--splits", nargs="+", default=["test", "stress"], choices=["test", "stress"])
+    st_.add_argument("--resume", action="store_true", help="continue an unfinished pass; a finished one cannot be repeated")
     ce = sub.choices["ceiling"]
     ce.add_argument("--components", nargs="+", default=None, help="stored score names (default: the seed's logistic and boosted fusion, and rules)")
     ce.add_argument("--budget", type=float, default=1.0, help="false alerts per 1,000 clean cell-days")
