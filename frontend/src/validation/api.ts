@@ -1,6 +1,7 @@
 // Typed client of /api/validation and /api/rainfall. Errors carry the server's plain-language reason.
 import type {
-  Decision, Evidence, ExplanationItem, ExplorerPage, FeedStation, FeedStatus, FeedTestResult, LabOptions, LabResult, NarratorStatus,
+  Decision, Evidence, ExplanationItem, ExplorerPage, FeedStation, FeedStatus, FeedTestResult, ImdStationsResponse, LabOptions, LabResult,
+  MapLayers, NarratorStatus, StationCycleResponse,
   Overview, PlaceInfo, GaugeStation, Profile, QueuePage, ReviewItem, ReviewSummary, RowContext, RowDetail, RowsPage, RunFull, RunSummary,
   Series, SettingsState, SettingsUpdate,
 } from './types';
@@ -58,6 +59,13 @@ export const getLabOptions = () => get<LabOptions>(`${V}/lab/options`);
 export const locate = (lat: number, lon: number) => get<PlaceInfo>(`/api/places/locate?lat=${lat}&lon=${lon}`);
 export const getGauges = (city?: string) =>
   get<{ cities: string[]; count: number; shown: number; stations: GaugeStation[] }>(`/api/places/stations${city ? `?city=${encodeURIComponent(city)}` : ''}`);
+
+/** The whole gauge catalogue (the map draws every station). */
+export const getAllGauges = () =>
+  get<{ cities: string[]; count: number; shown: number; stations: GaugeStation[] }>('/api/places/stations?limit=600');
+export const getImdStations = () => get<ImdStationsResponse>('/api/places/imd-stations');
+export const getMapLayers = () => get<MapLayers>('/api/places/map');
+export const getStationCycle = () => get<StationCycleResponse>(`${V}/stations`);
 
 /** The admin token is kept for this browser tab only (sessionStorage). Reviews and Settings need it; reading never does. */
 export const ADMIN_TOKEN_KEY = 'datamend-admin-token';

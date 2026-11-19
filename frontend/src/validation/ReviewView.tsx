@@ -7,7 +7,8 @@ import { EvidencePane } from './EvidencePane';
 import type { NarratorStatus, QueuePage, ReviewSummary } from './types';
 import { Notice, Panel, SeverityPill, SyntheticBadge, VerdictBadge, formatError } from './ui';
 
-export function ReviewView() {
+export function ReviewView({ station: initialStation = '', onClearStation }: { station?: string; onClearStation?: () => void }) {
+  const [station, setStation] = useState(initialStation);
   const [status, setStatus] = useState<'unreviewed' | 'reviewed' | 'all'>('unreviewed');
   const [verdict, setVerdict] = useState<'' | 'SUSPECT' | 'UNCERTAIN'>('');
   const [check, setCheck] = useState('');
@@ -20,17 +21,22 @@ export function ReviewView() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    getQueue(queueQuery({ page, status, verdict, check, synthetic: source })).then(setData).catch((e) => setError(formatError(e)));
+    getQueue(queueQuery({ page, status, verdict, check, synthetic: source, station })).then(setData).catch((e) => setError(formatError(e)));
     getReviewSummary().then(setSummary).catch(() => undefined);
-  }, [page, status, verdict, check, source]);
+  }, [page, status, verdict, check, source, station]);
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [status, verdict, check, source]);
+  useEffect(() => { setPage(1); }, [status, verdict, check, source, station]);
   useEffect(() => { getNarrator().then(setNarrator).catch(() => setNarrator(null)); }, []);
 
   const checks = ALL_CHECKS;
   return (
     <div className="space-y-3">
       {error && <Notice tone="error">{error}</Notice>}
+      {station && (
+        <Notice tone="info">
+          Showing only station <b className="font-mono">{station}</b>.{' '}
+          <button className="font-bold text-sky-700" onClick={() => { setStation(''); onClearStation?.(); }}>Show every station</button>
+        </Notice>)}
       {summary && (
         <Panel className="p-3 space-y-2">
           <div className="flex items-center gap-4 flex-wrap text-[11px] font-mono">

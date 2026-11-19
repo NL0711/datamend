@@ -5,10 +5,32 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from backend.app.places import grid
+from backend.app.places import grid, imd
 from backend.app.places.lookup import locate
 
 router = APIRouter(prefix="/api/places", tags=["places"])
+
+
+@router.get("/imd-stations")
+async def imd_stations() -> Dict[str, Any]:
+    """Indian synoptic stations from NOAA's station inventory (metadata only). NOT IMD's own list, which is not public."""
+    st = imd.stations()
+    return {"source": imd.SOURCE, "count": len(st), "with_data_2024_or_later": sum(1 for s in st if (s["last_data"] or "") >= "2024-01-01"),
+            "note": "Stations that have reported to NOAA's archive, most operated by IMD; last_data is when that archive stops. Not IMD's own station list.",
+            "stations": st}
+
+
+@router.get("/map")
+async def map_layers() -> Dict[str, Any]:
+    """The RF25 land mask and client regions for drawing a map: one string per row (row 0 is the SOUTHERNMOST), one digit per cell
+    (0 = not land, 1 to 8 = client region). 129 x 135 cells at 0.25 degree."""
+    cm = grid.client_map()
+    if cm is None:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "the RF25 land mask asset is not available on this server")
+    return {"grid": {"lat0": grid.LAT0, "lon0": grid.LON0, "step": grid.STEP, "n_lat": grid.N_LAT, "n_lon": grid.N_LON, "row0": "south"},
+            "rows": ["".join(str(v) for v in row) for row in cm], "regions": sorted({v for row in cm for v in row if v}),
+            "held_out_regions": list(grid.HELD_OUT_CLIENTS),
+            "note": "RF25 client regions (groups of whole IMD sub-divisions used in the rainfall experiments), not IMD's own region boundaries"}
 
 
 @router.get("/stations")
@@ -26,7 +48,7 @@ async def list_stations(city: Optional[str] = Query(None, max_length=80), limit:
         except grid.GridError:
             cell, land = None, None
         out.append({"station_id": s.locality_id, "city": s.city, "place": s.place, "latitude": s.latitude, "longitude": s.longitude,
-                    "device": s.device_label, "cell": cell, "is_land": land})
+                    "device": s.device_label, "cell": cell, "is_land": land, "nearest_imd": imd.nearest(s.latitude, s.longitude)})
     return {"cities": cities, "count": len(cat), "shown": len(out), "stations": out}
 
 

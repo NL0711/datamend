@@ -134,9 +134,38 @@ export interface PlaceInfo {
   is_land: boolean | null; client_region: number | null; imd_subdivision: { status: string; reason: string };
 }
 
+export interface NearestImd { id: string; name: string; km: number }
+
 export interface GaugeStation {
   station_id: string; city: string; place: string; latitude: number; longitude: number; device: string;
   cell: { row: number; col: number; lat: number; lon: number; grid: string } | null; is_land: boolean | null;
+  nearest_imd?: NearestImd | null;
+}
+
+/** An Indian synoptic station from NOAA's station inventory (most are IMD's). NOT IMD's own list: that one is not public. */
+export interface ImdStation {
+  id: string; name: string; state: string | null; icao: string | null; latitude: number; longitude: number;
+  elevation_m: number | null; first_data: string | null; last_data: string | null;
+}
+export interface ImdStationsResponse { source: string; count: number; with_data_2024_or_later: number; note: string; stations: ImdStation[] }
+
+/** The RF25 land mask and client regions: one string per row (row 0 is the southernmost), one digit per cell (0 = not land). */
+export interface MapLayers {
+  grid: { lat0: number; lon0: number; step: number; n_lat: number; n_lon: number; row0: 'south' };
+  rows: string[]; regions: number[]; held_out_regions: number[]; note: string;
+}
+
+/** One station's check -> flag -> audit cycle, from the stored runs and reviews. */
+export interface StationCycle {
+  station_id: string; place: string | null; city: string | null; latitude: number | null; longitude: number | null;
+  position_source: 'catalogue' | 'upload' | null; nearest_imd: NearestImd | null;
+  checked: number; runs: number; synthetic_rows: number; last_run_at: string | null; latest_run_id: number | null;
+  flagged: number; suspect: number; uncertain: number; no_data: number;
+  audited: number; unaudited: number; decisions: Record<Decision, number>; top_checks: Record<string, number>;
+}
+export interface StationCycleResponse {
+  storage: string; count: number; shown: number; truncated: boolean; positioned: number; positions_truncated: boolean;
+  truncated_reviews: boolean; stations: StationCycle[]; note: string;
 }
 
 export interface SettingsState {

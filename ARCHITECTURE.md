@@ -31,7 +31,8 @@ upload (CSV, JSON) or live Weather Union feed
 | Score-provider seam for trained scores | seam only; NO trained score is connected |
 | Admin review loop (`validation/review.py`): reviewer decisions on flagged rows, stored apart from the evidence, admin-token protected, summary says they are not ground truth | IMPLEMENTED |
 | Overview, Data explorer, event-forensics context, Anomaly lab (synthetic faults), gauge catalogue | IMPLEMENTED |
-| Dashboard (`frontend/src/validation`: Overview, Runs, Run view, Data explorer, Review queue, Anomaly lab, Locations, Live gauge feed, Settings) | IMPLEMENTED; type-checked and unit-tested, not looked at in a browser by the author |
+| Station network (`validation/stations.py`, `places/imd.py`, `frontend/src/validation/NetworkView.tsx`): a flat India map drawn from the RF25 land mask with the 580 Weather Union gauges and 541 Indian synoptic stations (NOAA's list, most operated by IMD; NOT IMD's own list, which is not public), each gauge coloured by its check, flag and audit state, with the nearest IMD station and a link into the audit queue for that station | IMPLEMENTED; tested on generated data, looked at in a browser with generated synthetic rows |
+| Dashboard (`frontend/src/validation`: Overview, Station network, Runs, Run view, Data explorer, Review queue, Anomaly lab, Locations, Live gauge feed, Settings) | IMPLEMENTED; type-checked and unit-tested; the Station network view was looked at in a browser, the rest not by its author |
 | PDF export, Parquet input, unit conversion, MCP hosting, accounts, composite quality grade | NOT IMPLEMENTED |
 
 The legacy temperature, pressure and humidity app and the Locations feature were removed (see git history).

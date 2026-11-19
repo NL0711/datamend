@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.settings import require_admin
 from backend.app.db.database import get_db
-from backend.app.validation import lab, narrate, overview as overview_svc, review as review_svc
+from backend.app.validation import lab, narrate, overview as overview_svc, review as review_svc, stations as stations_svc
 from backend.app.validation import runs as svc
 from backend.app.validation.explain import NarratorRateLimited, NarratorUnavailable
 from backend.app.validation.ingest import MAX_BYTES, InputRejected, UploadOptions
@@ -105,6 +105,12 @@ async def get_overview(session: AsyncSession = Depends(get_db)) -> Dict[str, Any
     return await overview_svc.overview(session)
 
 
+@router.get("/stations")
+async def get_station_cycle(session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """Per station: rows checked, rows flagged and rows audited by a reviewer (the check, flag and audit cycle). Read-only."""
+    return await stations_svc.station_cycle(session)
+
+
 # ---------------------------------------------------------------- the admin review loop
 class ReviewRequest(BaseModel):
     decision: Literal["confirmed_fault", "false_alarm", "genuine_extreme", "needs_followup"]
@@ -116,9 +122,10 @@ class ReviewRequest(BaseModel):
 async def review_queue(page: int = Query(1, ge=1), page_size: int = Query(review_svc.PAGE, ge=1, le=review_svc.PAGE),
                        status_: Literal["unreviewed", "reviewed", "all"] = Query("unreviewed", alias="status"),
                        verdict: Optional[Literal["SUSPECT", "UNCERTAIN"]] = None, check: Optional[str] = Query(None, max_length=48),
-                       run_id: Optional[int] = None, synthetic: Optional[bool] = None, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
-    """Flagged rows across every run with their review state, highest rule score first."""
-    return await review_svc.queue(session, page, page_size, status_, verdict, check, run_id, synthetic)
+                       run_id: Optional[int] = None, synthetic: Optional[bool] = None, station: Optional[str] = Query(None, max_length=64),
+                       session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """Flagged rows across every run with their review state, highest rule score first. ``station`` limits it to one station."""
+    return await review_svc.queue(session, page, page_size, status_, verdict, check, run_id, synthetic, station)
 
 
 @router.get("/review/summary")

@@ -38,10 +38,11 @@ export function explorerQuery(o: { page: number; station?: string; verdict?: Ver
 }
 
 /** Review queue query across runs. status unreviewed is the default work list. */
-export function queueQuery(o: { page: number; status: 'unreviewed' | 'reviewed' | 'all'; verdict?: 'SUSPECT' | 'UNCERTAIN' | ''; check?: string; runId?: number | null; synthetic?: 'all' | 'synthetic' | 'real' }): string {
+export function queueQuery(o: { page: number; status: 'unreviewed' | 'reviewed' | 'all'; verdict?: 'SUSPECT' | 'UNCERTAIN' | ''; check?: string; runId?: number | null; synthetic?: 'all' | 'synthetic' | 'real'; station?: string }): string {
   const q = new URLSearchParams({ status: o.status, page: String(Math.max(1, Math.floor(o.page))), page_size: String(PAGE_SIZE) });
   if (o.verdict) q.set('verdict', o.verdict);
   if (o.check) q.set('check', o.check);
+  if (o.station) q.set('station', o.station);
   if (o.runId) q.set('run_id', String(o.runId));
   if (o.synthetic === 'synthetic') q.set('synthetic', 'true');
   if (o.synthetic === 'real') q.set('synthetic', 'false');
@@ -123,4 +124,78 @@ export function headlineLine(h: Headline | null | undefined): string {
 /** Plain-text guard for generated text: the UI only ever renders it as text, never as HTML. */
 export function asPlainText(s: unknown): string {
   return typeof s === 'string' ? s : '';
+}
+
+// ---------------------------------------------------------------- station map (flat, equirectangular) and the check -> flag -> audit cycle
+export interface MapView { cx: number; cy: number; scale: number }          // centre latitude and longitude; scale = pixels per degree
+export const INDIA_BOUNDS = { lonMin: 66, lonMax: 100, latMin: 5.5, latMax: 38.5 };
+export const MIN_SCALE = 4;
+export const MAX_SCALE = 400;
+
+/** The view that shows all of India with a small margin. */
+export function fitView(w: number, h: number): MapView {
+  const b = INDIA_BOUNDS;
+  const scale = Math.min(w / (b.lonMax - b.lonMin), h / (b.latMax - b.latMin)) * 0.96;
+  return { cx: (b.lonMin + b.lonMax) / 2, cy: (b.latMin + b.latMax) / 2, scale: Math.max(MIN_SCALE, scale) };
+}
+export function project(lat: number, lon: number, v: MapView, w: number, h: number): { x: number; y: number } {
+  return { x: w / 2 + (lon - v.cx) * v.scale, y: h / 2 - (lat - v.cy) * v.scale };
+}
+export function unproject(x: number, y: number, v: MapView, w: number, h: number): { lat: number; lon: number } {
+  return { lat: v.cy - (y - h / 2) / v.scale, lon: v.cx + (x - w / 2) / v.scale };
+}
+/** Zoom by ``factor`` keeping the geographic point under (x, y) fixed. The scale is clamped. */
+export function zoomAt(v: MapView, factor: number, x: number, y: number, w: number, h: number): MapView {
+  const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, v.scale * factor));
+  const p = unproject(x, y, v, w, h);
+  return { scale, cx: p.lon - (x - w / 2) / scale, cy: p.lat + (y - h / 2) / scale };
+}
+/** Pan by a pixel drag. */
+export function panBy(v: MapView, dx: number, dy: number): MapView {
+  return { ...v, cx: v.cx - dx / v.scale, cy: v.cy + dy / v.scale };
+}
+/** The closest point to (x, y) within ``maxPx`` pixels, or null. Ties go to the earlier point. */
+export function nearestPoint<T extends { x: number; y: number }>(points: T[], x: number, y: number, maxPx: number): T | null {
+  let best: T | null = null;
+  let bd = maxPx * maxPx;
+  for (const p of points) {
+    const d = (p.x - x) ** 2 + (p.y - y) ** 2;
+    if (d <= bd && (best === null || d < bd)) { best = p; bd = d; }
+  }
+  return best;
+}
+
+export const REGION_COLORS = ['#BFDBFE', '#BBF7D0', '#FDE68A', '#FBCFE8', '#DDD6FE', '#FED7AA', '#A7F3D0', '#E9D5FF'];
+export const regionColor = (id: number): string => REGION_COLORS[(Math.max(1, id) - 1) % REGION_COLORS.length];
+
+export type CycleState = 'unchecked' | 'nodata' | 'clean' | 'flagged' | 'audited';
+export const CYCLE_LABEL: Record<CycleState, string> = {
+  unchecked: 'not checked yet', nodata: 'no data in the rows checked', clean: 'checked, nothing flagged', flagged: 'flagged, audit pending', audited: 'flagged and audited',
+};
+export const CYCLE_COLOR: Record<CycleState, string> = { unchecked: '#94A3B8', nodata: '#64748B', clean: '#10B981', flagged: '#EF4444', audited: '#2563EB' };
+
+type CycleCounts = { checked: number; flagged: number; no_data: number; unaudited: number };
+/** Where a station is in the cycle: checked, flagged, audited. A station with any unaudited flag stays "flagged". */
+export function cycleState(c: CycleCounts | null | undefined): CycleState {
+  if (!c || c.checked <= 0) return 'unchecked';
+  if (c.flagged > 0) return c.unaudited > 0 ? 'flagged' : 'audited';
+  return c.no_data >= c.checked ? 'nodata' : 'clean';
+}
+
+export interface NetworkTotals { stations: number; checked: number; flagged: number; audited: number; unaudited: number; byState: Record<CycleState, number> }
+export function networkTotals(list: (CycleCounts & { audited: number })[]): NetworkTotals {
+  const byState: Record<CycleState, number> = { unchecked: 0, nodata: 0, clean: 0, flagged: 0, audited: 0 };
+  let checked = 0, flagged = 0, audited = 0, unaudited = 0;
+  for (const c of list) {
+    byState[cycleState(c)]++;
+    checked += c.checked; flagged += c.flagged; audited += Math.min(c.audited, c.flagged); unaudited += c.unaudited;
+  }
+  return { stations: list.length, checked, flagged, audited, unaudited, byState };
+}
+
+/** Great-circle distance in km (haversine), for "gauges near this IMD station". */
+export function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const r = Math.PI / 180;
+  const a = Math.sin(((lat2 - lat1) * r) / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(((lon2 - lon1) * r) / 2) ** 2;
+  return 2 * 6371.0088 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }

@@ -56,9 +56,10 @@ async def latest_by_key(session: AsyncSession, keys: List[tuple]) -> Dict[tuple,
 
 
 async def queue(session: AsyncSession, page: int = 1, page_size: int = PAGE, status: str = "unreviewed", verdict: Optional[str] = None,
-                check: Optional[str] = None, run_id: Optional[int] = None, synthetic: Optional[bool] = None) -> Dict[str, Any]:
+                check: Optional[str] = None, run_id: Optional[int] = None, synthetic: Optional[bool] = None,
+                station: Optional[str] = None) -> Dict[str, Any]:
     """Flagged rows across every run (not rejected uploads), highest rule score first, with their review state. status is
-    unreviewed (default), reviewed or all."""
+    unreviewed (default), reviewed or all. ``station`` limits the queue to one station (exact id)."""
     page_size, page = max(1, min(page_size, PAGE)), max(1, page)
     has_review = exists(select(Review.id).where(Review.run_id == ValidationResult.run_id, Review.row_ref == ValidationResult.row_ref))
     q = (select(ValidationResult, ValidationRun.label, ValidationRun.synthetic, ValidationRun.source)
@@ -68,6 +69,8 @@ async def queue(session: AsyncSession, page: int = 1, page_size: int = PAGE, sta
         q = q.where(ValidationResult.verdict == verdict)
     if run_id is not None:
         q = q.where(ValidationResult.run_id == run_id)
+    if station:
+        q = q.where(ValidationResult.station_id == station)
     if synthetic is not None:
         q = q.where(ValidationRun.synthetic == synthetic)
     if status == "unreviewed":
