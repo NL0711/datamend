@@ -24,7 +24,7 @@ Polling N stations every T seconds costs 86400 N / T calls per day. The service 
 (counted per IST calendar day). 9 stations every 15 minutes = 864 calls.
 
 ## Daily total
-Rain day 03 UTC to 03 UTC (08:30 to 08:30 IST), the same definition as the IMD/RF25 daily grids. `cumulative` mode sums increases
+Rain day 03 UTC to 03 UTC (08:30 to 08:30 IST), the same definition as the IMD/RF25 daily grids, labelled by the date it ENDS (the `today.rain_day` field of the station report; it was the start date before 2026-11-19). `cumulative` mode sums increases
 and treats a drop as a counter reset; `per_reading` sums the readings. A day is `complete` only if readings cover it without a gap
 over 60 minutes.
 

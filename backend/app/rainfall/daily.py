@@ -24,15 +24,17 @@ DAY_OFFSET = timedelta(hours=3)
 
 
 def rain_day(ts: datetime) -> date:
-    """The 03 UTC to 03 UTC rain day a UTC timestamp belongs to (labelled by the date it starts on)."""
+    """The 03 UTC to 03 UTC rain day a UTC timestamp belongs to, labelled by the date it ENDS on (the IMD convention, and the
+    label used by ml-service/qc/station.py): 2026-11-19 02:59 UTC is in rain day 2026-11-19, 03:00 UTC is in 2026-11-20."""
     if ts.tzinfo is None:
         raise ValueError("timestamp must be timezone-aware")
-    return (ts.astimezone(timezone.utc) - DAY_OFFSET).date()
+    return (ts.astimezone(timezone.utc) - DAY_OFFSET).date() + timedelta(days=1)
 
 
 def rain_day_bounds(day: date) -> Tuple[datetime, datetime]:
-    start = datetime(day.year, day.month, day.day, tzinfo=timezone.utc) + DAY_OFFSET
-    return start, start + timedelta(days=1)
+    """[start, end) in UTC of the rain day labelled `day`: 03 UTC on the previous date up to 03 UTC on `day`."""
+    end = datetime(day.year, day.month, day.day, tzinfo=timezone.utc) + DAY_OFFSET
+    return end - timedelta(days=1), end
 
 
 @dataclass(frozen=True)

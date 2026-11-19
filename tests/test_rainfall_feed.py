@@ -64,11 +64,14 @@ def test_safe_interval_never_exceeds_budget():
 
 
 # ---- rain day and totals --------------------------------------------------------------------------------------------
-def test_rain_day_is_03_to_03_utc():
-    assert rain_day(datetime(2026, 11, 19, 2, 59, tzinfo=timezone.utc)) == date(2026, 11, 18)
-    assert rain_day(datetime(2026, 11, 19, 3, 0, tzinfo=timezone.utc)) == date(2026, 11, 19)
+def test_rain_day_is_03_to_03_utc_labelled_by_the_date_it_ends():
+    assert rain_day(datetime(2026, 11, 19, 2, 59, tzinfo=timezone.utc)) == date(2026, 11, 19)
+    assert rain_day(datetime(2026, 11, 19, 3, 0, tzinfo=timezone.utc)) == date(2026, 11, 20)
     start, end = rain_day_bounds(date(2026, 11, 19))
-    assert (end - start) == timedelta(days=1) and start.hour == 3
+    assert (end - start) == timedelta(days=1) and start == datetime(2026, 11, 18, 3, tzinfo=timezone.utc) and end == datetime(2026, 11, 19, 3, tzinfo=timezone.utc)
+    for ts in (start, end - timedelta(seconds=1)):                     # the bounds round-trip through the label
+        assert rain_day(ts) == date(2026, 11, 19)
+    assert rain_day(end) == date(2026, 11, 20)
     with pytest.raises(ValueError):
         rain_day(datetime(2026, 11, 19, 3, 0))
 

@@ -134,7 +134,7 @@ class RainfallService:
             "last_reading": None if last is None else {
                 "received_at": last.observed_at.isoformat(), "status": last.status,
                 "rain_intensity": last.rain_intensity, "rain_accumulation": last.rain_accumulation},
-            "today": {"rain_day_utc_start": str(total.day), "total_mm": total.total_mm, "n_readings": total.n_readings,
+            "today": {"rain_day": str(total.day), "rain_day_label": "date the 03-to-03 UTC rain day ends", "total_mm": total.total_mm, "n_readings": total.n_readings,
                       "n_resets": total.n_resets, "max_gap_minutes": total.max_gap_minutes, "complete": total.complete,
                       "mode": total.mode, "units_confirmed": total.units_confirmed},
             "quality": None if score is None else {"assessment": score.assessment, "score": score.score, "reasons": score.reasons,
