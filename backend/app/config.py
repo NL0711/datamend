@@ -1,5 +1,8 @@
+import json
 import os
-from typing import List, Optional
+from typing import Annotated, List, Optional
+
+from pydantic import field_validator
 
 try:
     from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -14,6 +17,13 @@ except ImportError:
                     values[k] = os.environ[k]
             super().__init__(**values)
 
+try:
+    # pydantic-settings >= 2.7: stop it from JSON-decoding list env vars before our validator runs.
+    from pydantic_settings import NoDecode
+    _OriginList = Annotated[List[str], NoDecode]
+except ImportError:
+    _OriginList = List[str]
+
 class Settings(BaseSettings):
     PROJECT_NAME: str = "DataMend"
     VERSION: str = "0.2.0"
@@ -21,7 +31,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     HOST: str = "0.0.0.0"
     PORT: int = 8000
-    CORS_ORIGINS: List[str] = [
+    CORS_ORIGINS: _OriginList = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:5199",
@@ -62,6 +72,20 @@ class Settings(BaseSettings):
     MQTT_HEARTBEAT_TOPIC: str = "skyguard/aws/+/heartbeat"
     PHYSICAL_AWS_TIMEOUT_SECONDS: float = 30.0
     PHYSICAL_DEFAULT_STATION_ID: str = "AWS-ESP32-001"
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def _parse_cors_origins(cls, v):
+        """Accept a JSON list, a comma-separated string, or a single URL (trailing slashes stripped)."""
+        if isinstance(v, str):
+            s = v.strip()
+            if s.startswith("["):
+                v = json.loads(s)
+            else:
+                v = [p for p in s.split(",")]
+        if isinstance(v, (list, tuple)):
+            return [str(p).strip().strip("\"'").rstrip("/") for p in v if str(p).strip().strip("\"'")]
+        return v
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
