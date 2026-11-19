@@ -160,11 +160,12 @@ def cmd_ceiling(cfg, args) -> int:
 
     names = args.components or [fused_name("logistic", args.seed), fused_name("boosted", args.seed), "rules"]
     p = load_prepared(cfg)
-    results = run_ceiling(p, names, args.budget)
+    results = run_ceiling(p, names, args.budget, tag=args.tag)
     from qc import paths
     out = paths.out_dir(cfg) / str(cfg.name) / "ceiling"
-    print((out / "ceiling.md").read_text(encoding="utf-8"))
-    print(f"wrote {out}. SYNTHETIC faults, validation years only.")
+    md = out / (f"ceiling_{args.tag}.md" if args.tag else "ceiling.md")
+    print(md.read_text(encoding="utf-8"))
+    print(f"wrote {md}. SYNTHETIC faults, validation years only.")
     return 0
 
 
@@ -259,18 +260,20 @@ def cmd_fusion(cfg, args) -> int:
 
 
 def cmd_ablate(cfg, args) -> int:
-    from qc.ablate import format_rows, run_ablation
+    from qc.ablate import RESIDUAL_SUBSETS, format_rows, run_ablation
     from qc.prepare import load_prepared
     from qc.runs import RunDir, write_json
 
     p = load_prepared(cfg)
-    rows = run_ablation(p, args.seed, args.budget)
+    rows = run_ablation(p, args.seed, args.budget, RESIDUAL_SUBSETS if args.residual_only else None)
     print(f"Fusion ablation, seed {args.seed}, validation years (held out from the fusion fit), budget {args.budget} false alerts per 1,000 "
           "clean cell-days, synthetic faults:")
     print(format_rows(rows))
     out = RunDir(paths.out_dir(cfg) / str(cfg.name), "ablation")
     out.start(cfg, int(cfg.seed), {"split_manifest_hash": p.manifest["hash"], "seed": args.seed})
-    write_json(out.file("ablation_s%d.json" % args.seed), {"budget": args.budget, "seed": args.seed, "rows": rows})
+    fname = "ablation_residual_s%d.json" if args.residual_only else "ablation_s%d.json"        # never overwrite the full ablation
+    write_json(out.file(fname % args.seed), {"budget": args.budget, "seed": args.seed, "rows": rows,
+                                              "subsets": "residual" if args.residual_only else "full"})
     out.mark_done("ablation")
     return 0
 
@@ -566,6 +569,7 @@ def main(argv=None) -> int:
     ce = sub.choices["ceiling"]
     ce.add_argument("--components", nargs="+", default=None, help="stored score names (default: the seed's logistic and boosted fusion, and rules)")
     ce.add_argument("--budget", type=float, default=1.0, help="false alerts per 1,000 clean cell-days")
+    ce.add_argument("--tag", default="", help="write ceiling_<tag>.md instead of ceiling.md, so an earlier result is not overwritten")
     ce.add_argument("--seed", type=int, default=None, help=SEED_HELP)
     o = sub.choices["offline-score"]
     o.add_argument("--overwrite", action="store_true")
@@ -640,6 +644,7 @@ def main(argv=None) -> int:
     ab = sub.choices["ablate"]
     ab.add_argument("--seed", type=int, default=None, help=SEED_HELP)
     ab.add_argument("--budget", type=float, default=1.0, help="false alerts per 1,000 clean cell-days the components are compared at")
+    ab.add_argument("--residual-only", action="store_true", help="only the subsets with the neighbour-residual scores (qc.residual), written to ablation_residual_s<seed>.json")
     cb = sub.choices["calibrate"]
     cb.add_argument("--seed", type=int, default=None, help=SEED_HELP)
     cb.add_argument("--budget", type=float, default=1.0)

@@ -95,17 +95,20 @@ def markdown(component: str, res: Dict) -> str:
     return "\n".join(o) + "\n"
 
 
-def run_ceiling(p: Prepared, components: Sequence[str], budget: float = 1.0, store=None) -> Dict[str, Dict]:
-    """Analyse each stored component; write <run>/ceiling/ceiling_<component>.{json,md} and ceiling.md (all in one)."""
+def run_ceiling(p: Prepared, components: Sequence[str], budget: float = 1.0, store=None, tag: str = "") -> Dict[str, Dict]:
+    """Analyse each stored component; write <run>/ceiling/ceiling_<component>.json and one markdown file with all of them:
+    ceiling.md, or ceiling_<tag>.md when ``tag`` is given (so an earlier result is never overwritten)."""
     import json
     out_dir = paths.out_dir(p.cfg) / str(p.cfg.name) / "ceiling"
     out_dir.mkdir(parents=True, exist_ok=True)
     results, md = {}, []
+    from qc.ablate import ablation_store
     for name in components:
-        res = analyse(fault_table(p, name, budget, store), budget)
+        use = store or (ablation_store(p) if name.startswith("abl_") else score_store(p))     # ablation fusions live in their own store
+        res = analyse(fault_table(p, name, budget, use), budget)
         res["component"] = name
         results[name] = res
         (out_dir / f"ceiling_{name}.json").write_text(json.dumps(res, indent=1, default=float), encoding="utf-8")
         md.append(markdown(name, res))
-    (out_dir / "ceiling.md").write_text("\n".join(md), encoding="utf-8")
+    (out_dir / (f"ceiling_{tag}.md" if tag else "ceiling.md")).write_text("\n".join(md), encoding="utf-8")
     return results

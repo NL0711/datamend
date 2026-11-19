@@ -56,7 +56,7 @@ def component_names(seed: int, base: Sequence[str] = BASE, source: str = "centra
     from qc.federated import run_label
 
     def one(b: str) -> str:
-        if b in ("rules", "slow", "neighbour_baseline", "nbr_wet", "nbr_heavy"):          # untrained or context: no seed
+        if b in ("rules", "slow", "neighbour_baseline", "nbr_wet", "nbr_heavy", "nbr_surprise", "drift_cusum"):   # untrained or context: no seed
             return b
         return f"{b}_s{seed}" if source == "central" else run_label(source, b, seed, prox_mu)
     return [one(b) for b in base]
