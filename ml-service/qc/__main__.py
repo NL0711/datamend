@@ -152,6 +152,24 @@ def cmd_untrained(cfg, args) -> int:
     return 0
 
 
+def cmd_offline_score(cfg, args) -> int:
+    """Score the offline reference models (offline.artifacts in the config) on the VALIDATION years only."""
+    from qc.offline import run_offline_validation
+    from qc.prepare import load_prepared
+    from qc.trained import resolve_device
+
+    results, not_run = run_offline_validation(load_prepared(cfg), str(resolve_device(cfg)), args.overwrite)
+    for label, why in not_run.items():
+        print(f"{label}: {why}")
+    if not results:
+        print("nothing was scored: set offline.artifacts.<arch> (for example --set offline.artifacts.lstm_ae=artifacts/offline/lstm_ae)")
+        return 1
+    for b in args.show_budgets:
+        print_table(list(results.values()), b)
+    print("NON-CAUSAL reference (the model reads days on both sides), validation years only, SYNTHETIC faults.")
+    return 0
+
+
 def shard_units(units, spec):
     """The units of work this process takes. ``spec`` is "I/N": unit k goes to shard k % N, so N processes (for example one
     per GPU) split the work with no overlap. None = everything."""
@@ -506,7 +524,7 @@ def cmd_paper(cfg, args) -> int:
 COMMANDS = {"uk-grid": cmd_uk_grid, "uk-labels": cmd_uk_labels, "test-score": cmd_test_score, "federated": cmd_federated, "fusion": cmd_fusion, "ablate": cmd_ablate, "calibrate": cmd_calibrate, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
             "train": cmd_train, "paper": cmd_paper,
             "period-benchmark": cmd_period_benchmark, "scale-select": cmd_scale_select, "cross-scale": cmd_cross_scale, "choose-architecture": cmd_choose_architecture,
-            "cross-scale-test": cmd_cross_scale_test, "regions-report": cmd_regions_report}
+            "cross-scale-test": cmd_cross_scale_test, "regions-report": cmd_regions_report, "offline-score": cmd_offline_score}
 
 
 SEED_HELP = "default: the first of train.seeds in the config"
@@ -529,6 +547,9 @@ def main(argv=None) -> int:
     u.add_argument("--splits", nargs="+", default=["val"], choices=["val", "test", "stress"])
     u.add_argument("--overwrite", action="store_true")
     u.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
+    o = sub.choices["offline-score"]
+    o.add_argument("--overwrite", action="store_true")
+    o.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
     t = sub.choices["train"]
     t.add_argument("--components", nargs="+", default=["spatial", "temporal", "plain_gru"], choices=["spatial", "temporal", "plain_gru"])
     t.add_argument("--seeds", nargs="+", type=int, default=None, help="default: train.seeds from the config")
