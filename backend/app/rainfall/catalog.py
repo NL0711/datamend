@@ -8,9 +8,9 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from backend.app.spatial.consensus import haversine_distance_km
+from backend.app.geo import haversine_distance_km
 
-CATALOG_PATH = Path(__file__).resolve().parents[1] / "sources" / "data" / "weather_union_stations.csv"
+CATALOG_PATH = Path(__file__).resolve().parent / "data" / "weather_union_stations.csv"
 
 AWS = 1          # automated weather system: temperature, humidity, wind, rain
 RAIN_GAUGE = 2   # rain gauge system: rainfall only (other fields come back null)

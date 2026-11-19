@@ -1,37 +1,25 @@
-# DataMend Python Dependencies
-# Target Python Version: 3.10+ (tested on 3.10, 3.11, 3.12)
+# DataMend Python dependencies: the rainfall validation platform (backend/).
+# Target Python 3.10+ (tested on 3.13 locally; the Docker image uses 3.11).
+# The trained-model layer (ml-service/, optional, offline) has its own requirements: ml-service/requirements-train.txt.
 
-# Web & API Framework
+# Web and API framework
 fastapi>=0.110.0,<0.116.0
 uvicorn[standard]>=0.28.0,<0.35.0
 pydantic>=2.6.0,<3.0.0
 pydantic-settings>=2.2.0,<3.0.0
 python-multipart>=0.0.9,<0.1.0
-websockets>=12.0,<14.0
+httpx>=0.27.0,<0.29.0         # the Weather Union client and the narrator client
 
-# Database & Async ORM
+# Database and async ORM (SQLite now, PostgreSQL later)
 sqlalchemy>=2.0.28,<2.1.0
 aiosqlite>=0.20.0,<0.21.0
-asyncpg>=0.29.0,<0.31.0
-psycopg2-binary>=2.9.9,<3.0.0
+asyncpg>=0.29.0,<0.31.0       # only used with a postgresql+asyncpg:// DATABASE_URL (the persistence decision is open)
 
-# Telemetry Protocols (Physical AWS MQTT)
-paho-mqtt>=1.6.1,<2.2.0
-
-# Data Processing & Numerics
+# Numerics (the climatology check fits a gamma upper tail)
 numpy>=1.26.0,<2.0.0
-pandas>=2.2.0,<3.0.0
 scipy>=1.12.0,<2.0.0
-statsmodels>=0.14.0,<0.15.0
 
-# Machine Learning & AI
-scikit-learn>=1.4.0,<1.6.0
-pyod>=1.1.0,<2.0.0
-torch>=2.2.0,<2.6.0
-shap>=0.45.0,<0.47.0
-joblib>=1.3.2,<1.5.0
-
-# Testing & Utilities
+# Testing
 pytest>=8.0.0,<9.0.0
 pytest-asyncio>=0.23.0,<0.25.0
-httpx>=0.27.0,<0.29.0
+jsonschema>=4.18.0,<5.0.0     # tests validate the evidence-v1 contract against its JSON Schema

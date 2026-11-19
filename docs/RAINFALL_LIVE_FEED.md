@@ -6,7 +6,7 @@ reading has been seen yet). Code: `backend/app/rainfall/`, endpoints under `/api
 
 ## Source
 Weather Union by Zomato, free key, 1000 calls per day (reset after 12 AM). About 580 stations in 30 cities (313 automated weather
-systems, 267 rain gauges), catalogue in `backend/app/sources/data/weather_union_stations.csv` (built by
+systems, 267 rain gauges), catalogue in `backend/app/rainfall/data/weather_union_stations.csv` (built by
 `scripts/build_weather_union_catalog.py` from Zomato's published list). Header `x-zomato-api-key`; endpoint
 `GET /get_locality_weather_data?locality_id=...` returns `rain_intensity` and `rain_accumulation` (rain-gauge stations return only those).
 
@@ -24,11 +24,14 @@ Polling N stations every T seconds costs 86400 N / T calls per day. The service 
 (counted per IST calendar day). 9 stations every 15 minutes = 864 calls.
 
 ## Daily total
-Rain day 03 UTC to 03 UTC (08:30 to 08:30 IST), the same definition as the IMD/RF25 daily grids. `cumulative` mode sums increases
+Rain day 03 UTC to 03 UTC (08:30 to 08:30 IST), the same definition as the IMD/RF25 daily grids, labelled by the date it ENDS (the `today.rain_day` field of the station report; it was the start date before 2026-11-19). `cumulative` mode sums increases
 and treats a drop as a counter reset; `per_reading` sums the readings. A day is `complete` only if readings cover it without a gap
 over 60 minutes.
 
 ## Quality score (rules plus neighbour check, NOT a trained model)
+Implemented by the shared check catalogue (`backend/app/validation/checks.py`), the same code that validates uploads. After every poll
+the current rain day is re-scored and stored as the one open live run (`GET /api/validation/runs`, `source: live`); storage is demo
+storage and resets on restart.
 Checks and fixed weights (design choices, not calibrated; there are no labels): negative value 0.95, intensity above 300 (assumed
 mm/h) 0.9, counter jump above 50 mm in one reading 0.7, identical non-zero intensity for 6 readings 0.6, intensity above zero with a
 flat counter 0.5, isolated wet or dry against at least 3 neighbours within 10 km (75 percent agreement) 0.3, counter reset 0.1.

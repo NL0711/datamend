@@ -49,4 +49,4 @@ A locked **spec** (written as `shared-docs/DATAMEND_ARCHITECTURE.docx` plus the 
 
 ## Open tickets
 
-None. Every ticket is closed and the way to the destination is clear: what remains is writing `SPEC.md` (scope, architecture, vocabulary, the evidence contract, the "Not claimed" section and the ordered build slices, including the legacy removal order from the inventory) from the decisions above. That is a writing step, not a decision. Others are blocked; see `blocked_by` in each ticket.
+None. Every ticket is closed. `SPEC.md` is written and confirmed by the owner (2026-11-19). It was written (scope, architecture, vocabulary, the evidence contract, the "Not claimed" section and the ordered build slices, including the legacy removal order from the inventory) from the decisions above. That is a writing step, not a decision. Others are blocked; see `blocked_by` in each ticket.

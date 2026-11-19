@@ -1,51 +1,31 @@
-# DataMend — OPTIONAL production stack (TimescaleDB + backend + frontend).
-# Default dev/demo/test path needs none of this: the backend runs on local
-# SQLite (DATABASE_URL=sqlite+aiosqlite:///./skyguard.db). Bring this stack
-# up only to operate against PostgreSQL/TimescaleDB (OpenSpec task4-parity-closeout,
-# capability sqlite-truth).
+# DataMend rainfall validation platform: backend (FastAPI) + frontend (nginx serving the built SPA).
+#
+#   docker compose up --build        then open http://localhost:5173
+#
+# Storage is SQLite inside the backend container ("demo storage, resets on restart" unless you mount a volume); the JSON export of a run
+# is the durable copy. PostgreSQL is NOT part of this stack: the tables are written to move there later (set DATABASE_URL to a
+# postgresql+asyncpg:// URL), but that path is untested.
+# Configuration comes from .env (copy .env.example). The live feed and the AI narrator stay off unless you set their variables.
 services:
-  timescaledb:
-    image: timescale/timescaledb:latest-pg16
-    container_name: datamend-timescaledb
-    restart: unless-stopped
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB:-datamend}
-    volumes:
-      - timescale_data:/var/lib/postgresql/data
-      - ./scripts/init_timescaledb.sql:/docker-entrypoint-initdb.d/01_init_timescaledb.sql:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-datamend}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - datamend-net
-
   backend:
     build:
       context: .
       dockerfile: Dockerfile.backend
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
     container_name: datamend-backend
     restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
     ports:
       - "8000:8000"
-    environment:
-      - ENVIRONMENT=production
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-datamend}
-      - DEFAULT_DATA_SOURCE=SIMULATED
-      - EXTERNAL_WEATHER_PROVIDER=open_meteo
-      - MQTT_BROKER_HOST=broker.hivemq.com
-      - MQTT_BROKER_PORT=1883
     volumes:
-      - ./data:/app/data
-      - ./models:/app/models
-    depends_on:
-      timescaledb:
-        condition: service_healthy
+      - datamend_data:/app/data
+    environment:
+      # Overrides DATABASE_URL from .env (a copied .env.example has a relative path that would bypass the volume). To use another
+      # database in Docker, set COMPOSE_DATABASE_URL in your shell.
+      - DATABASE_URL=${COMPOSE_DATABASE_URL:-sqlite+aiosqlite:////app/data/datamend.db}
     networks:
       - datamend-net
 
@@ -62,28 +42,8 @@ services:
     networks:
       - datamend-net
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: datamend-pgadmin
-    restart: unless-stopped
-    ports:
-      - "5050:80"
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-admin@datamend.ai}
-      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
-      - PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION=False
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-      - ./scripts/servers.json:/pgadmin4/servers.json:ro
-    depends_on:
-      timescaledb:
-        condition: service_healthy
-    networks:
-      - datamend-net
-
 volumes:
-  timescale_data:
-  pgadmin_data:
+  datamend_data:
 
 networks:
   datamend-net:

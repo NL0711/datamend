@@ -11,7 +11,6 @@ import pytest
 
 from backend.app.rainfall.catalog import RAIN_GAUGE, load_catalog, neighbours
 from backend.app.rainfall.daily import DailyAccumulator, rain_day, rain_day_bounds, total_for_day
-from backend.app.rainfall.scorer import score_reading
 from backend.app.rainfall.service import RainfallService, pick_cluster, safe_interval_seconds
 from backend.app.rainfall.weather_union import (IST, BudgetExhausted, CallBudget, RainObservation, WeatherUnionClient,
                                                  parse_response)
@@ -64,11 +63,14 @@ def test_safe_interval_never_exceeds_budget():
 
 
 # ---- rain day and totals --------------------------------------------------------------------------------------------
-def test_rain_day_is_03_to_03_utc():
-    assert rain_day(datetime(2026, 11, 19, 2, 59, tzinfo=timezone.utc)) == date(2026, 11, 18)
-    assert rain_day(datetime(2026, 11, 19, 3, 0, tzinfo=timezone.utc)) == date(2026, 11, 19)
+def test_rain_day_is_03_to_03_utc_labelled_by_the_date_it_ends():
+    assert rain_day(datetime(2026, 11, 19, 2, 59, tzinfo=timezone.utc)) == date(2026, 11, 19)
+    assert rain_day(datetime(2026, 11, 19, 3, 0, tzinfo=timezone.utc)) == date(2026, 11, 20)
     start, end = rain_day_bounds(date(2026, 11, 19))
-    assert (end - start) == timedelta(days=1) and start.hour == 3
+    assert (end - start) == timedelta(days=1) and start == datetime(2026, 11, 18, 3, tzinfo=timezone.utc) and end == datetime(2026, 11, 19, 3, tzinfo=timezone.utc)
+    for ts in (start, end - timedelta(seconds=1)):                     # the bounds round-trip through the label
+        assert rain_day(ts) == date(2026, 11, 19)
+    assert rain_day(end) == date(2026, 11, 20)
     with pytest.raises(ValueError):
         rain_day(datetime(2026, 11, 19, 3, 0))
 
@@ -109,65 +111,44 @@ def test_accumulator_ignores_bad_readings_and_prunes_old_days():
     assert len(a.days("ZWL1")) == 2
 
 
-# ---- scorer ---------------------------------------------------------------------------------------------------------
-def test_scorer_ok_for_quiet_dry_station():
-    r = score_reading([obs(i) for i in range(5)])
-    assert r.assessment == "OK" and r.score == 0.0 and "not a trained model" in r.method
+# ---- live quality comes from the validation catalogue (the legacy one-gauge scorer is deleted) ---------------------------
+# Each check's behaviour is covered by tests/test_validation_checks.py; here only the live adapter is tested.
+def _service_with_history(per_station):
+    stations = pick_cluster("Mumbai", len(per_station))
+    svc = RainfallService(_client(lambda r: httpx.Response(200, json=payload(0, 0))), stations, 900.0, "cumulative")
+    for st, rows in zip(stations, per_station):
+        for i, (inten, acc) in enumerate(rows):
+            svc.history[st.locality_id].append(obs(i, inten, acc, sid=st.locality_id))
+    return svc, stations
 
 
-def test_scorer_no_data_when_station_offline():
-    r = score_reading([obs(0), obs(1, None, None, status="NO_RAIN_FIELDS")])
-    assert r.assessment == "NO_DATA"
+def test_live_readings_are_platform_records_with_received_time_and_unconfirmed_units():
+    svc, stations = _service_with_history([[(0.0, 0.0), (0.0, 0.0)]])
+    rs = svc.readings()
+    assert len(rs) == 2 and all(r.source == "weather_union" and r.time_basis == "received" and r.units_confirmed is False for r in rs)
+    assert rs[0].latitude == stations[0].latitude and rs[0].row_ref.startswith(stations[0].locality_id + "@")
 
 
-def test_scorer_flags_negative_and_implausible_intensity():
-    assert score_reading([obs(0), obs(1, -1.0, 0.0)]).assessment == "SUSPECT"
-    r = score_reading([obs(0), obs(1, 900.0, 0.0)])
-    assert r.assessment == "SUSPECT" and r.reasons[0]["check"] == "INTENSITY_IMPLAUSIBLE"
+def test_listing_stations_scores_the_history_once_and_rescores_when_it_changes():
+    """Review finding: every station report used to re-run the whole catalogue."""
+    svc, stations = _service_with_history([[(0.0, 0.0)], [(0.0, 0.0)], [(0.0, 0.0)]])
+    for st in stations:
+        svc.station_report(st.locality_id)
+    first = svc._scored_cache
+    for st in stations:
+        svc.station_report(st.locality_id)
+    assert svc._scored_cache is first                                   # nothing recomputed
+    svc.history[stations[0].locality_id].append(obs(1, 0.0, 0.0, sid=stations[0].locality_id))
+    svc.station_report(stations[0].locality_id)
+    assert svc._scored_cache is not first                               # new reading: scored again
 
 
-def test_scorer_flags_accumulation_jump_but_not_a_normal_increase():
-    assert score_reading([obs(0, accum=0.0), obs(1, 1.0, 2.0)]).assessment == "OK"
-    r = score_reading([obs(0, accum=0.0), obs(1, 1.0, 80.0)])
-    assert r.assessment == "SUSPECT" and any(x["check"] == "ACCUMULATION_JUMP" for x in r.reasons)
-
-
-def test_scorer_counter_reset_alone_is_not_suspect():
-    r = score_reading([obs(0, accum=5.0), obs(1, 0.0, 0.0)])
-    assert r.assessment == "OK" and r.reasons[0]["check"] == "COUNTER_RESET"
-
-
-def test_scorer_flags_frozen_nonzero_intensity():
-    r = score_reading([obs(i, 2.0, float(i)) for i in range(6)])
-    assert any(x["check"] == "FROZEN_INTENSITY" for x in r.reasons) and r.assessment == "SUSPECT"
-    assert score_reading([obs(i, 0.0, 0.0) for i in range(6)]).assessment == "OK"  # frozen at zero is just a dry day
-
-
-def test_scorer_flags_intensity_without_counter_movement():
-    r = score_reading([obs(i, 1.0 + i * 0.1, 3.0) for i in range(4)])
-    assert any(x["check"] == "INTENSITY_ACCUMULATION_MISMATCH" for x in r.reasons)
-
-
-def test_isolated_wet_is_uncertain_not_a_fault():
-    me = [obs(0), obs(1, 3.0, 1.0)]
-    buddies = {f"B{i}": [obs(0, sid=f"B{i}"), obs(1, 0.0, 0.0, sid=f"B{i}")] for i in range(4)}
-    r = score_reading(me, buddies)
-    assert r.assessment == "UNCERTAIN" and r.n_neighbours_used == 4 and 0 < r.score < 0.5
-
-
-def test_buddy_check_needs_enough_neighbours_and_agreement():
-    me = [obs(0), obs(1, 3.0, 1.0)]
-    two = {f"B{i}": [obs(0), obs(1, 0.0, 0.0)] for i in range(2)}
-    assert score_reading(me, two).assessment == "OK"
-    mixed = {f"B{i}": [obs(0), obs(1, 2.0 if i < 2 else 0.0, 1.0)] for i in range(4)}
-    assert score_reading(me, mixed).assessment == "OK"
-
-
-def test_score_is_bounded_and_combines_evidence():
-    r = score_reading([obs(0, accum=0.0), obs(1, 900.0, 80.0)])
-    assert 0.9 < r.score <= 1.0
-    with pytest.raises(ValueError):
-        score_reading([])
+def test_live_station_report_uses_the_catalogue_and_labels_the_score():
+    svc, stations = _service_with_history([[(0.0, 0.0), (900.0, 80.0)]])
+    q = svc.station_report(stations[0].locality_id)["quality"]
+    assert q["assessment"] == "SUSPECT" and q["score_kind"].startswith("rule score") and "not a trained model" in q["method"]
+    assert {r["check"] for r in q["reasons"]} >= {"intensity_above_ceiling", "counter_jump"} and 0.9 < q["score"] <= 1.0
+    assert any(n["check"] == "neighbour" for n in q["not_run"])           # one station polled: the neighbour check says why it did not run
 
 
 # ---- catalogue ------------------------------------------------------------------------------------------------------
