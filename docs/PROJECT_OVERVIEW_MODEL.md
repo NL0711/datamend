@@ -294,8 +294,8 @@ Test functions counted by `def test_` in the tree: qc 124, training 51, ensemble
 I did not run them.
 
 Not part of the rainfall model: `backend/app/ml/` (legacy tiers and a 6-stage pipeline for temperature, pressure and
-humidity, trained on 5,760 simulated rows) belongs to the web app side. Its numbers in `docs/evaluation_report.md` do not
-describe the rainfall model.
+humidity, trained on 5,760 simulated rows) belongs to the web app side and is scheduled for removal. Its old evaluation
+report (`docs/evaluation_report.md`, removed 2026-11-19, still in git history) did not describe the rainfall model.
 
 ## 8. PROPOSED, NOT BUILT: multi-resolution extension
 
@@ -339,10 +339,10 @@ Docs against code or against each other. Code wins.
    scores (commit `ede7e72...+dirty`, 2026-11-17) and a 62-year land cache. The config pinned hash `442851b03d5f95a4` until the owner removed the pin on 2026-11-18 (the hash is
    now recorded, not enforced); a fresh machine builds its own benchmark. Whether these files came from real or generated data is not recorded;
    the owner says nothing ran on real data.
-3. **Project identity.** `AGENTS.md`, `GOAL.md`, `ARCHITECTURE.md`, `PROJECT.md`, `README.md`, `docs/evaluation_report.md`
-   still describe an AWS temperature, pressure and humidity system. Only `TODO.md` (QC section), `ml-service/` docs and
-   `docs/qc-system-spec.md` describe the rainfall system. `GOAL.md` section 9 lists "a rainfall prediction system" as a
-   non-goal. The rainfall components predict rain internally, but only to score surprise, which is not forecasting.
+3. **Project identity.** Resolved 2026-11-19: `AGENTS.md`, `ARCHITECTURE.md`, `README.md` and `TODO.md` were rewritten for the
+   rainfall validation platform, and the old `GOAL.md`, `PROJECT.md` and `docs/evaluation_report.md` (AWS temperature, pressure
+   and humidity) were removed (still in git history). The rainfall components predict rain internally, but only to score
+   surprise, which is not forecasting.
 4. **Commands.** `docs/qc-system-spec.md` s11 says runs launch with `python -m qc run <config>`. No such command exists
    (`qc/__main__.py`); `qc/README.md` and `SETUP.md` say so. `qc calibrate` is in the code and the `ablate` command is in the
    README, but neither is in the `__main__.py` docstring, and `calibrate` is absent from the README run table.

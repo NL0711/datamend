@@ -101,7 +101,7 @@ Weekly (simulated) flag rate per region against the budget, score distribution a
 4. MLflow logging and the registry aliases around `run_qc.py`.
 5. Steps C and D, the promotion gate and the shadow rule.
 6. Monitoring and a replay of a simulated multi-month stream.
-7. The review screen in the web app, and the live federated view (`docs/PROJECT_OVERVIEW_WEBAPP.md`).
+7. The review screen in the web app, and the live federated view (the web app is described in `shared-docs/DATAMEND_ARCHITECTURE.docx`).
 
 ## 11. Open points
 

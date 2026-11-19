@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.routes import router as api_router
 from backend.app.api.locations import router as locations_router
+from backend.app.api.rainfall import router as rainfall_router
 from backend.app.api.websocket import router as ws_router
 from backend.app.config import settings
 from backend.app.db.database import close_db, init_db
@@ -46,9 +47,16 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Data source manager auto-start warning: %s", exc)
 
+    from backend.app.api.rainfall import start_rainfall_service, stop_rainfall_service
+    try:
+        await start_rainfall_service()
+    except Exception as exc:
+        logger.warning("Rainfall feed start skipped: %s", exc)
+
     yield
 
     logger.info("Shutting down %s services...", settings.PROJECT_NAME)
+    await stop_rainfall_service()
     await data_source_manager.stop()
     await close_db()
     logger.info("Cleanup complete.")
@@ -73,6 +81,7 @@ app.add_middleware(
 # Mount REST and WebSocket routers
 app.include_router(api_router)
 app.include_router(locations_router)
+app.include_router(rainfall_router)
 app.include_router(ws_router)
 
 
