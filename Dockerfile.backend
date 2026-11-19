@@ -2,18 +2,16 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install build essentials for C-extensions if needed
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ ./backend/
-COPY scripts/ ./scripts/
+# The place lookup reads the committed land/region map of the RF25 grid (one small JSON file, nothing else from ml-service).
+COPY ml-service/qc/assets/client_map.json ./ml-service/qc/assets/client_map.json
 
+# Recorded in every run so a result can be traced to a build: docker build --build-arg GIT_COMMIT=$(git rev-parse HEAD) ...
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=${GIT_COMMIT}
 ENV PYTHONPATH=/app
 
 EXPOSE 8000

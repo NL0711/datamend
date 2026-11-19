@@ -10,14 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@types/three": "^0.185.4",
-    "clsx": "^2.1.0",
     "lucide-react": "^0.344.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "recharts": "^2.12.2",
-    "tailwind-merge": "^2.2.1",
-    "three": "^0.185.1"
+    "recharts": "^2.12.2"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",
