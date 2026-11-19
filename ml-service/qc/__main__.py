@@ -152,6 +152,22 @@ def cmd_untrained(cfg, args) -> int:
     return 0
 
 
+def cmd_ceiling(cfg, args) -> int:
+    """Where the recall is lost: recall by change size, footprint weight and fault kind (validation years, stored scores)."""
+    from qc.ceiling import run_ceiling
+    from qc.fusion import fused_name
+    from qc.prepare import load_prepared
+
+    names = args.components or [fused_name("logistic", args.seed), fused_name("boosted", args.seed), "rules"]
+    p = load_prepared(cfg)
+    results = run_ceiling(p, names, args.budget)
+    from qc import paths
+    out = paths.out_dir(cfg) / str(cfg.name) / "ceiling"
+    print((out / "ceiling.md").read_text(encoding="utf-8"))
+    print(f"wrote {out}. SYNTHETIC faults, validation years only.")
+    return 0
+
+
 def cmd_offline_score(cfg, args) -> int:
     """Score the offline reference models (offline.artifacts in the config) on the VALIDATION years only."""
     from qc.offline import run_offline_validation
@@ -524,7 +540,7 @@ def cmd_paper(cfg, args) -> int:
 COMMANDS = {"uk-grid": cmd_uk_grid, "uk-labels": cmd_uk_labels, "test-score": cmd_test_score, "federated": cmd_federated, "fusion": cmd_fusion, "ablate": cmd_ablate, "calibrate": cmd_calibrate, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
             "train": cmd_train, "paper": cmd_paper,
             "period-benchmark": cmd_period_benchmark, "scale-select": cmd_scale_select, "cross-scale": cmd_cross_scale, "choose-architecture": cmd_choose_architecture,
-            "cross-scale-test": cmd_cross_scale_test, "regions-report": cmd_regions_report, "offline-score": cmd_offline_score}
+            "cross-scale-test": cmd_cross_scale_test, "regions-report": cmd_regions_report, "offline-score": cmd_offline_score, "ceiling": cmd_ceiling}
 
 
 SEED_HELP = "default: the first of train.seeds in the config"
@@ -547,6 +563,10 @@ def main(argv=None) -> int:
     u.add_argument("--splits", nargs="+", default=["val"], choices=["val", "test", "stress"])
     u.add_argument("--overwrite", action="store_true")
     u.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
+    ce = sub.choices["ceiling"]
+    ce.add_argument("--components", nargs="+", default=None, help="stored score names (default: the seed's logistic and boosted fusion, and rules)")
+    ce.add_argument("--budget", type=float, default=1.0, help="false alerts per 1,000 clean cell-days")
+    ce.add_argument("--seed", type=int, default=None, help=SEED_HELP)
     o = sub.choices["offline-score"]
     o.add_argument("--overwrite", action="store_true")
     o.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])
