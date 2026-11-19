@@ -74,7 +74,18 @@ ml-service/data/**
 !ml-service/data/**/
 !ml-service/data/README.md
 !ml-service/data/**/.gitkeep
-ml-service/artifacts/
+# Run outputs: only the small result files (tables, json reports, curve images) are tracked so results can be pulled and read.
+# Stored scores, model checkpoints and arrays stay out. Later rules win, so the exclusions come last.
+ml-service/artifacts/**
+!ml-service/artifacts/**/
+!ml-service/artifacts/**/*.md
+!ml-service/artifacts/**/*.json
+!ml-service/artifacts/**/*.png
+ml-service/artifacts/**/scores/**
+ml-service/artifacts/**/checkpoints/**
+ml-service/artifacts/**/*.pt
+ml-service/artifacts/**/*.npz
+ml-service/artifacts/**/*.npy
 ml-service/*.nc
 *.nc
 
