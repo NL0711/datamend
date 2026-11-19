@@ -97,7 +97,7 @@ export function ValidationApp() {
                   <Icon className="w-4 h-4" />{item.label}</button>);
             })}
           </div>))}
-        <div className="hidden md:block"><AdminChip onSignIn={() => setTab('settings')} /></div>
+        <div className="hidden md:block"><AdminChip onSignIn={() => { window.location.hash = '#/login'; }} /></div>
       </nav>
       <main className="flex-1 px-4 py-6 md:px-10 md:py-8 min-w-0 max-w-[1400px] space-y-6">
         <PageHead title={title} line={HEADINGS[tab]} />
