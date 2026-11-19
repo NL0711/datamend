@@ -22,7 +22,8 @@ import {
   LocationSeriesResponse,
 } from '../types';
 
-export const API_BASE_URL = '/api';
+import { BACKEND_URL } from './backend';
+export const API_BASE_URL = `${BACKEND_URL}/api`;
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {

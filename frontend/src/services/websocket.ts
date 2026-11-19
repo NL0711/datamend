@@ -3,6 +3,7 @@
  */
 
 import { InferenceResult } from '../types';
+import { websocketUrl } from './backend';
 
 export interface WebSocketCallbacks {
   onTelemetry?: (data: InferenceResult) => void;
@@ -23,8 +24,7 @@ export class TelemetryStreamClient {
 
   public connect(): void {
     this.shouldReconnect = true;
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/live`;
+    const wsUrl = websocketUrl('/ws/live');
 
     try {
       this.ws = new WebSocket(wsUrl);
@@ -92,8 +92,7 @@ export class TelemetryStreamClient {
 }
 
 export function createTelemetryWebSocket(onMessage: (data: any) => void): WebSocket {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/ws/live`;
+  const wsUrl = websocketUrl('/ws/live');
   const ws = new WebSocket(wsUrl);
 
   ws.onmessage = (event) => {

@@ -1,5 +1,7 @@
 import os
-from typing import List, Optional
+from typing import List, Optional, Union
+import json
+from pydantic import field_validator
 
 try:
     from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -21,7 +23,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     HOST: str = "0.0.0.0"
     PORT: int = 8000
-    CORS_ORIGINS: List[str] = [
+    CORS_ORIGINS: Union[List[str], str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:5199",
@@ -72,6 +74,13 @@ class Settings(BaseSettings):
     WEATHER_UNION_DAILY_CALL_BUDGET: int = 900
     WEATHER_UNION_ACCUMULATION_MODE: str = "cumulative"   # cumulative | per_reading; the provider does not document it
     WEATHER_UNION_RAW_LOG_PATH: str = "data/weather_union_raw.jsonl"
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors(cls, value):
+        if isinstance(value, str):
+            return json.loads(value) if value.strip().startswith("[") else [v.strip() for v in value.split(",") if v.strip()]
+        return value
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
