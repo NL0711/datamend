@@ -1,0 +1,53 @@
+{
+ "name": "ceiling",
+ "started": "2026-11-19T15:15:32",
+ "wall_seconds": 5.180581331253052,
+ "meta": {
+  "run": "base",
+  "profile": "single-gpu",
+  "seed": 42,
+  "config_digest": "b5af58ff5130c309"
+ },
+ "environment": {
+  "python": "3.10.11",
+  "platform": "Windows 10",
+  "numpy": "1.26.4",
+  "cpu_count": 4,
+  "torch": "2.5.1+cu121",
+  "cuda": "12.1",
+  "cuda_available": true,
+  "gpu_names": [
+   "NVIDIA RTXA6000-12Q"
+  ],
+  "ram_total_gb": 23.4,
+  "git_commit": "9180328de2a632280472e415cf1d52109661e65d+dirty"
+ },
+ "gpu": {
+  "name": "NVIDIA RTXA6000-12Q",
+  "source": "nvml",
+  "samples": 4,
+  "available": true,
+  "energy_wh": "NOT AVAILABLE",
+  "energy_method": "NOT AVAILABLE: the GPU reports no power (common on virtual GPUs); install nvidia-ml-py for the NVML counter",
+  "avg_power_w": "NOT AVAILABLE",
+  "max_power_w": "NOT AVAILABLE",
+  "avg_util_pct": 0.25,
+  "max_util_pct": 1.0,
+  "avg_mem_used_mb": 1727.26953125,
+  "max_mem_used_mb": 1727.37890625,
+  "avg_temp_c": 0.0,
+  "max_temp_c": 0.0,
+  "avg_sm_mhz": 2100.0,
+  "max_sm_mhz": 2100.0
+ },
+ "cpu": {
+  "process_cpu_seconds": 4.25,
+  "avg_cpu_percent": 23.425,
+  "max_cpu_percent": 33.2,
+  "avg_rss_mb": 506.7451171875,
+  "max_rss_mb": 565.3671875,
+  "energy_wh": "NOT AVAILABLE: no readable RAPL counters (Windows, container or no permission); not estimated"
+ },
+ "spans": {},
+ "metrics": {}
+}

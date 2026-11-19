@@ -1,0 +1,12 @@
+{
+ "config_digest": "b5af58ff5130c309",
+ "seed": 42,
+ "git_commit": "487d59dd4a7c08ef90ec2d33041b6d70a640d0bc",
+ "started": "2026-11-18T15:18:20",
+ "profile": "single-gpu",
+ "split_manifest_hash": "a079504cc9e89c1b",
+ "benchmark_hash": "c37de7e3cf2be90e",
+ "component": "temporal",
+ "variant": "fedft",
+ "prox_mu": 0.0
+}

@@ -1,0 +1,18 @@
+{
+  "schema": "evidence-v1",
+  "run": {"id": 12, "profile": "reading", "source": "upload", "synthetic": true},
+  "row": {"id": 2041, "row_ref": "21", "station_id": "A", "time": "2026-07-01T11:00:00+00:00", "verdict": "SUSPECT", "rule_score": 0.7, "severity": "high"},
+  "check": "counter_jump",
+  "layer": "rule",
+  "kind": "fault",
+  "weight": 0.7,
+  "profile": "reading",
+  "time_basis": "observed",
+  "reason": "the counter rose 120.0 between consecutive readings (limit 50)",
+  "observed": {"value": 120.0, "unit": "mm", "basis": "measured"},
+  "threshold": {"value": 50.0, "why": "design choice, uncalibrated", "basis": "assumed"},
+  "window": [
+    {"row_ref": "20", "accumulation": 0.0, "basis": "measured"},
+    {"row_ref": "21", "accumulation": 120.0, "basis": "measured"}
+  ]
+}

@@ -2,25 +2,17 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install build essentials for C-extensions if needed
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY requirements.txt .
-# CPU-only torch first (the default Linux wheel bundles CUDA, ~2.5 GB); the pinned range in
-# requirements.txt is then already satisfied.
-RUN pip install --no-cache-dir "torch>=2.2.0,<2.6.0" --index-url https://download.pytorch.org/whl/cpu \
-    && pip install --no-cache-dir -r requirements.txt
+# No torch, scikit-learn or other ML packages: the platform is rules, a gamma tail (scipy) and a neighbour check.
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ ./backend/
-COPY scripts/ ./scripts/
-COPY models/ ./models/
-COPY data/ ./data/
-# backend/app/locations/grid.py reads the land mask and client regions from here
-COPY ml-service/qc/assets/ ./ml-service/qc/assets/
+# The place lookup reads the committed land/region map of the RF25 grid (one small JSON file, nothing else from ml-service).
+COPY ml-service/qc/assets/client_map.json ./ml-service/qc/assets/client_map.json
 
+# Recorded in every run so a result can be traced to a build: docker build --build-arg GIT_COMMIT=$(git rev-parse HEAD) ...
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=${GIT_COMMIT}
 ENV PYTHONPATH=/app
 
 EXPOSE 8000

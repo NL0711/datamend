@@ -117,3 +117,28 @@ def offline_scorers(p: Prepared, splits, device: str = "cpu") -> Tuple[Dict, Dic
             continue
         fns[offline_name(arch)] = score_function(p, det)
     return fns, not_run
+
+
+def run_offline_validation(p: Prepared, device: str = "cpu", overwrite: bool = False, pinned: bool = True) -> Tuple[Dict, Dict[str, str]]:
+    """Score the configured offline models on the VALIDATION years only and evaluate them like every other component
+    (thresholds from the clean threshold years, same budgets). Test and stress years are never read here, so this is a
+    development comparison that does not use up the single test pass. Still NON-CAUSAL: the numbers are a reference.
+    Returns (results[name] = metrics, not_run[label] = reason). Metrics are written to <run>/offline/metrics/."""
+    from qc import paths
+    from qc.evaluate import compute_scores_many, evaluate_component, score_store
+    from qc.runs import RunDir, write_json
+
+    fns, not_run = offline_scorers(p, ("val",), device)
+    results: Dict[str, Dict] = {}
+    if not fns:
+        return results, not_run
+    run = RunDir(paths.out_dir(p.cfg) / str(p.cfg.name), "offline")
+    run.start(p.cfg, int(p.cfg.seed), {"split_manifest_hash": p.manifest["hash"], "components": sorted(fns), "label": LABEL})
+    store = score_store(p)
+    compute_scores_many(p, fns, ("val",), store, overwrite)
+    for name in fns:
+        res = evaluate_component(p, name, "val", p.cfg.evaluation.budgets, ("seen",), store, pinned)
+        res["label"] = LABEL
+        write_json(run.file("metrics", f"{name}_val.json"), res)
+        results[name] = res
+    return results, not_run

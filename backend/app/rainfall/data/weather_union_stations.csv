@@ -1,0 +1,581 @@
+locality_id,city,place,latitude,longitude,device_type
+ZWL005764,Delhi NCR,Delhi NCR Sarita Vihar,28.531759,77.293973,1
+ZWL008752,Delhi NCR,Delhi NCR Faridabad Sector 41-50,28.460895,77.304764,1
+ZWL005996,Delhi NCR,Delhi NCR New Friends Colony,28.565268,77.274971,1
+ZWL005243,Delhi NCR,Delhi NCR Sector 26 (Noida),28.574404,77.334178,1
+ZWL009032,Delhi NCR,Delhi NCR New Industrial Town,28.375702,77.299442,1
+ZWL005428,Delhi NCR,Delhi NCR Tilak Nagar,28.641372,77.094689,1
+ZWL001073,Delhi NCR,"Delhi NCR Sector 10, Gurgaon",28.436077,76.996757,1
+ZWL001319,Delhi NCR,"Delhi NCR Ashok Vihar, Delhi",28.684453,77.174418,1
+ZWL004800,Delhi NCR,Delhi NCR Kalkaji,28.529029,77.258939,1
+ZWL003118,Delhi NCR,Delhi NCR Sector 53,28.442743,77.104379,1
+ZWL002091,Delhi NCR,Delhi NCR Sector 49,28.408012,77.050064,1
+ZWL002662,Delhi NCR,Delhi NCR Vasundhara,28.665225,77.366782,2
+ZWL001404,Delhi NCR,Delhi NCR Rajinder Nagar,28.640732,77.182900,1
+ZWL008963,Delhi NCR,Delhi NCR Safdarjung Enclave,28.562608,77.191457,1
+ZWL006538,Delhi NCR,Delhi NCR Connaught Place,28.630630,77.220640,1
+ZWL003075,Delhi NCR,Delhi NCR Sector 66,28.380856,77.062751,1
+ZWL003721,Delhi NCR,Delhi NCR Sector 57,28.422100,77.082740,1
+ZWL006396,Delhi NCR,"Delhi NCR Moti Bagh, Delhi",28.575774,77.180697,1
+ZWL004535,Delhi NCR,"Delhi NCR Patel Nagar, Delhi",28.652848,77.167909,1
+ZWL008554,Delhi NCR,Delhi NCR Greater Noida,28.456171,77.521577,1
+ZWL004533,Delhi NCR,"Delhi NCR Karkardooma, Delhi",28.656829,77.310553,1
+ZWL002179,Delhi NCR,Delhi NCR Tigaon,28.417120,77.412569,1
+ZWL007487,Delhi NCR,Delhi NCR Sector 50 (Noida),28.569103,77.364876,1
+ZWL007120,Delhi NCR,"Delhi NCR Vasant Kunj, Delhi",28.524633,77.151206,1
+ZWL007486,Delhi NCR,"Delhi NCR Dwarka, Delhi",28.594467,77.047747,1
+ZWL006287,Delhi NCR,Delhi NCR Sector 15,28.457927,77.034816,1
+ZWL002146,Delhi NCR,Delhi NCR Mayur Vihar Phase III,28.606000,77.323675,1
+ZWL008405,Delhi NCR,Delhi NCR Crossing Republik,28.635043,77.419056,1
+ZWL004455,Delhi NCR,Delhi NCR Sector 28,28.473457,77.087532,1
+ZWL005087,Delhi NCR,"Delhi NCR Palam Vihar, Gurgaon",28.508782,77.033506,1
+ZWL009648,Delhi NCR,Delhi NCR Sector 63 (Noida),28.621672,77.386474,1
+ZWL008317,Delhi NCR,"Delhi NCR Raj Nagar, Ghaziabad",28.689174,77.428976,1
+ZWL005878,Delhi NCR,Delhi NCR Sector 128,28.526706,77.354868,1
+ZWL003241,Delhi NCR,"Delhi NCR Sector 56, Gurgaon",28.418235,77.101860,1
+ZWL007224,Delhi NCR,Delhi NCR Indirapuram,28.644059,77.373883,1
+ZWL009834,Delhi NCR,Delhi NCR Malviya Nagar,28.536048,77.213453,1
+ZWL007284,Delhi NCR,"Delhi NCR Sector 43, Gurgaon",28.454416,77.088820,1
+ZWL006738,Delhi NCR,Delhi NCR Sector 120 (Noida),28.586854,77.390832,1
+ZWL007329,Delhi NCR,Delhi NCR Saket,28.523171,77.207543,1
+ZWL001752,Delhi NCR,Delhi NCR Sector 18 (Noida),28.568937,77.324414,2
+ZWL007594,Delhi NCR,Delhi NCR Naraina,28.627479,77.142115,2
+ZWL006116,Delhi NCR,Delhi NCR Patparganj,28.632961,77.308344,1
+ZWL009925,Delhi NCR,Delhi NCR Ghitorni,28.486412,77.125366,1
+ZWL009335,Delhi NCR,Delhi NCR Faridabad Sector 1-11,28.365131,77.326157,1
+ZWL009638,Delhi NCR,Delhi NCR Sector 24,28.497419,77.090980,1
+ZWL005670,Delhi NCR,Delhi NCR Rajouri Garden,28.646438,77.122357,2
+ZWL003757,Delhi NCR,Delhi NCR Vishnu Garden,28.646933,77.095064,1
+ZWL003610,Delhi NCR,"Delhi NCR Sector 48, Gurgaon",28.416008,77.032164,1
+ZWL005971,Delhi NCR,Delhi NCR Kirti Nagar,28.654433,77.142367,1
+ZWL003626,Delhi NCR,Delhi NCR Faridabad Sector 81-89,28.397247,77.345569,1
+ZWL005876,Delhi NCR,Delhi NCR GK I,28.550911,77.235272,1
+ZWL006295,Delhi NCR,Delhi NCR Mohan Estate,28.494788,77.312727,1
+ZWL007653,Delhi NCR,Delhi NCR Mukherjee Nagar,28.702971,77.209740,1
+ZWL006697,Delhi NCR,Delhi NCR Mehrauli,28.524426,77.183996,2
+ZWL003259,Delhi NCR,Delhi NCR Burari,28.753669,77.191037,1
+ZWL004759,Delhi NCR,"Delhi NCR Gaur city, Ghaziabad",28.607703,77.434385,1
+ZWL004477,Delhi NCR,Delhi NCR GK II,28.533936,77.243800,1
+ZWL005077,Delhi NCR,Delhi NCR Rohini,28.723712,77.104596,2
+ZWL008191,Delhi NCR,Delhi NCR Rangpuri,28.533976,77.119516,1
+ZWL006092,Delhi NCR,Delhi NCR Sector 46,28.438586,77.060773,1
+ZWL001549,Delhi NCR,Delhi NCR Sector 62 (Noida),28.611088,77.369652,2
+ZWL001036,Delhi NCR,Delhi NCR Shalimar Bagh,28.720312,77.164849,1
+ZWL006996,Delhi NCR,Delhi NCR Model Town,28.717232,77.194643,1
+ZWL007566,Delhi NCR,Delhi NCR Faridabad Sector 16-20,28.422437,77.310113,1
+ZWL009852,Delhi NCR,Delhi NCR Sector 2 (Noida),28.581459,77.316720,1
+ZWL008648,Delhi NCR,Delhi NCR Govindpuram,28.689317,77.486930,2
+ZWL009728,Delhi NCR,Delhi NCR Gwal Pahari,28.435122,77.136308,1
+ZWL006868,Delhi NCR,Delhi NCR Nehru Nagar,28.653441,77.449969,2
+ZWL002067,Delhi NCR,Delhi NCR Chittaranjan Park,28.537530,77.249070,1
+ZWL008791,Delhi NCR,Delhi NCR IMT Manesar,28.384492,76.941950,1
+ZWL003043,Delhi NCR,Delhi NCR Sector 73 Z Kitchen,28.580105,77.385436,2
+ZWL004159,Delhi NCR,Delhi NCR Sector 51,28.430042,77.065213,1
+ZWL005960,Delhi NCR,Delhi NCR Ballabhgarh,28.343049,77.330317,2
+ZWL009293,Delhi NCR,Delhi NCR Nangloi,28.659524,77.060800,1
+ZWL001663,Delhi NCR,Delhi NCR Uttam Nagar,28.616774,77.057136,1
+ZWL005762,Delhi NCR,Delhi NCR Sector 47,28.424524,77.050065,2
+ZWL005345,Delhi NCR,Delhi NCR Paharganj,28.645112,77.212824,1
+ZWL008225,Delhi NCR,Delhi NCR Sector 25,28.484268,77.084693,1
+ZWL001933,Delhi NCR,Delhi NCR Pitampura,28.688724,77.138225,1
+ZWL003591,Delhi NCR,Delhi NCR Shahdara,28.688657,77.278267,1
+ZWL007061,Delhi NCR,Delhi NCR Sector 31,28.442946,77.057195,1
+ZWL008476,Delhi NCR,Delhi NCR Sector 23,28.509080,77.057138,1
+ZWL009008,Delhi NCR,Delhi NCR Sector 12 (Noida),28.599952,77.343188,1
+ZWL005323,Delhi NCR,Delhi NCR Mayur Vihar Phase II,28.613695,77.302775,1
+ZWL001412,Delhi NCR,Delhi NCR Faridabad Sector 12-15,28.394334,77.324016,1
+ZWL005925,Delhi NCR,Delhi NCR DLF PHASE 1 (SECTOR 26),28.477910,77.103843,1
+ZWL008716,Delhi NCR,Delhi NCR Laxmi Nagar,28.627366,77.279200,1
+ZWL009339,Delhi NCR,Delhi NCR Karol Bagh,28.647924,77.190463,1
+ZWL009096,Delhi NCR,Delhi NCR Chhatarpur,28.497203,77.171629,1
+ZWL006720,Delhi NCR,Delhi NCR Paschim Vihar,28.665591,77.098478,2
+ZWL002908,Delhi NCR,"Delhi NCR Sector 1, Noida",28.573663,77.415427,1
+ZWL001186,Delhi NCR,Delhi NCR South Extension I,28.578498,77.223627,1
+ZWL004789,Delhi NCR,Delhi NCR Sector 18,28.495291,77.069729,1
+ZWL008978,Delhi NCR,Delhi NCR Kamla Nagar,28.676018,77.208446,1
+ZWL007903,Delhi NCR,Delhi NCR Janakpuri,28.623431,77.097814,2
+ZWL008897,Delhi NCR,Delhi NCR Vikaspuri,28.645655,77.065922,1
+ZWL007431,Delhi NCR,Delhi NCR Najafgarh,28.607458,76.995980,2
+ZWL001112,Delhi NCR,Delhi NCR Mayur Vihar Phase 1,28.609961,77.296133,1
+ZWL008649,Delhi NCR,Delhi NCR Sez Noida 1,28.507448,77.410089,2
+ZWL006384,Delhi NCR,"Delhi NCR Gulavali, Noida",28.436941,77.456903,1
+ZWL007840,Delhi NCR,Delhi NCR Sector 14,28.471738,77.045472,1
+ZWL002072,Delhi NCR,Delhi NCR Sector 76(Noida),28.570828,77.390429,1
+ZWL003077,Delhi NCR,Delhi NCR Green Park,28.562981,77.209729,1
+ZWL005395,Delhi NCR,Delhi NCR Munirka,28.554395,77.172547,1
+ZWL005729,Delhi NCR,Delhi NCR NEHRU PLACE,28.555622,77.250890,1
+ZWL005736,Delhi NCR,Delhi NCR Lajpat Nagar,28.565415,77.247221,1
+ZWL007212,Delhi NCR,Delhi NCR Sector 52 (Noida),28.595742,77.362995,1
+ZWL004803,Delhi NCR,Delhi NCR Sector 100 (Noida),28.547583,77.370951,1
+ZWL003444,Delhi NCR,Delhi NCR Sector 50,28.418947,77.059581,1
+ZWL008293,Delhi NCR,Delhi NCR Dilshad Garden,28.684684,77.320986,1
+ZWL007308,Delhi NCR,"Delhi NCR Sector 29, Gurgaon",28.459498,77.061046,1
+ZWL008219,Delhi NCR,Delhi NCR SUSHANT LOK 1,28.467923,77.076530,1
+ZWL006234,Delhi NCR,Delhi NCR SAHIBABAD,28.682920,77.362827,1
+ZWL007666,Delhi NCR,Delhi NCR Sector 45 (Noida),28.555596,77.345713,1
+ZWL002490,Delhi NCR,Delhi NCR Sector 84,28.395433,76.967436,1
+ZWL007138,Delhi NCR,"Delhi NCR Sector 7, Gurgaon",28.476288,77.013365,1
+ZWL009706,Delhi NCR,Delhi NCR Sector 27,28.465260,77.085742,1
+ZWL001267,Delhi NCR,Delhi NCR Hauz Khas,28.551132,77.211401,1
+ZWL003552,Delhi NCR,Delhi NCR Jangpura,28.583630,77.246915,1
+ZWL008401,Delhi NCR,"Delhi NCR Sector 52, Gurgaon",28.443858,77.083991,1
+ZWL001758,Delhi NCR,"Delhi NCR Vaishali, Ghaziabad",28.649375,77.336609,1
+ZWL003128,Kolkata,Kolkata Shibpur,22.578477,88.315675,2
+ZWL004322,Kolkata,"Kolkata Kalyani 1, Kolkata",22.983813,88.427417,2
+ZWL002495,Kolkata,Kolkata Bansdroni,22.472208,88.357875,2
+ZWL009257,Kolkata,Kolkata Bow Barracks,22.565476,88.360918,1
+ZWL005435,Kolkata,"Kolkata Baranagar, Kolkata",22.660464,88.374255,2
+ZWL007041,Kolkata,"Kolkata Sonarpur, Kolkata",22.432033,88.408369,1
+ZWL002918,Kolkata,Kolkata Ballygunge,22.532686,88.362677,1
+ZWL003388,Kolkata,"Kolkata Sinthi, Kolkata",22.627697,88.380719,1
+ZWL008806,Kolkata,Kolkata Salt Lake 2,22.583560,88.432176,2
+ZWL008635,Kolkata,Kolkata Alipore,22.536626,88.331142,1
+ZWL002312,Kolkata,Kolkata Baguihati,22.614990,88.426184,1
+ZWL001499,Kolkata,Kolkata South Dum Dum,22.621570,88.408915,1
+ZWL003315,Kolkata,Kolkata Purba Barisha,22.474612,88.320775,1
+ZWL003794,Kolkata,Kolkata Jadavpur,22.498720,88.362540,1
+ZWL006574,Kolkata,Kolkata Tollygunge,22.498620,88.351732,1
+ZWL004138,Kolkata,Kolkata Shyam Bazar,22.594302,88.377284,1
+ZWL009022,Kolkata,Kolkata Behala,22.488571,88.306630,2
+ZWL003271,Kolkata,"Kolkata Chandannagar, Kolkata",22.865442,88.367339,1
+ZWL003951,Kolkata,Kolkata Barrackpore,22.766771,88.361552,1
+ZWL003915,Kolkata,Kolkata East Kolkata Township,22.512832,88.399411,1
+ZWL006750,Kolkata,Kolkata Bhowanipore,22.526436,88.343904,2
+ZWL008828,Kolkata,Kolkata Elgin,22.543063,88.356096,1
+ZWL008426,Kolkata,Kolkata Howrah,22.604678,88.342218,1
+ZWL007323,Kolkata,Kolkata New Alipore,22.506135,88.332770,1
+ZWL006266,Kolkata,Kolkata Barasat,22.735727,88.490498,1
+ZWL008393,Kolkata,Kolkata New Town (kolkata),22.588818,88.457964,1
+ZWL007966,Kolkata,Kolkata Uttarpara,22.692420,88.342900,1
+ZWL001039,Kolkata,Kolkata Santoshpur,22.502107,88.388897,2
+ZWL003882,Kolkata,Kolkata Liluah,22.635342,88.343314,1
+ZWL004925,Kolkata,Kolkata Rajarhat,22.621505,88.446915,1
+ZWL005244,Kolkata,Kolkata Park Street area,22.552632,88.362888,2
+ZWL003687,Kolkata,Kolkata Baghajatin Colony,22.481243,88.374932,1
+ZWL008120,Kolkata,Kolkata Shrirampur,22.735733,88.344597,2
+ZWL007514,Kolkata,Kolkata Chhota Jagulia,22.759573,88.747215,2
+ZWL003935,Kolkata,Kolkata Dum Dum,22.656310,88.423694,1
+ZWL002931,Kolkata,Kolkata Kestopur,22.597524,88.431114,1
+ZWL006521,Kolkata,Kolkata Sodepur,22.701254,88.383329,2
+ZWL005558,Kolkata,Kolkata Nimta,22.670256,88.413503,2
+ZWL005174,Kolkata,Kolkata Shapoorji,22.567623,88.497427,1
+ZWL002488,Kolkata,Kolkata Barabazar Market,22.574220,88.366682,1
+ZWL007934,Kolkata,Kolkata Salt Lake 1,22.573829,88.412814,2
+ZWL001584,Kolkata,Kolkata Tangra,22.555059,88.388175,1
+ZWL005429,Kolkata,Kolkata Gariahat,22.514492,88.362000,2
+ZWL005121,Kolkata,Kolkata Santragachi,22.621044,88.283605,1
+ZWL007830,Kolkata,Kolkata Garia,22.469249,88.382261,2
+ZWL008991,Kolkata,"Kolkata Chinsurah, Kolkata",22.933551,88.398649,1
+ZWL009194,Kolkata,Kolkata Kankurgachi,22.573467,88.391666,1
+ZWL004722,Kolkata,Kolkata Kasba,22.521693,88.389844,1
+ZWL006536,Mumbai,Mumbai Mira Road East,19.278130,72.874722,1
+ZWL004934,Mumbai,Mumbai Kandivali West,19.212156,72.828850,2
+ZWL004821,Mumbai,"Mumbai Boisar, Mumbai",19.804797,72.745805,2
+ZWL007249,Mumbai,Mumbai Bhiwandi,19.251790,73.087318,1
+ZWL001164,Mumbai,Mumbai Panvel,18.998845,73.108933,1
+ZWL009537,Mumbai,Mumbai Kopar Khairane (Navi Mumbai),19.113909,73.012598,1
+ZWL007275,Mumbai,Mumbai Vashi,19.067662,73.004987,2
+ZWL002556,Mumbai,"Mumbai Titwala, Mumbai",19.292555,73.205899,1
+ZWL006937,Mumbai,Mumbai Kandivali East,19.200730,72.865461,1
+ZWL008636,Mumbai,Mumbai Nalasopara,19.424433,72.817134,1
+ZWL003995,Mumbai,Mumbai Lower Parel,19.005114,72.820143,1
+ZWL006938,Mumbai,Mumbai Goregaon East,19.163093,72.872277,1
+ZWL008550,Mumbai,Mumbai Santacruz East,19.076131,72.858715,1
+ZWL004494,Mumbai,"Mumbai Ghatkopar East, Mumbai",19.080794,72.922280,1
+ZWL003708,Mumbai,Mumbai Palava,19.168067,73.074612,1
+ZWL008711,Mumbai,Mumbai Malad West,19.187022,72.827076,1
+ZWL005991,Mumbai,Mumbai Borivali East,19.241003,72.865970,1
+ZWL002865,Mumbai,"Mumbai Kalyan,West,Mumbai",19.255127,73.128176,1
+ZWL004749,Mumbai,Mumbai Santacruz West,19.082610,72.835608,1
+ZWL001274,Mumbai,"Mumbai Badlapur, Mumbai",19.174156,73.225767,1
+ZWL007699,Mumbai,Mumbai Ambernath,19.199776,73.181176,1
+ZWL001764,Mumbai,Mumbai Marine lines,18.952178,72.825198,1
+ZWL002921,Mumbai,Mumbai Mulund West,19.170765,72.942239,1
+ZWL001410,Mumbai,Mumbai Airoli,19.170339,72.995114,1
+ZWL009757,Mumbai,Mumbai Kharghar (Navi Mumbai),19.069735,73.055883,1
+ZWL002059,Mumbai,Mumbai Ulhasnagar (Mumbai),19.224136,73.169340,1
+ZWL001058,Mumbai,"Mumbai Ghatkopar West, Mumbai",19.096740,72.904562,1
+ZWL006995,Mumbai,Mumbai Bandra West,19.068857,72.833000,1
+ZWL004692,Mumbai,Mumbai Dadar West,19.021199,72.835378,1
+ZWL007667,Mumbai,Mumbai Andheri West,19.137106,72.834828,1
+ZWL009338,Mumbai,Mumbai Vile Parle West,19.109560,72.832194,1
+ZWL009167,Mumbai,Mumbai Byculla,18.974283,72.833712,1
+ZWL006032,Mumbai,Mumbai Vasai,19.364358,72.836612,1
+ZWL007397,Mumbai,"Mumbai Kalyan,East (Mumbai)",19.221503,73.138111,1
+ZWL009360,Mumbai,"Mumbai Ulwe, Mumbai",18.974217,73.024914,1
+ZWL002205,Mumbai,Mumbai Fort,18.940613,72.834235,1
+ZWL008975,Mumbai,Mumbai Andheri East,19.108639,72.874437,1
+ZWL009252,Mumbai,Mumbai Chembur,19.049840,72.907847,2
+ZWL002558,Mumbai,"Mumbai Palghar, Mumbai",19.700631,72.763031,2
+ZWL002742,Mumbai,"Mumbai Mumbra, Mumbai",19.172636,73.023715,2
+ZWL004971,Mumbai,Mumbai Mulund East,19.154253,72.962493,2
+ZWL008348,Mumbai,"Mumbai Shirdhon, Mumbai",19.195881,73.128886,1
+ZWL001344,Mumbai,Mumbai Virar,19.461784,72.799199,1
+ZWL007606,Mumbai,Mumbai Tardeo,18.961317,72.805513,1
+ZWL005697,Mumbai,Mumbai Bandra East,19.064138,72.852737,2
+ZWL005442,Mumbai,Mumbai Thane West,19.227309,72.972736,1
+ZWL004189,Mumbai,Mumbai Kurla West,19.079972,72.881537,1
+ZWL005000,Mumbai,Mumbai Goregaon West,19.162722,72.841610,1
+ZWL002056,Mumbai,Mumbai Hiranandani Estate,19.267411,72.967074,1
+ZWL009826,Mumbai,Mumbai Dombivli,19.210229,73.102272,1
+ZWL007889,Mumbai,Mumbai Bhandup West,19.151889,72.934553,1
+ZWL008977,Mumbai,Mumbai Kamothe,19.023359,73.091814,1
+ZWL006622,Mumbai,"Mumbai Powai, Mumbai",19.115248,72.908952,1
+ZWL002074,Mumbai,Mumbai Naupada,19.188451,72.968001,1
+ZWL008874,Mumbai,Mumbai Bhayandar West,19.257869,72.804743,1
+ZWL001334,Mumbai,Mumbai Vileparle East,19.098430,72.864947,1
+ZWL008378,Mumbai,Mumbai Sion,19.045271,72.864631,1
+ZWL007690,Mumbai,Mumbai Nerul (Navi Mumbai),19.031072,73.026647,1
+ZWL007706,Mumbai,Mumbai Dahisar West,19.255014,72.848267,1
+ZWL005320,Mumbai,Mumbai Colaba,18.919405,72.824376,1
+ZWL006544,Mumbai,Mumbai Mahim,19.039256,72.843913,1
+ZWL002686,Mumbai,Mumbai Wadala,19.017538,72.867138,1
+ZWL001089,Mumbai,Mumbai Borivali West,19.229714,72.839710,1
+ZWL008360,Mumbai,"Mumbai Palava Lakeshore,Mumbai",19.165716,73.105733,1
+ZWL003467,Bengaluru,Bengaluru Banashankari,12.936787,77.556079,1
+ZWL004900,Bengaluru,Bengaluru Rajarajeshwari Nagar,12.918637,77.505467,1
+ZWL005530,Bengaluru,Bengaluru JP Nagar,12.893441,77.560436,1
+ZWL007643,Bengaluru,Bengaluru Mahadevapura,12.985322,77.687578,1
+ZWL003159,Bengaluru,Bengaluru Jalahalli,13.031518,77.530986,1
+ZWL002736,Bengaluru,Bengaluru RT Nagar,13.021267,77.601234,1
+ZWL006369,Bengaluru,Bengaluru KR Puram,13.016987,77.706819,1
+ZWL006274,Bengaluru,Bengaluru Electronic City,12.833101,77.673182,1
+ZWL005375,Bengaluru,Bengaluru Vijayanagar,12.973219,77.519303,1
+ZWL008600,Bengaluru,Bengaluru Marathahalli,12.955103,77.696507,1
+ZWL002292,Bengaluru,Bengaluru Sarjapur road,12.900225,77.697451,1
+ZWL004341,Bengaluru,Bengaluru Brookefields,12.967420,77.717851,1
+ZWL007633,Bengaluru,Bengaluru Whitefield,12.975224,77.740422,1
+ZWL009212,Bengaluru,Bengaluru Nagavara,13.048370,77.625534,1
+ZWL007628,Bengaluru,Bengaluru New BEL Road,13.040495,77.569420,1
+ZWL001156,Bengaluru,Bengaluru Koramangala,12.933756,77.625825,1
+ZWL004924,Bengaluru,"Bengaluru Bannerghatta Road, Bangalore",12.891397,77.608176,1
+ZWL009229,Bengaluru,Bengaluru Aavalahalli,13.034488,77.712241,1
+ZWL005576,Bengaluru,Bengaluru BIAL Airport Road,13.178996,77.630005,1
+ZWL006658,Bengaluru,Bengaluru Yelahanka,13.111809,77.589276,1
+ZWL002882,Bengaluru,Bengaluru Kadugodi,13.007511,77.763209,1
+ZWL006631,Bengaluru,Bengaluru Kammanahalli,13.016050,77.661735,1
+ZWL001196,Bengaluru,Bengaluru HSR Layout,12.908482,77.641773,1
+ZWL006600,Bengaluru,Bengaluru BTM Layout,12.916931,77.608897,1
+ZWL006854,Bengaluru,Bengaluru Varthur,12.936055,77.723415,1
+ZWL001273,Bengaluru,Bengaluru Indiranagar,12.952636,77.653059,1
+ZWL008105,Bengaluru,Bengaluru Jayanagar,12.944441,77.581003,1
+ZWL005206,Bengaluru,Bengaluru Sahakaranagar,13.059918,77.591344,1
+ZWL008797,Bengaluru,"Bengaluru Devanahalli, Bangalore",13.258381,77.716183,1
+ZWL001962,Bengaluru,Bengaluru MG Road,12.982689,77.608075,1
+ZWL006844,Bengaluru,Bengaluru Rajajinagar,12.993217,77.557903,1
+ZWL004164,Bengaluru,Bengaluru Bellandur,12.936225,77.665059,1
+ZWL007698,Pune,Pune NIGDI(Pune),18.646511,73.775411,1
+ZWL005773,Pune,Pune Bibvewadi (Pune),18.492332,73.861939,1
+ZWL009577,Pune,Pune Nanded-Nahre,18.453179,73.811077,1
+ZWL002253,Pune,Pune Bhosari (Pune),18.643893,73.858653,1
+ZWL003498,Pune,Pune Camp Area,18.513693,73.877293,1
+ZWL004311,Pune,Pune Magarpatta,18.519482,73.934360,1
+ZWL007801,Pune,Pune Pimpri,18.625381,73.791194,2
+ZWL008134,Pune,Pune Yerwada,18.544659,73.869499,1
+ZWL009625,Pune,Pune Kalyani Nagar (Pune),18.546538,73.906594,1
+ZWL001627,Pune,"Pune Sus, Pune",18.564293,73.753879,1
+ZWL006236,Pune,Pune Bavdhan,18.514730,73.777922,1
+ZWL006743,Pune,Pune Viman nagar,18.564998,73.911551,1
+ZWL004927,Pune,Pune Aundh (Pune),18.559795,73.807123,1
+ZWL008370,Pune,Pune Katraj (Pune),18.451394,73.847642,1
+ZWL004523,Pune,Pune Pimple Saudagar_Pune,18.600897,73.798441,1
+ZWL001778,Pune,Pune Dhanori,18.588936,73.907711,1
+ZWL003386,Pune,Pune Dehu Road,18.695874,73.740365,1
+ZWL009157,Pune,Pune Koregaon Park (Pune),18.535326,73.883976,1
+ZWL004962,Pune,Pune Hinjewadi - Phase 2,18.585004,73.706319,1
+ZWL005340,Pune,Pune Wakad_Pune,18.599555,73.774652,2
+ZWL009671,Pune,"Pune Manas Lake, Pune",18.491382,73.748953,1
+ZWL008921,Pune,Pune Sadashiv Peth,18.511357,73.856996,2
+ZWL008940,Pune,Pune Ghorpadi (Pune),18.519767,73.897269,2
+ZWL009874,Pune,Pune Pashan (Pune),18.527587,73.789459,1
+ZWL006660,Pune,"Pune SP Infocity, Pune",18.487813,73.947187,2
+ZWL003813,Pune,"Pune Manjri,Pune",18.509232,73.978364,2
+ZWL007471,Pune,"Pune Khadki, Pune",18.563289,73.835023,1
+ZWL009602,Pune,Pune Kothrud (Pune),18.504984,73.811587,1
+ZWL002208,Pune,Pune Sinhagad Road(Pune),18.477264,73.826437,1
+ZWL007895,Pune,"Pune New Sangvi, Pune",18.578959,73.823437,2
+ZWL003099,Pune,"Pune Nimgaon, Pune",18.794589,73.910016,1
+ZWL004575,Pune,Pune Wagholi,18.579310,73.972122,2
+ZWL004513,Pune,"Pune Keshavnagar, Pune",18.537273,73.944521,1
+ZWL008983,Pune,Pune Baner (Pune),18.567954,73.783475,1
+ZWL005520,Pune,Pune Warje (Pune),18.472703,73.788400,1
+ZWL003300,Pune,"Pune Mundwa, Pune",18.535220,73.918549,2
+ZWL001963,Pune,Pune Chakan,18.752436,73.837484,1
+ZWL002422,Pune,Pune Shivaji Nagar (Pune),18.526724,73.841658,2
+ZWL005088,Pune,"Pune Yewalewadi, Pune",18.439804,73.902433,2
+ZWL003014,Pune,"Pune Bopkhel, Pune",18.586306,73.859602,1
+ZWL001472,Pune,Pune Kharadi,18.552390,73.941901,1
+ZWL004339,Pune,Pune Talegaon Dabhade,18.738724,73.675701,1
+ZWL003817,Pune,Pune Hinjewadi - Phase 1,18.596583,73.733312,1
+ZWL007925,Pune,Pune Wanowrie-Kondhwa,18.477085,73.900966,1
+ZWL003370,Hyderabad,Hyderabad Nagole,17.359969,78.565724,1
+ZWL002088,Hyderabad,Hyderabad Attapur,17.380875,78.415717,1
+ZWL006702,Hyderabad,Hyderabad Peerzadiguda,17.411644,78.578220,1
+ZWL008776,Hyderabad,Hyderabad Begumpet,17.442659,78.482009,2
+ZWL003918,Hyderabad,"Hyderabad Suraram, Hyderabad",17.559752,78.437467,1
+ZWL004079,Hyderabad,Hyderabad Banjara Hills,17.419238,78.438474,1
+ZWL008309,Hyderabad,Hyderabad Alwal,17.508852,78.507402,1
+ZWL002433,Hyderabad,Hyderabad Sainikpuri,17.489079,78.558910,2
+ZWL007390,Hyderabad,Hyderabad Saroor Nagar,17.348264,78.530476,1
+ZWL004767,Hyderabad,Hyderabad Karkhana,17.467142,78.496696,1
+ZWL006016,Hyderabad,Hyderabad Kompally,17.533309,78.489965,1
+ZWL003283,Hyderabad,Hyderabad Himayatnagar,17.402602,78.487229,1
+ZWL007311,Hyderabad,Hyderabad Medchal Road,17.637191,78.480392,1
+ZWL005919,Hyderabad,Hyderabad Kukatpally,17.495894,78.416259,1
+ZWL001822,Hyderabad,Hyderabad Amberpet,17.407658,78.521703,1
+ZWL008208,Hyderabad,Hyderabad Jeedimetla,17.495621,78.450281,1
+ZWL001362,Hyderabad,Hyderabad Gachibowli,17.452114,78.351486,1
+ZWL002162,Hyderabad,Hyderabad LB Nagar,17.345727,78.557062,1
+ZWL009712,Hyderabad,Hyderabad Dilsukhnagar,17.370431,78.536184,1
+ZWL005963,Hyderabad,Hyderabad Masab Tank,17.398217,78.462258,2
+ZWL008297,Hyderabad,Hyderabad Bachupally,17.544887,78.359975,1
+ZWL005424,Hyderabad,Hyderabad Manikonda,17.405930,78.388380,1
+ZWL008585,Hyderabad,Hyderabad Shamshabad,17.257432,78.387920,1
+ZWL008599,Hyderabad,Hyderabad Miyapur,17.500034,78.342670,2
+ZWL006535,Hyderabad,"Hyderabad Hayath Nagar, Hyderabad",17.326620,78.609288,2
+ZWL006545,Hyderabad,"Hyderabad Sangareddy, Hyderabad",17.598038,78.091346,1
+ZWL009719,Hyderabad,Hyderabad JNTU,17.485166,78.389775,1
+ZWL008890,Hyderabad,Hyderabad Serilingampally,17.485245,78.313916,1
+ZWL007119,Hyderabad,Hyderabad Nizampet,17.509398,78.390364,2
+ZWL004747,Hyderabad,"Hyderabad Q City, Hyderabad",17.421788,78.318868,1
+ZWL004802,Hyderabad,Hyderabad Madhapur,17.441185,78.398416,1
+ZWL004665,Hyderabad,Hyderabad Narayanguda,17.392120,78.494443,1
+ZWL005999,Hyderabad,Hyderabad ECIL,17.460327,78.567924,1
+ZWL003360,Hyderabad,Hyderabad Toli Chowki,17.398121,78.421238,1
+ZWL007187,Hyderabad,Hyderabad Kondapur,17.472485,78.367854,1
+ZWL007344,Hyderabad,Hyderabad Charminar,17.375037,78.454499,1
+ZWL008438,Hyderabad,Hyderabad Sivarampalli,17.345995,78.439283,1
+ZWL005494,Hyderabad,Hyderabad Tarnaka,17.431829,78.550940,2
+ZWL009519,Hyderabad,Hyderabad Moosapet,17.453292,78.421126,1
+ZWL001687,Hyderabad,"Hyderabad Patancheru, Hyderabad",17.542613,78.276529,2
+ZWL005569,Hyderabad,Hyderabad Vanasthali Puram,17.318241,78.544989,1
+ZWL003027,Hyderabad,Hyderabad Ameerpet,17.434737,78.446618,1
+ZWL001337,Hyderabad,Hyderabad Uppal,17.403149,78.554106,1
+ZWL001579,Hyderabad,Hyderabad Malakpet,17.371621,78.502672,1
+ZWL006699,Hyderabad,Hyderabad Hafiz Baba Nagar,17.338717,78.497590,2
+ZWL008512,Hyderabad,"Hyderabad Mokila, Hyderabad",17.436228,78.190072,1
+ZWL006789,Chennai,Chennai Potheri,12.799983,80.029865,1
+ZWL004297,Chennai,Chennai Pallavaram,12.973055,80.151271,2
+ZWL005190,Chennai,Chennai Nungambakkam,13.060471,80.255887,1
+ZWL003967,Chennai,"Chennai Anna Nagar, Chennai",13.086884,80.206602,2
+ZWL008996,Chennai,Chennai Perambur,13.121741,80.225058,1
+ZWL005857,Chennai,"Chennai Mogappair, Chennai",13.080365,80.175724,1
+ZWL006232,Chennai,Chennai Royapuram,13.136635,80.289535,2
+ZWL008548,Chennai,Chennai Mugalivakkam,13.014886,80.152455,2
+ZWL006053,Chennai,Chennai Porur,13.048069,80.158163,1
+ZWL001398,Chennai,Chennai Redhills,13.191443,80.181225,1
+ZWL001701,Chennai,Chennai Tambaram,12.934834,80.101824,1
+ZWL008876,Chennai,Chennai Avadi,13.125301,80.069776,1
+ZWL003387,Chennai,Chennai Kilpauk,13.080772,80.248018,1
+ZWL007059,Chennai,Chennai Ashok Nagar (CHENNAI),13.022680,80.200286,1
+ZWL006520,Chennai,Chennai Adyar,12.993947,80.247174,1
+ZWL001210,Chennai,Chennai Alwarpet,13.032366,80.257625,2
+ZWL007171,Chennai,Chennai Selaiyur,12.916570,80.134348,1
+ZWL006329,Chennai,"Chennai Thandalam, Chennai",12.863785,79.947886,2
+ZWL004233,Chennai,Chennai Sholinganallur,12.921608,80.233727,1
+ZWL007209,Chennai,Chennai Ambattur,13.117566,80.146667,2
+ZWL003452,Chennai,Chennai Medavakkam,12.931197,80.182327,1
+ZWL007176,Chennai,Chennai Poonamallee,13.052763,80.090763,1
+ZWL009897,Chennai,"Chennai Minjur, Chennai",13.282298,80.266616,1
+ZWL004882,Chennai,Chennai Urapakkam,12.878957,80.070307,1
+ZWL006156,Chennai,Chennai Velachery,12.989300,80.199988,2
+ZWL001141,Chennai,Chennai Navallur,12.841923,80.209025,2
+ZWL004431,Chennai,Chennai Vadapalani,13.065160,80.207917,1
+ZWL001516,Chennai,Chennai T Nagar,13.026256,80.228120,2
+ZWL003425,Lucknow,Lucknow Hazratganj,26.844819,80.940833,2
+ZWL006490,Lucknow,Lucknow Aminabad,26.856770,80.925103,2
+ZWL009091,Lucknow,Lucknow Chowk,26.873686,80.894502,2
+ZWL003030,Lucknow,"Lucknow Telibagh, Lucknow",26.776664,80.936755,2
+ZWL004978,Lucknow,Lucknow Husainganj,26.836970,80.926110,2
+ZWL009177,Lucknow,Lucknow Jankipuram,26.926427,80.936884,2
+ZWL004436,Lucknow,Lucknow Arjunganj,26.794554,80.999112,2
+ZWL005470,Lucknow,"Lucknow Chinhat, Lucknow",26.878323,81.038299,2
+ZWL001500,Lucknow,Lucknow Mahanagar,26.886387,80.960641,2
+ZWL003371,Lucknow,Lucknow Ashiyana,26.790510,80.913855,2
+ZWL003635,Lucknow,"Lucknow Indira Nagar, Lucknow",26.883684,80.990290,2
+ZWL003320,Lucknow,"Lucknow Vasant Kunj, Lucknow",26.877121,80.878447,2
+ZWL009682,Lucknow,Lucknow Rajajipuram,26.842055,80.873868,2
+ZWL002273,Lucknow,Lucknow Gomti Nagar,26.850582,80.999875,2
+ZWL002331,Lucknow,Lucknow Alambagh,26.810769,80.904864,2
+ZWL007731,Lucknow,"Lucknow Aliganj, Lucknow",26.890082,80.942007,2
+ZWL007011,Lucknow,Lucknow Kalyanpur,26.907206,80.974143,2
+ZWL003768,Kochi,Kochi Eroor,9.929826,76.332369,2
+ZWL005555,Kochi,Kochi Kakkanad,10.014153,76.358626,2
+ZWL002986,Kochi,"Kochi Nedumbassery,Kochi",10.178008,76.386636,2
+ZWL004273,Kochi,"Kochi North Paravur, Kochi",10.162441,76.216317,2
+ZWL005425,Kochi,"Kochi Aluva, Kochi",10.106615,76.348843,2
+ZWL004691,Kochi,Kochi Ambalamugal,9.980241,76.397987,2
+ZWL001981,Kochi,Kochi Kalamassery,10.046034,76.308117,2
+ZWL003786,Kochi,Kochi Kaloor,10.000143,76.298744,2
+ZWL009487,Kochi,"Kochi Perumbavoor,Kochi",10.117563,76.460320,2
+ZWL007216,Kochi,Kochi Thiruvankulam,9.932264,76.385740,2
+ZWL002327,Kochi,"Kochi Vypin, Kochi",10.019731,76.245595,2
+ZWL006873,Kochi,Kochi Ernakulam,9.969514,76.288288,2
+ZWL004591,Kochi,Kochi Fort Kochi,9.931564,76.268065,2
+ZWL005082,Jaipur,Jaipur Mansarovar-2,26.844258,75.768570,2
+ZWL003863,Jaipur,Jaipur Tonk road 2,26.853567,75.794945,2
+ZWL009286,Jaipur,Jaipur Jagatpura,26.825942,75.851086,2
+ZWL009458,Jaipur,Jaipur Shyam Nagar,26.887617,75.756174,2
+ZWL003704,Jaipur,Jaipur C Scheme,26.916823,75.801190,2
+ZWL003606,Jaipur,Jaipur Lal Kothi,26.893689,75.797800,2
+ZWL009569,Jaipur,Jaipur Pink City,26.929588,75.823855,2
+ZWL001750,Jaipur,Jaipur Vaishali Nagar,26.909885,75.739394,2
+ZWL002751,Jaipur,Jaipur Malviya Nagar,26.854191,75.810798,2
+ZWL005080,Jaipur,Jaipur Sodala,26.904751,75.777608,2
+ZWL008680,Jaipur,Jaipur Vidhyadhar Nagar,26.963051,75.770166,2
+ZWL008249,Jaipur,Jaipur Raja Park,26.902497,75.826544,2
+ZWL008915,Jaipur,Jaipur Shastri Nagar,26.936514,75.797054,2
+ZWL006372,Jaipur,Jaipur Pratap Nagar,26.798396,75.815353,2
+ZWL003133,Ahmedabad,Ahmedabad Paldi,22.994998,72.557474,2
+ZWL002302,Ahmedabad,Ahmedabad Shahibag,23.058607,72.592212,2
+ZWL003747,Ahmedabad,Ahmedabad Navrangpura,23.038426,72.558241,2
+ZWL002503,Ahmedabad,Ahmedabad Chandkheda,23.117204,72.607123,2
+ZWL005979,Ahmedabad,Ahmedabad Science-City Sola,23.087361,72.510289,2
+ZWL005987,Ahmedabad,"Ahmedabad Sector 16, Gandhinagar",23.216612,72.652543,2
+ZWL001959,Ahmedabad,Ahmedabad Vastrapur,23.042513,72.524312,2
+ZWL007404,Ahmedabad,Ahmedabad Prahlad Nagar,22.998074,72.515955,2
+ZWL001898,Ahmedabad,Ahmedabad Nikol,23.077071,72.637566,2
+ZWL002250,Ahmedabad,"Ahmedabad Infocity, Gandhinagar",23.177762,72.636221,2
+ZWL004415,Ahmedabad,Ahmedabad Naranpura,23.072018,72.573161,2
+ZWL006288,Ahmedabad,Ahmedabad Bopal,23.011294,72.464041,2
+ZWL009182,Ahmedabad,Ahmedabad Maninagar,22.985307,72.610322,2
+ZWL009990,Ahmedabad,Ahmedabad Bodakdev,23.055398,72.491724,2
+ZWL003455,Ahmedabad,Ahmedabad Gota,23.131231,72.543606,2
+ZWL007561,Chandigarh,Chandigarh Sector 15 (Chandigarh),30.764466,76.774815,2
+ZWL006687,Chandigarh,Chandigarh Sector 8 (Chandigarh),30.749265,76.801584,2
+ZWL001934,Chandigarh,Chandigarh Manimajra (Chandigarh),30.722848,76.835395,2
+ZWL003936,Chandigarh,Chandigarh Industrial Area Phase I (Chandigarh),30.701381,76.808231,2
+ZWL004716,Chandigarh,Chandigarh Sector 59 (Chandigarh),30.725954,76.716657,2
+ZWL002303,Chandigarh,"Chandigarh Sector 20, Panchkula",30.667002,76.860170,2
+ZWL009521,Chandigarh,Chandigarh Sector 8/9 nd Panchkula,30.694507,76.849604,2
+ZWL006817,Chandigarh,Chandigarh Sector 28 (Chandigarh),30.724245,76.808833,2
+ZWL003496,Chandigarh,Chandigarh Phase 10 Mohali,30.692094,76.733846,2
+ZWL009894,Chandigarh,"Chandigarh Gillco, Chandigarh",30.736526,76.654293,2
+ZWL004101,Chandigarh,Chandigarh Sector 46 (Chandigarh),30.705920,76.762310,2
+ZWL003262,Chandigarh,Chandigarh Sector 70 (Chandigarh),30.709870,76.692050,2
+ZWL009430,Chandigarh,"Chandigarh VIP Road, Zirakpur",30.656048,76.823298,2
+ZWL004196,Chandigarh,Chandigarh VR Mall,30.730066,76.684242,2
+ZWL003093,Chandigarh,Chandigarh Sector 35 (Chandigarh),30.727290,76.756632,2
+ZWL009406,Chandigarh,Chandigarh Sector 22 (Chandigarh),30.735307,76.774912,2
+ZWL002150,Goa,"Goa Verna, Goa",15.380640,73.909304,2
+ZWL008519,Goa,"Goa Mapusa, Goa",15.599556,73.791137,2
+ZWL004452,Goa,"Goa Calangute, Goa",15.532704,73.762608,2
+ZWL006556,Goa,"Goa Majorda, Goa",15.255895,73.937616,2
+ZWL002137,Goa,"Goa Upper panaji, Goa",15.460913,73.835391,2
+ZWL005093,Goa,"Goa Ponda, Goa",15.398953,74.002377,2
+ZWL002142,Goa,"Goa Margao, Goa",15.231363,73.997689,2
+ZWL004621,Goa,"Goa Vasco, Goa",15.387592,73.829979,2
+ZWL006403,Goa,"Goa Morjim, Goa",15.653757,73.747022,2
+ZWL005568,Goa,"Goa Porvorim, Goa",15.535007,73.827229,2
+ZWL009021,Ludhiana,"Ludhiana Sector 32, Ludhiana",30.895881,75.906050,2
+ZWL006208,Ludhiana,"Ludhiana Civil Lines, Ludhiana",30.916548,75.818266,2
+ZWL006788,Ludhiana,"Ludhiana Sarabha Nagar, Ludhiana",30.891869,75.834901,2
+ZWL005256,Ludhiana,"Ludhiana BRS Nagar, Ludhiana",30.897774,75.787544,2
+ZWL001163,Ludhiana,"Ludhiana Model Town, Ludhiana",30.881060,75.875309,2
+ZWL003304,Ludhiana,"Ludhiana Ganesh Nagar, Ludhiana",30.917540,75.879759,2
+ZWL003119,Ludhiana,"Ludhiana Dugri,Ludhiana",30.856247,75.843129,2
+ZWL006981,Guwahati,"Guwahati Pathar Quarry, Guwahati",26.159879,91.827651,2
+ZWL006537,Guwahati,"Guwahati Basistha-Lokhra, Guwahati",26.116888,91.777488,2
+ZWL009407,Guwahati,"Guwahati North Guwahati, Guwahati",26.196471,91.684788,2
+ZWL004763,Guwahati,"Guwahati Dharapur, Guwahati",26.134004,91.623895,2
+ZWL007095,Guwahati,"Guwahati Lal Ganesh - Kahilipara, Guwahati",26.145102,91.752656,2
+ZWL002105,Guwahati,"Guwahati Paltan-Bazar, Guwahati",26.183358,91.752480,2
+ZWL003362,Guwahati,"Guwahati Azara, Guwahati",26.110966,91.602115,2
+ZWL002491,Guwahati,"Guwahati Changsari, Guwahati",26.262376,91.694879,2
+ZWL005319,Guwahati,"Guwahati Maligaon - Jalukbari, Guwahati",26.161285,91.689576,2
+ZWL005708,Guwahati,Guwahati Zoo Tiniali - Christian basti,26.177033,91.779799,2
+ZWL001780,Amritsar,"Amritsar Himatpura, Amritsar",31.608999,74.863051,2
+ZWL008281,Amritsar,"Amritsar Rasulpur, Amritsar",31.619590,74.915049,2
+ZWL004590,Amritsar,"Amritsar Ranjit Avenue, Amritsar",31.666773,74.850200,2
+ZWL002073,Amritsar,"Amritsar White Avenue, Amritsar",31.657377,74.889594,2
+ZWL005826,Amritsar,"Amritsar Chheharta, Amritsar",31.633049,74.817702,2
+ZWL007456,Amritsar,"Amritsar Hall Bazar, Amritsar",31.632158,74.866838,2
+ZWL008755,Bhopal,"Bhopal Ashoka Garden, Bhopal",23.260793,77.421525,2
+ZWL009428,Bhopal,"Bhopal Shahpura,Bhopal",23.176545,77.418255,2
+ZWL006900,Bhopal,"Bhopal Airport Area, Bhopal",23.290449,77.337426,2
+ZWL002615,Bhopal,"Bhopal TT Nagar, Bhopal",23.223600,77.392134,2
+ZWL003463,Bhopal,"Bhopal BHEL, Bhopal",23.267602,77.474332,2
+ZWL002872,Bhopal,"Bhopal MP Nagar,Bhopal",23.227641,77.447330,2
+ZWL005836,Bhopal,"Bhopal Hoshangabad Road, Bhopal",23.168118,77.482657,2
+ZWL003417,Bhopal,"Bhopal People's Mall, Bhopal",23.293081,77.396385,2
+ZWL001466,Visakhapatnam,"Visakhapatnam NAD, Vizag",17.749616,83.230677,2
+ZWL003024,Visakhapatnam,Visakhapatnam Gajuwaka,17.681004,83.207459,2
+ZWL004755,Visakhapatnam,Visakhapatnam Dwaraka Nagar,17.739116,83.324672,2
+ZWL009959,Visakhapatnam,Visakhapatnam Madhurawada,17.789823,83.373031,2
+ZWL007491,Bhubaneswar,"Bhubaneswar Madhusudan Nagar, Bhubaneswar",20.278497,85.824922,2
+ZWL003084,Bhubaneswar,"Bhubaneswar Kalinga Nagar, Bhubneshwar",20.277934,85.773884,2
+ZWL003270,Bhubaneswar,"Bhubaneswar Nayapalli, Bhubneshwar",20.299879,85.813518,2
+ZWL007379,Bhubaneswar,"Bhubaneswar Sahid Nagar, Bhubaneshwar",20.289125,85.856680,2
+ZWL001823,Bhubaneswar,"Bhubaneswar Lakshmi Sagar, Bhubneshwar",20.266492,85.851166,2
+ZWL004098,Bhubaneswar,"Bhubaneswar Khandagiri, Bhubneshwar",20.246979,85.766384,2
+ZWL008906,Bhubaneswar,"Bhubaneswar Jagmohan Nagar, Bhubaneswar",20.257002,85.789371,2
+ZWL002821,Bhubaneswar,"Bhubaneswar Kharabela Nagar, Bhubaneswar",20.271584,85.840940,2
+ZWL009572,Bhubaneswar,"Bhubaneswar Chandrasekharpur, Bhubaneswar",20.317124,85.806992,2
+ZWL005652,Bhubaneswar,"Bhubaneswar Patia, Bhubneshwar",20.363954,85.814321,2
+ZWL003661,Coimbatore,"Coimbatore Gandhipuram, Coimbatore",11.019095,76.968472,2
+ZWL005742,Coimbatore,Coimbatore Vadavalli,11.024820,76.900648,2
+ZWL008653,Coimbatore,"Coimbatore RS Puram, Coimbatore",11.000355,76.941985,2
+ZWL002703,Coimbatore,"Coimbatore Racecourse, Coimbatore",10.999272,76.975662,2
+ZWL009668,Coimbatore,"Coimbatore Saibaba Colony, Coimbatore",11.032946,76.944253,2
+ZWL007527,Coimbatore,"Coimbatore Peelamedu, Coimbatore",11.026179,77.005899,2
+ZWL005468,Coimbatore,"Coimbatore Podanur, Coimbatore",10.977206,76.981702,2
+ZWL004408,Coimbatore,"Coimbatore Kunniamuthur, Coimbatore",10.937589,76.933705,2
+ZWL008265,Coimbatore,"Coimbatore Ondipudur, Coimbatore",10.997670,77.042986,2
+ZWL007600,Coimbatore,Coimbatore Koundampalayam,11.068353,76.937962,2
+ZWL002147,Coimbatore,Coimbatore Saravanampatty,11.070812,76.998053,2
+ZWL009595,Coimbatore,"Coimbatore Ganapathypudur, Coimbatore",11.042698,76.984477,2
+ZWL001279,Coimbatore,"Coimbatore Sitra, and Singanallur, Coimbatore",11.042569,77.054996,2
+ZWL006449,Mangalore,Mangalore South Mangalore,12.879030,74.854593,2
+ZWL009478,Mangalore,"Mangalore Thokkattu, Mangalore",12.820460,74.865765,2
+ZWL002354,Vadodara,Vadodara Waghodia,22.300216,73.229259,2
+ZWL004097,Vadodara,Vadodara Fatehgunj,22.315398,73.199769,2
+ZWL009713,Vadodara,Vadodara Nizampura,22.334731,73.176306,2
+ZWL008938,Vadodara,Vadodara Diwalipura,22.302691,73.156120,2
+ZWL004439,Vadodara,Vadodara Akota,22.298674,73.178672,2
+ZWL002446,Vadodara,"Vadodara Manjalpur, Vadodara",22.257070,73.191150,2
+ZWL008232,Vadodara,Vadodara Shubhanpura,22.321614,73.160014,2
+ZWL002475,Vadodara,Vadodara Alkapuri,22.313140,73.172760,2
+ZWL005549,Nagpur,Nagpur Pratap Nagar,21.114916,79.051774,2
+ZWL001438,Nagpur,Nagpur Sadar,21.171681,79.072065,2
+ZWL006432,Nagpur,"Nagpur Kharabi, Nagpur",21.144692,79.136306,2
+ZWL009782,Nagpur,Nagpur Hanuman Nagar,21.131152,79.100974,2
+ZWL008282,Nagpur,Nagpur Dharampeth,21.131547,79.056027,2
+ZWL001041,Nagpur,Nagpur Manish Nagar,21.091663,79.072458,2
+ZWL007188,Nagpur,"Nagpur Ayodhya Nagar, Nagpur",21.103625,79.104888,2
+ZWL003633,Nagpur,Nagpur Gandhibagh,21.146868,79.103994,2
+ZWL002458,Mysore,Mysore Central Mysore,12.326689,76.633539,2
+ZWL005095,Surat,"Surat Udhna, Surat",21.166218,72.850231,2
+ZWL002155,Surat,"Surat City Light, Surat",21.159272,72.791465,2
+ZWL007951,Surat,Surat Athwa,21.168804,72.803931,2
+ZWL006000,Surat,"Surat Vesu, Surat",21.136777,72.762895,2
+ZWL008198,Surat,"Surat Adajan, Surat",21.211151,72.793110,2
+ZWL002771,Surat,"Surat Varaccha, Surat",21.210937,72.857374,2
+ZWL005626,Surat,"Surat New Textile Market, Surat",21.199018,72.828239,2
+ZWL005423,Surat,"Surat Katargam, Surat",21.231792,72.824230,2
+ZWL009343,Trivandrum,"Trivandrum Kazhakoottam, Thiruvananthapuram",8.575170,76.904888,2
+ZWL007746,Trivandrum,Trivandrum Tvm Central,8.490977,76.969250,2
+ZWL002223,Trivandrum,"Trivandrum Nemom, Thiruvananthapuram",8.430376,77.027424,2
+ZWL005308,Vijayawada,"Vijayawada Governorpet, Vijayawada",16.520989,80.636340,2
+ZWL004428,Vijayawada,"Vijayawada Gunadala, Vijayawada",16.515748,80.690025,2
+ZWL002106,Vijayawada,"Vijayawada Gollapudi, Vijayawada",16.541337,80.585061,2
+ZWL005858,Vijayawada,"Vijayawada Auto Nagar, Vijayawada",16.487591,80.685560,2
+ZWL003905,Vijayawada,"Vijayawada Labbipet, Vijayawada",16.510686,80.648812,2
+ZWL009921,Jalandhar,"Jalandhar Shastri Nagar, Jalandhar",31.323693,75.583627,2
+ZWL002344,Jalandhar,"Jalandhar Gurdev Nagar, Jalandhar",31.347368,75.566556,2
+ZWL001077,Jalandhar,"Jalandhar Paragpur, Jalandhar",31.285004,75.648457,2
+ZWL005408,Jalandhar,"Jalandhar Model Town, Jalandhar",31.299818,75.582441,2
+ZWL001624,Jalandhar,"Jalandhar Basti Nau, Jalandhar",31.327456,75.549901,2
+ZWL004713,Jalandhar,"Jalandhar Rama Mandi, Jalandhar",31.314281,75.617635,2
+ZWL007457,Jammu,"Jammu Greater Kailash, Jammu",32.670712,74.901243,2
+ZWL005892,Jammu,"Jammu Barnai, Jammu",32.755253,74.825204,2
+ZWL008753,Jammu,"Jammu Gandhi Nagar, Jammu",32.704392,74.864830,2
+ZWL008047,Jammu,"Jammu OLD JAMMU, Jammu",32.727614,74.856395,2
+ZWL002687,Jammu,"Jammu Channi Himmat, Jammu",32.690740,74.886902,2
+ZWL003195,Raipur,"Raipur Shankar Nagar, Raipur",21.251392,81.663850,2
+ZWL009896,Raipur,"Raipur Purena, Raipur",21.235636,81.692460,2
+ZWL001038,Raipur,"Raipur Mowa, Raipur",21.272467,81.671100,2
+ZWL008872,Raipur,Raipur Mahaveer Nagar,21.210730,81.640523,2
+ZWL004310,Raipur,"Raipur Samta Colony, Raipur",21.243164,81.621252,2
+ZWL006651,Raipur,"Raipur Civil Lines, Raipur",21.243402,81.650848,2
+ZWL008695,Raipur,Raipur Devendra Nagar,21.252033,81.650070,2
+ZWL008436,Raipur,"Raipur Moudhapara, Raipur",21.256569,81.627672,2

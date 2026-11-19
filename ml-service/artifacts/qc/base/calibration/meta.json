@@ -1,0 +1,12 @@
+{
+ "config_digest": "b5af58ff5130c309",
+ "seed": 0,
+ "git_commit": "9180328de2a632280472e415cf1d52109661e65d+dirty",
+ "started": "2026-11-19T15:19:00",
+ "profile": "single-gpu",
+ "split_manifest_hash": "a079504cc9e89c1b",
+ "components": [
+  "stnet_fault_s42",
+  "stnet_l2_fault_s42"
+ ]
+}

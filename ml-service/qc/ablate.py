@@ -37,6 +37,16 @@ SUBSETS: List[Sequence[str]] = [
     ("rules", "slow", "spatial", "temporal", "neighbour_baseline", "nbr_wet", "nbr_heavy"),
     ("rules", "nbr_wet", "nbr_heavy"),
 ]
+# Neighbour-residual evidence for zeroed, scale and drift faults (qc.residual). Run with `ablate --residual-only`; the first row is the
+# unchanged four-component fusion, for comparison inside the same table.
+RESIDUAL_SUBSETS: List[Sequence[str]] = [
+    FULL,
+    FULL + ("nbr_surprise",),
+    FULL + ("nbr_surprise", "drift_cusum"),
+    FULL + ("nbr_surprise", "drift_cusum", "nbr_wet", "nbr_heavy"),
+    ("rules", "slow", "nbr_surprise", "drift_cusum"),      # no trained model at all
+    ("rules", "nbr_surprise", "drift_cusum"),
+]
 
 
 def label(subset: Sequence[str]) -> str:
@@ -52,6 +62,9 @@ def run_ablation(p: Prepared, seed: int, budget: float = 1.0, subsets: Optional[
     rows: List[Dict] = []
     if any(c in CONTEXT for sub in (subsets or SUBSETS) for c in sub):
         compute_scores_many(p, context_functions(p), ("val",), main)       # cheap, CPU, validation years and clean threshold years only
+    from qc.residual import RESIDUAL, residual_functions
+    if any(c in RESIDUAL for sub in (subsets or SUBSETS) for c in sub):
+        compute_scores_many(p, residual_functions(p), ("val",), main)      # same: validation years and clean threshold years only
     for subset in (subsets or SUBSETS):
         names = _names(seed, subset)
         missing = [n for n in names if not main.has(n, "val", p.split.years["fusion_fit"][0])]

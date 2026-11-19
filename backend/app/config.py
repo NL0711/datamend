@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Annotated, List, Optional
+from typing import Annotated, List
 
 from pydantic import field_validator
 
@@ -38,40 +38,29 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5199",
         "http://localhost:3000",
     ]
-    DATABASE_URL: str = "sqlite+aiosqlite:///./skyguard.db"
+    # SQLite now (demo storage: resets on a free Render tier); PostgreSQL later (postgresql+asyncpg://...), the tables are portable.
+    DATABASE_URL: str = "sqlite+aiosqlite:///./datamend.db"
 
-    # ML Pipeline defaults
-    INFERENCE_WINDOW_SIZE: int = 30
-    HEALTH_ROLLING_WINDOW: int = 288
-    HEALTH_EMA_ALPHA: float = 0.10
-    ANOMALY_THRESHOLD: float = 0.50
+    # Weather Union live rain-gauge feed (backend/app/rainfall). Off unless a key AND a city are set.
+    WEATHER_UNION_API_KEY: str = ""
+    WEATHER_UNION_BASE_URL: str = "https://www.weatherunion.com/gw/weather/external/v0"
+    WEATHER_UNION_CITY: str = ""                      # e.g. "Mumbai": poll the stations closest to the city's centre
+    WEATHER_UNION_MAX_STATIONS: int = 9               # 9 stations x 96 polls/day = 864 calls, under the 1000/day free limit
+    WEATHER_UNION_POLL_INTERVAL_SECONDS: float = 900.0
+    WEATHER_UNION_DAILY_CALL_BUDGET: int = 900
+    WEATHER_UNION_ACCUMULATION_MODE: str = "cumulative"   # cumulative | per_reading; the provider does not document it
+    WEATHER_UNION_RAW_LOG_PATH: str = "data/weather_union_raw.jsonl"
 
-    # Data Source defaults (NOAA_ISD | SIMULATED | EXTERNAL_API | PHYSICAL_AWS | HISTORICAL_REPLAY)
-    DEFAULT_DATA_SOURCE: str = "NOAA_ISD"
-    NOAA_ISD_DATA_PATH: str = "data/noaa_aws_network.csv"
-    HISTORICAL_DATA_PATH: str = "data/historical_benchmark_30d.csv"
-    HISTORICAL_REPLAY_SPEED: float = 1.0  # 1.0 = real-time, 10.0 = 10x, 0.0 = instantaneous burst
+    # AI narrator (built by the AI implementation team). NOT IMPLEMENTED on our side until they deliver: with NARRATOR_URL unset the
+    # platform says "AI narrator not connected" and shows the rule-based baseline. The request and response shape is a proposal
+    # (docs/contracts/narrator-request-v1.md) awaiting the team's confirmation. The token lives in .env only.
+    NARRATOR_URL: str = ""
+    NARRATOR_TOKEN: str = ""
+    NARRATOR_TIMEOUT_SECONDS: float = 20.0
 
-    # External Weather API settings (Open-Meteo)
-    EXTERNAL_WEATHER_PROVIDER: str = "open_meteo"
-    EXTERNAL_WEATHER_BASE_URL: str = "https://api.open-meteo.com/v1/forecast"
-    EXTERNAL_WEATHER_LATITUDE: float = 18.5204   # Pune, India (Standard reference observatory)
-    EXTERNAL_WEATHER_LONGITUDE: float = 73.8567  # Pune, India
-    EXTERNAL_WEATHER_STATION_ID: str = "PUNE-EXT-001"
-    EXTERNAL_WEATHER_STATION_NAME: str = "Pune Meteorological Center"
-    EXTERNAL_API_POLL_INTERVAL_SECONDS: float = 60.0
-    EXTERNAL_API_TIMEOUT_SECONDS: float = 10.0
-
-    # Physical AWS & MQTT settings
-    MQTT_BROKER_HOST: str = "broker.hivemq.com"  # Public test broker default (configurable for private broker)
-    MQTT_BROKER_PORT: int = 1883
-    MQTT_USERNAME: Optional[str] = None
-    MQTT_PASSWORD: Optional[str] = None
-    MQTT_TLS: bool = False
-    MQTT_TELEMETRY_TOPIC: str = "skyguard/aws/+/telemetry"
-    MQTT_HEARTBEAT_TOPIC: str = "skyguard/aws/+/heartbeat"
-    PHYSICAL_AWS_TIMEOUT_SECONDS: float = 30.0
-    PHYSICAL_DEFAULT_STATION_ID: str = "AWS-ESP32-001"
+    # Editing settings from the dashboard (api/settings.py) is DISABLED unless this is set; callers must send it as X-Admin-Token.
+    # A long random string, in .env only. There are no user accounts: anyone who has this token can change the feed key and the narrator.
+    ADMIN_TOKEN: str = ""
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
