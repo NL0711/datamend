@@ -7,7 +7,7 @@ import { Panel } from './ui';
 const W = 188, H = 70, GX = 52, GY = 18, PAD = 12;
 const TITLES: Record<string, string> = { job: 'Ingest job', run: 'Check run', snapshot: 'Snapshot', train: 'Training', model: 'Model and gate' };
 
-function tone(n: LineageNode): string {
+export function tone(n: LineageNode): string {
   const s = n.status;
   if (s === 'champion' || s === 'done' || s === 'complete' || s === 'completed') return '#059669';
   if (s === 'failed' || s === 'rejected') return '#DC2626';
@@ -15,16 +15,21 @@ function tone(n: LineageNode): string {
   return '#64748B';
 }
 
+/** Box positions by column (kind) and row, the canvas size, and the edges whose two ends are both drawn. */
+export function layoutLineage(data: Lineage) {
+  const pos = new Map<string, { x: number; y: number }>();
+  data.columns.forEach((col, ci) => {
+    data.nodes.filter((n) => n.kind === col).forEach((n, ri) => pos.set(n.id, { x: PAD + ci * (W + GX), y: PAD + 22 + ri * (H + GY) }));
+  });
+  const rows = Math.max(1, ...data.columns.map((c) => data.nodes.filter((n) => n.kind === c).length));
+  const edges = data.edges.filter((e) => pos.has(e.from) && pos.has(e.to));
+  return { pos, edges, width: PAD * 2 + data.columns.length * W + (data.columns.length - 1) * GX, height: PAD * 2 + 22 + rows * H + (rows - 1) * GY };
+}
+export const LINEAGE_BOX = { W, H, GX, GY, PAD };
+
 export function LineageGraph({ data, onOpenRun }: { data: Lineage; onOpenRun: (id: number) => void }) {
   const [sel, setSel] = useState<string | null>(null);
-  const layout = useMemo(() => {
-    const pos = new Map<string, { x: number; y: number }>();
-    data.columns.forEach((col, ci) => {
-      data.nodes.filter((n) => n.kind === col).forEach((n, ri) => pos.set(n.id, { x: PAD + ci * (W + GX), y: PAD + 22 + ri * (H + GY) }));
-    });
-    const rows = Math.max(1, ...data.columns.map((c) => data.nodes.filter((n) => n.kind === c).length));
-    return { pos, width: PAD * 2 + data.columns.length * W + (data.columns.length - 1) * GX, height: PAD * 2 + 22 + rows * H + (rows - 1) * GY };
-  }, [data]);
+  const layout = useMemo(() => layoutLineage(data), [data]);
   const node = data.nodes.find((n) => n.id === sel);
   const touching = (id: string) => sel !== null && (id === sel || data.edges.some((e) => (e.from === sel && e.to === id) || (e.to === sel && e.from === id)));
 
