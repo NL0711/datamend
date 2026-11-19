@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterator, Optional
@@ -18,6 +19,8 @@ ASSUMED_OFFSET = timedelta(hours=5, minutes=30)
 ASSUMPTIONS = {
     "time_zone": "Asia/Kolkata (IST, UTC+05:30) ASSUMED: the source does not state it",
     "zero_hours": "the source file lists only non-zero hours: a missing hour is not known to be dry",
+    "time_stamp": "whether the time stamp marks the START or the END of the hour is NOT stated by the source; the code uses the stamp as given, as the "
+                  "instant of the reading (no shift), so a stamp of exactly 03:00 UTC (08:30 IST) falls in the NEXT rain day, i.e. it is treated as the hour's start",
     "units": "mm per hour as the column name says (not otherwise confirmed)",
     "licence": "portal says 'Other (Open)' with no licence name; storing derived flags is unconfirmed",
 }
@@ -28,6 +31,9 @@ TIME_FORMATS = ("%d-%m-%Y %H:%M", "%d-%m-%Y %H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-
 
 class CwcFormatError(ValueError):
     """The file is not a CWC hourly rainfall CSV (a file-level problem: the whole file is rejected)."""
+
+
+FormatError = CwcFormatError          # the name every source module exposes for its own file-level error
 
 
 @dataclass
@@ -42,13 +48,16 @@ class CwcRow:
     observed_at: Optional[datetime]
     value_mm: Optional[float]
     problem: Optional[str] = None           # set when the row cannot be stored; the row is counted and listed, never silently dropped
+    warning: Optional[str] = None           # set when the row IS stored but looks wrong (a negative rainfall); listed, the check flags it
 
 
 def _num(s: Optional[str]) -> Optional[float]:
+    """A finite number, or None. ``nan`` and ``inf`` parse as floats but are not measurements: they are treated as not a number."""
     try:
-        return float(str(s).strip()) if s is not None and str(s).strip() != "" else None
+        v = float(str(s).strip()) if s is not None and str(s).strip() != "" else None
     except ValueError:
         return None
+    return v if v is not None and math.isfinite(v) else None
 
 
 def parse_time(s: str) -> Optional[datetime]:
@@ -88,10 +97,13 @@ def read_rows(path: str) -> Iterator[CwcRow]:
                 if row.observed_at is None:
                     row.problem = f"time not understood: {(r.get(COLUMNS['time']) or '')[:30]!r}"
                 elif row.value_mm is None:
-                    row.problem = f"rainfall not a number: {(r.get(COLUMNS['mm']) or '')[:30]!r}"
+                    row.problem = f"rainfall not a finite number: {(r.get(COLUMNS['mm']) or '')[:30]!r}"
+                elif row.value_mm < 0:
+                    row.warning = f"negative rainfall {row.value_mm:g} mm (stored as read; the impossible-value check flags it)"
             yield row
 
 
 def station_record(row: CwcRow) -> Dict[str, Any]:
-    return {"station_key": row.station_key, "source": SOURCE, "name": row.name, "state": row.state, "district": row.district,
-            "latitude": row.latitude, "longitude": row.longitude}
+    """Metadata cut to the column widths (name 128, state 64, district 64) so PostgreSQL cannot fail mid-file on a long value."""
+    return {"station_key": row.station_key, "source": SOURCE, "name": row.name[:128], "state": row.state[:64] if row.state else None,
+            "district": row.district[:64] if row.district else None, "latitude": row.latitude, "longitude": row.longitude}

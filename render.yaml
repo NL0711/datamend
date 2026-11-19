@@ -7,7 +7,7 @@ services:
     dockerfilePath: ./Dockerfile.backend
     dockerContext: .
     plan: free                # 512 MB RAM; measured ~305 MiB idle locally. No persistent disk on free: SQLite resets on every restart/redeploy/spin-down.
-    healthCheckPath: /docs
+    healthCheckPath: /           # /docs is behind the sign-in when REQUIRE_LOGIN is on; / always answers (status only when signed out)
     envVars:
       - key: ENVIRONMENT
         value: production     # the server logs a warning at start-up while this is set and ADMIN_PASSWORD is still the public default

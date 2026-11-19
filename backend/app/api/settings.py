@@ -13,7 +13,7 @@ from collections import deque
 from typing import Any, Deque, Dict, List, Literal, Optional
 
 import httpx
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from backend.app import runtime_settings as rs
@@ -26,8 +26,8 @@ from backend.app.rainfall.weather_union import BudgetExhausted, CallBudget, Weat
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
-_failures: Deque[float] = deque()
-MAX_FAILURES, WINDOW_S = 10, 300.0
+_failures = auth_api._token_failures             # the SAME limiter the login middleware uses for wrong tokens, per client address
+MAX_FAILURES, WINDOW_S = auth_api.TOKEN_MAX_FAILURES, auth_api.WINDOW_S
 _TEST_TRANSPORT: Optional[httpx.AsyncBaseTransport] = None      # tests inject a mocked transport; never set in production
 
 
@@ -35,20 +35,18 @@ def editing_enabled() -> bool:
     return bool(settings.ADMIN_TOKEN) or auth_api.login_enabled()
 
 
-def require_admin(x_admin_token: Optional[str] = Header(None)) -> None:
-    """A write needs a signed-in admin session (api/auth.py) or, for scripts, the ADMIN_TOKEN itself."""
+def require_admin(request: Request, x_admin_token: Optional[str] = Header(None)) -> None:
+    """A write needs a signed-in admin session (api/auth.py) or, for scripts, the ADMIN_TOKEN itself. Wrong tokens are limited per client address."""
     if not editing_enabled():
         raise HTTPException(status.HTTP_403_FORBIDDEN, "editing is disabled: set ADMIN_PASSWORD (or ADMIN_TOKEN) on the server and restart")
     if auth_api.session_valid(x_admin_token):
         return
-    now = time.monotonic()
-    while _failures and now - _failures[0] > WINDOW_S:
-        _failures.popleft()
-    if len(_failures) >= MAX_FAILURES:
+    client = auth_api.client_key(request)
+    if auth_api.too_many(_failures, client, MAX_FAILURES):
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "too many wrong tokens; wait a few minutes")
     if settings.ADMIN_TOKEN and x_admin_token and hmac.compare_digest(x_admin_token.encode(), settings.ADMIN_TOKEN.encode()):
         return
-    _failures.append(now)
+    auth_api.record_failure(_failures, client)
     raise HTTPException(status.HTTP_401_UNAUTHORIZED, "sign in as admin first (the session is missing or has expired)")
 
 

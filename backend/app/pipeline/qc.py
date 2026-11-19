@@ -17,13 +17,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.config import settings as app_settings
 from backend.app.pipeline import cwc
 from backend.app.pipeline.models import IngestJob, Observation, PipelineStation
-from backend.app.rainfall.daily import rain_day
+from backend.app.rainfall.daily import rain_day, rain_day_bounds
 from backend.app.validation import checks
 from backend.app.validation.records import DailyTotal
 from backend.app.validation.models import ValidationRun
 from backend.app.validation.runs import _store_rows, build_report, check_settings, git_commit, prune_runs
 
 import time
+
+
+NEIGHBOUR_NOT_TRUSTED = ("the neighbour checks cannot be trusted on this source: it lists only non-zero hours, so a neighbour with no row is not known to be dry "
+                         "(neighbour votes of 'dry' are missing for most days, and a wet station can look isolated)")
 
 
 def _utc(t: datetime) -> datetime:
@@ -35,9 +39,12 @@ async def daily_totals(session: AsyncSession, source: str, start: Optional[date]
     stations = (await session.execute(select(PipelineStation).where(PipelineStation.source == source).order_by(PipelineStation.station_key))).scalars().all()
     out: List[DailyTotal] = []
     for st in stations:
-        rows = (await session.execute(select(Observation.observed_at, Observation.value_mm)
-                                      .where(Observation.source == source, Observation.station_key == st.station_key)
-                                      .order_by(Observation.observed_at))).all()
+        q = select(Observation.observed_at, Observation.value_mm).where(Observation.source == source, Observation.station_key == st.station_key)
+        if start is not None:                                   # the period filter is done in SQL, on the rain-day bounds
+            q = q.where(Observation.observed_at >= rain_day_bounds(start)[0])
+        if end is not None:
+            q = q.where(Observation.observed_at < rain_day_bounds(end)[1])
+        rows = (await session.execute(q.order_by(Observation.observed_at))).all()
         days: Dict[date, List[float]] = defaultdict(list)
         for t, v in rows:
             d = rain_day(_utc(t))
@@ -60,11 +67,15 @@ async def run_qc(session: AsyncSession, source: str, job: Optional[IngestJob] = 
     if not records:
         raise ValueError("no stored observations to check for this source and period")
     cat = checks.run_checks(records, "daily", None)
+    if source == "cwc":
+        cat.not_run.append({"check": "neighbour", "reason": NEIGHBOUR_NOT_TRUSTED})      # before build_report, so the report carries it too
     report = build_report("daily", records, cat, None)
     st = check_settings("daily", None, None)
     st["pipeline"] = {"source": source, "assumptions": dict(cwc.ASSUMPTIONS) if source == "cwc" else {}, "start": start.isoformat() if start else None,
                       "end": end.isoformat() if end else None, "job_id": job.id if job else None,
                       "roll_up": "rain day 03 UTC to 03 UTC, sum of the reported hours, completeness unknown"}
+    if source == "cwc":                                    # a source that omits zero hours
+        st["pipeline"]["neighbour_checks"] = NEIGHBOUR_NOT_TRUSTED
     days = sorted({r.day for r in records})
     label = f"pipeline {source}: {len({r.station_id for r in records})} stations, {days[0]} to {days[-1]}"
     run = ValidationRun(profile="daily", source="pipeline", label=label, platform_version=app_settings.VERSION, git_commit=git_commit(), settings=st,

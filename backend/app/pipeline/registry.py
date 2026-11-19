@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.pipeline import fusion
 from backend.app.pipeline.models import ModelVersion
 
 REQUIRED = ("recall_at_budget", "false_alarms_per_1000", "protected_extremes_flagged", "false_alarm_budget_per_1000",
@@ -31,7 +32,18 @@ def model_dict(m: ModelVersion) -> Dict[str, Any]:
 
 
 def evaluate_gate(candidate: Dict[str, Any], champion: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    """Pure function: the gate result with one entry per rule. ``passed`` is True only when every rule holds."""
+    """Pure function: the gate result with one entry per rule. ``passed`` is True only when every rule holds. Metrics that are not numbers
+    (hand-registered or Kaggle results) make the gate FAIL with a reason; they never raise."""
+    try:
+        return _evaluate_gate(candidate, champion)
+    except (TypeError, ValueError, AttributeError, KeyError, OverflowError) as e:
+        return {"passed": False, "champion_compared": False,
+                "checks": [{"rule": "metrics_valid", "passed": False, "detail": f"a metric is missing its expected type or is not a number ({type(e).__name__})"}]}
+
+
+def _evaluate_gate(candidate: Dict[str, Any], champion: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    if not isinstance(candidate, dict):
+        raise TypeError("metrics must be an object")
     checks: List[Dict[str, Any]] = []
 
     def add(name: str, ok: bool, detail: str) -> None:
@@ -76,15 +88,17 @@ def _evaluate_label_model(c: Dict[str, Any], champion: Optional[Dict[str, Any]])
         return {"passed": False, "checks": checks, "champion_compared": False, "profile": "label_fusion"}
     base, val, tr = c["baseline"], c["validation"], c["train"]
     add("temporal_split", c.get("temporal_split") is True, "earlier days train, later days validate")
-    add("enough_labels", tr.get("n_fault", 0) >= 20 and tr.get("n_clean", 0) >= 100 and val.get("n_fault", 0) >= 1 and val.get("n_clean", 0) >= 1,
-        f"train {tr.get('n_fault')} faults and {tr.get('n_clean')} clean, validation {val.get('n_fault')} faults and {val.get('n_clean')} clean (needs 20 and 100 to train, 1 of each to judge)")
+    add("enough_labels", tr.get("n_fault", 0) >= fusion.MIN_FAULT and tr.get("n_clean", 0) >= fusion.MIN_CLEAN
+        and val.get("n_fault", 0) >= fusion.MIN_VAL_FAULT and val.get("n_clean", 0) >= fusion.MIN_VAL_CLEAN,
+        f"train {tr.get('n_fault')} faults and {tr.get('n_clean')} clean, validation {val.get('n_fault')} faults and {val.get('n_clean')} clean "
+        f"(needs {fusion.MIN_FAULT} and {fusion.MIN_CLEAN} to train, {fusion.MIN_VAL_FAULT} and {fusion.MIN_VAL_CLEAN} to judge)")
     add("false_alarms_within_budget", c["false_alarms_per_1000"] is not None and float(c["false_alarms_per_1000"]) <= float(c["false_alarm_budget_per_1000"]),
         f"{c['false_alarms_per_1000']} per 1,000 against a budget of {c['false_alarm_budget_per_1000']}")
     add("recall_not_below_rules", c["recall_at_budget"] is not None and base.get("recall_at_budget") is not None and float(c["recall_at_budget"]) >= float(base["recall_at_budget"]),
         f"{c['recall_at_budget']} against the fixed rule weights' {base.get('recall_at_budget')} on the same validation days")
     add("protected_extremes_not_higher", int(c["protected_extremes_flagged"]) <= int(base.get("protected_extremes_flagged", 0)),
         f"{c['protected_extremes_flagged']} genuine extremes flagged against the rules' {base.get('protected_extremes_flagged')}")
-    same = champion is not None and champion.get("snapshot_sha256") == c.get("snapshot_sha256")
+    same = champion is not None and c.get("snapshot_sha256") is not None and champion.get("snapshot_sha256") == c.get("snapshot_sha256")   # None == None is not "same"
     if champion is not None and not same:
         add("champion_not_comparable", True, "the champion was trained and judged on a different snapshot, so the two are not compared; this model is judged against the rules only")
     elif champion is not None:
@@ -93,8 +107,15 @@ def _evaluate_label_model(c: Dict[str, Any], champion: Optional[Dict[str, Any]])
     return {"passed": all(x["passed"] for x in checks), "checks": checks, "champion_compared": bool(same), "profile": "label_fusion"}
 
 
+async def _champions(session: AsyncSession, name: str) -> List[ModelVersion]:
+    """All champions of a name, newest first (there should be one; defensive against two)."""
+    return list((await session.execute(select(ModelVersion).where(ModelVersion.name == name, ModelVersion.alias == "champion")
+                                       .order_by(ModelVersion.id.desc()))).scalars())
+
+
 async def champion(session: AsyncSession, name: str) -> Optional[ModelVersion]:
-    return (await session.execute(select(ModelVersion).where(ModelVersion.name == name, ModelVersion.alias == "champion"))).scalars().first()
+    found = await _champions(session, name)
+    return found[0] if found else None
 
 
 async def register(session: AsyncSession, name: str, version: str, metrics: Dict[str, Any], snapshot_id: Optional[int] = None,
@@ -113,29 +134,40 @@ async def promote(session: AsyncSession, model_id: int) -> ModelVersion:
         raise LookupError("no such model")
     if m.alias != "challenger":
         raise ValueError(f"only a challenger can be promoted (this one is {m.alias})")
-    cur = await champion(session, m.name)
+    champs = await _champions(session, m.name)
+    cur = champs[0] if champs else None
     result = evaluate_gate(m.metrics, cur.metrics if cur else None)
-    m.gate = result
     if result["passed"]:
-        if cur is not None:
-            cur.alias = "archived"
+        for old in champs:                                   # demote ALL existing champions of this name
+            old.alias = "archived"
+        # the history for rollback: which model was champion immediately before this one (gate JSON, no new column)
+        m.gate = {**result, "replaces": cur.id if cur is not None else None}
         m.alias = "champion"
     else:
+        m.gate = result
         m.alias = "rejected"
     await session.commit()
     return m
 
 
 async def rollback(session: AsyncSession, name: str) -> ModelVersion:
-    """Put the most recent archived model back as champion; the current champion is archived. Recorded in the model's notes."""
+    """Put the model that was champion immediately before the current one back as champion; the current champion is archived. Repeating it
+    walks back along the history to the oldest model, then refuses. The order is the ``replaces`` link recorded when each model was promoted
+    (for older rows without the link: the nearest earlier archived model by id)."""
     cur = await champion(session, name)
-    prev = (await session.execute(select(ModelVersion).where(ModelVersion.name == name, ModelVersion.alias == "archived")
-                                  .order_by(ModelVersion.id.desc()))).scalars().first()
-    if prev is None:
-        raise ValueError("no archived model to roll back to")
-    if cur is not None:
-        cur.alias = "archived"
-        cur.notes = ((cur.notes or "") + " | rolled back").strip(" |")
+    if cur is None:
+        raise ValueError("there is no champion to roll back from")
+    prev_id = (cur.gate or {}).get("replaces") if isinstance(cur.gate, dict) else None
+    prev: Optional[ModelVersion] = await session.get(ModelVersion, prev_id) if prev_id is not None else None
+    if prev is None and (not isinstance(cur.gate, dict) or "replaces" not in cur.gate):
+        prev = (await session.execute(select(ModelVersion).where(ModelVersion.name == name, ModelVersion.alias == "archived", ModelVersion.id < cur.id)
+                                      .order_by(ModelVersion.id.desc()))).scalars().first()
+    if prev is None or prev.name != name or prev.alias != "archived":
+        raise ValueError("this is the oldest model; there is nothing earlier to roll back to")
+    cur.alias = "archived"
+    cur.notes = ((cur.notes or "") + " | rolled back").strip(" |")
+    for extra in (await _champions(session, name)):
+        extra.alias = "archived"
     prev.alias = "champion"
     await session.commit()
     return prev

@@ -28,8 +28,12 @@ AUDIT_LABEL_OF = {"ok": "clean", "missed_fault": "fault"}                       
 
 
 async def build(session: AsyncSession, cut: date, exclude_years: Optional[Sequence[int]] = None, allow_test_years: bool = False) -> TrainingSnapshot:
-    years = tuple(exclude_years) if exclude_years is not None else (() if allow_test_years else LOCKED_TEST_YEARS)
-    runs = (await session.execute(select(ValidationRun.id, ValidationRun.settings).where(ValidationRun.source == "pipeline", ValidationRun.status != "failed"))).all()
+    years = tuple(sorted(set(exclude_years))) if exclude_years is not None else (() if allow_test_years else LOCKED_TEST_YEARS)
+    missing_locked = [y for y in LOCKED_TEST_YEARS if y not in years]
+    if missing_locked and not allow_test_years:
+        raise ValueError(f"the locked test years {LOCKED_TEST_YEARS[0]} to {LOCKED_TEST_YEARS[-1]} must all stay excluded; "
+                         f"including {missing_locked} needs allow_test_years=true")
+    runs =(await session.execute(select(ValidationRun.id, ValidationRun.settings).where(ValidationRun.source == "pipeline", ValidationRun.status != "failed"))).all()
     stations = {s.station_key: s for s in (await session.execute(select(PipelineStation))).scalars()}
     rows: List[Dict[str, Any]] = []
     skipped = {"after_cut": 0, "excluded_year": 0, "no_label": 0}
@@ -67,10 +71,17 @@ async def build(session: AsyncSession, cut: date, exclude_years: Optional[Sequen
                          "latitude": st.latitude if st else None, "longitude": st.longitude if st else None,
                          "mm_original": r.mm, "mm_effective": (c.corrected_mm if c is not None else r.mm), "excluded_by_correction": bool(c is not None and c.corrected_mm is None),
                          "verdict": r.verdict, "rule_score": r.rule_score, "checks": sorted(hits), **lab, "label_tier": "real_reviewer"})
+    # the same station-day can be labelled in several runs (a job re-checked): keep ONE row per (station, day), the newest run's label
+    newest: Dict[Any, Dict[str, Any]] = {}
+    for row in sorted(rows, key=lambda x: (x["run_id"], int(x["row_ref"]) if str(x["row_ref"]).isdigit() else 0)):
+        newest[(row["station_id"], row["day"])] = row
+    skipped["duplicate_station_day"] = len(rows) - len(newest)
+    rows = list(newest.values())
+    run_ids_used = {r["run_id"] for r in rows}
     rows.sort(key=lambda x: (x["run_id"], int(x["row_ref"]) if str(x["row_ref"]).isdigit() else 0))
     content = "\n".join(json.dumps(r, sort_keys=True, separators=(",", ":")) for r in rows)
     sha = hashlib.sha256(content.encode("utf-8")).hexdigest()
-    manifest = {"cut_day": cut.isoformat(), "rows": len(rows), "runs": sorted(run_ids_used), "excluded_years": list(years), "test_years_override": bool(allow_test_years and exclude_years is None),
+    manifest = {"cut_day": cut.isoformat(), "rows": len(rows), "runs": sorted(run_ids_used), "excluded_years": list(years), "test_years_override": bool(missing_locked),
                 "skipped": skipped, "label_counts": {k: sum(1 for r in rows if r["label"] == k) for k in sorted({r["label"] for r in rows})},
                 "random_sample_rows": sum(1 for r in rows if r["random_sample"]), "platform_version": app_settings.VERSION,
                 "created_at": datetime.now(timezone.utc).isoformat(),

@@ -11,6 +11,7 @@ import hashlib
 import logging
 import os
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -30,6 +31,8 @@ SOURCES = {"cwc": cwc}
 MAX_BYTES = 300 * 1024 * 1024
 CHUNK_ROWS = 2000
 MAX_BAD_SAMPLES = 50
+MAX_WARN_SAMPLES = 20
+ORPHAN_AGE_SECONDS = 24 * 3600
 UPLOAD_DIR = Path(os.environ.get("PIPELINE_UPLOAD_DIR") or (Path(tempfile.gettempdir()) / "datamend_pipeline_uploads"))
 
 
@@ -83,11 +86,41 @@ async def fail_interrupted_jobs() -> int:
         for j in jobs:
             j.status, j.error, j.finished_at = "failed", "interrupted by a server restart; upload the file again (rows already stored are skipped)", datetime.now(timezone.utc)
         await session.commit()
+        remove_orphan_uploads()
         return len(jobs)
 
 
+def remove_orphan_uploads(max_age_seconds: float = ORPHAN_AGE_SECONDS) -> int:
+    """Delete saved uploads in UPLOAD_DIR older than a day (left by a crash or restart; a running job's file is far younger)."""
+    n, cutoff = 0, time.time() - max_age_seconds
+    try:
+        for p in UPLOAD_DIR.glob("*.csv"):
+            try:
+                if p.is_file() and p.stat().st_mtime < cutoff:
+                    p.unlink(missing_ok=True)
+                    n += 1
+            except OSError:
+                continue
+    except OSError:
+        pass
+    return n
+
+
+STORAGE_ERROR = "the file could not be stored (a database error); rows from earlier chunks may be stored, upload again to continue. Detail is in the server log"
+
+
 async def run_job(job_id: int, path: str) -> None:
-    """Read the saved file and fill the raw store. Uses its own session (it runs after the request has returned). Never raises."""
+    """Read the saved file and fill the raw store. Uses its own session (it runs after the request has returned). Never raises; always
+    removes the saved file."""
+    try:
+        await _run_job(job_id, path)
+    except Exception:
+        logger.exception("ingest job %s crashed outside its error handling", job_id)
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+async def _run_job(job_id: int, path: str) -> None:
     async with async_session_factory() as session:
         job = await session.get(IngestJob, job_id)
         if job is None:
@@ -97,6 +130,7 @@ async def run_job(job_id: int, path: str) -> None:
         mod = SOURCES[job.source]
         seen_stations: set = set()
         bad: List[Dict[str, Any]] = []
+        warns: List[Dict[str, Any]] = []
         n_read = n_bad = 0
         obs: List[Dict[str, Any]] = []
         stn: Dict[str, Dict[str, Any]] = {}
@@ -108,7 +142,7 @@ async def run_job(job_id: int, path: str) -> None:
                 if obs:
                     await insert_observations(session, obs)
                 job.rows_read, job.rows_bad, job.stations = n_read, n_bad, len(seen_stations)
-                job.bad_samples = bad[:MAX_BAD_SAMPLES]
+                job.bad_samples = bad[:MAX_BAD_SAMPLES] + warns
                 await session.commit()
                 obs, stn = [], {}
                 await asyncio.sleep(0)                       # let other requests in between chunks
@@ -120,6 +154,8 @@ async def run_job(job_id: int, path: str) -> None:
                     if len(bad) < MAX_BAD_SAMPLES:
                         bad.append({"row": row.row_number, "problem": row.problem})
                 else:
+                    if row.warning and len(warns) < MAX_WARN_SAMPLES:        # stored rows that look wrong: listed, NOT counted as bad rows
+                        warns.append({"row": row.row_number, "problem": row.warning, "stored": True})
                     seen_stations.add(row.station_key)
                     stn.setdefault(row.station_key, mod.station_record(row))
                     obs.append({"source": job.source, "station_key": row.station_key, "observed_at": row.observed_at,
@@ -134,9 +170,18 @@ async def run_job(job_id: int, path: str) -> None:
         except Exception as exc:                              # a file-level problem (wrong format) or a storage error
             await session.rollback()
             job = await session.get(IngestJob, job_id)
-            job.status, job.error = "failed", str(exc)[:500]
-            job.rows_read, job.rows_bad, job.stations, job.bad_samples = n_read, n_bad, len(seen_stations), bad[:MAX_BAD_SAMPLES]
-            logger.warning("ingest job %s failed: %s", job_id, exc)
+            if isinstance(exc, mod.FormatError):              # the file's own problem: its message is ours and safe to show
+                job.error = str(exc)[:500]
+            else:                                             # a database error carries SQL and parameters: log it, show a fixed message
+                job.error = STORAGE_ERROR
+                logger.exception("ingest job %s failed while storing", job_id)
+            job.status = "failed"
+            job.rows_read, job.rows_bad, job.stations, job.bad_samples = n_read, n_bad, len(seen_stations), bad[:MAX_BAD_SAMPLES] + warns
+            try:                                              # earlier chunks were committed: say how many rows really are stored
+                job.rows_inserted = (await session.execute(select(func.count()).select_from(Observation).where(Observation.job_id == job.id))).scalar_one()
+            except Exception:
+                await session.rollback()
+                job = await session.get(IngestJob, job_id)
+                job.status, job.error = "failed", STORAGE_ERROR
         job.finished_at = datetime.now(timezone.utc)
         await session.commit()
-    Path(path).unlink(missing_ok=True)

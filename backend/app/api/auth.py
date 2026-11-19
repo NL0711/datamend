@@ -23,8 +23,39 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 SESSION_TTL_S = 12 * 3600
 MAX_FAILURES, WINDOW_S = 8, 300.0
+TOKEN_MAX_FAILURES = 10
+_MAX_CLIENTS = 5000
 _sessions: Dict[str, float] = {}
-_failures: Deque[float] = deque()
+_failures: Dict[str, Deque[float]] = {}          # wrong sign-in attempts, per client address
+_token_failures: Dict[str, Deque[float]] = {}    # wrong ADMIN_TOKEN guesses (middleware and require_admin share it), per client address
+
+
+def client_key(request: Request) -> str:
+    """The address of the TCP peer. X-Forwarded-For is deliberately NOT read: any caller can set it, which would let an attacker dodge the limit
+    or lock out someone else's address. Behind a trusted proxy, run uvicorn with --proxy-headers and --forwarded-allow-ips so the peer address is real."""
+    return request.client.host if request.client else "unknown"
+
+
+def too_many(bucket: Dict[str, Deque[float]], key: str, limit: int) -> bool:
+    q = bucket.get(key)
+    if q is None:
+        return False
+    now = time.monotonic()
+    while q and now - q[0] > WINDOW_S:
+        q.popleft()
+    if not q:
+        bucket.pop(key, None)
+    return len(q) >= limit
+
+
+def record_failure(bucket: Dict[str, Deque[float]], key: str) -> None:
+    if len(bucket) >= _MAX_CLIENTS:                  # bounded memory: forget the idle addresses
+        now = time.monotonic()
+        for k in [k for k, q in bucket.items() if not q or now - q[-1] > WINDOW_S]:
+            bucket.pop(k, None)
+        if len(bucket) >= _MAX_CLIENTS:
+            bucket.pop(next(iter(bucket)), None)
+    bucket.setdefault(key, deque()).append(time.monotonic())
 
 
 def login_enabled() -> bool:
@@ -45,16 +76,29 @@ def _same(a: str, b: str) -> bool:
 
 
 _OPEN_PATHS = ("/api/auth/login", "/api/auth/me", "/api/auth/logout")
+_DOC_PATHS = ("/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect")      # the API's description is gated too
+
+
+def gated(path: str) -> bool:
+    return (path.startswith("/api/") and path not in _OPEN_PATHS) or path in _DOC_PATHS
 
 
 async def require_login(request: Request, call_next):
-    """Middleware: with REQUIRE_LOGIN on, every /api request needs a signed-in session (or the ADMIN_TOKEN, for scripts)."""
+    """Middleware: with REQUIRE_LOGIN on, every /api request (and /docs, /redoc, /openapi.json) needs a signed-in session (or the ADMIN_TOKEN, for
+    scripts). Wrong tokens count against the per-client limiter, so the ADMIN_TOKEN cannot be guessed without limit."""
     path = request.url.path
-    if settings.REQUIRE_LOGIN and path.startswith("/api/") and path not in _OPEN_PATHS and request.method != "OPTIONS":
+    if settings.REQUIRE_LOGIN and gated(path) and request.method != "OPTIONS":
         tok = request.headers.get("x-admin-token")
-        ok = session_valid(tok) or bool(settings.ADMIN_TOKEN and tok and _same(tok, settings.ADMIN_TOKEN))
-        if not ok:
-            return JSONResponse({"detail": "sign in to use the dashboard"}, status_code=status.HTTP_401_UNAUTHORIZED)
+        client = client_key(request)
+        if session_valid(tok):
+            return await call_next(request)
+        if too_many(_token_failures, client, TOKEN_MAX_FAILURES):
+            return JSONResponse({"detail": "too many wrong tokens; wait a few minutes"}, status_code=status.HTTP_429_TOO_MANY_REQUESTS)
+        if settings.ADMIN_TOKEN and tok and _same(tok, settings.ADMIN_TOKEN):
+            return await call_next(request)
+        if tok:                                      # a token was offered and it was wrong: that is a guess
+            record_failure(_token_failures, client)
+        return JSONResponse({"detail": "sign in to use the dashboard"}, status_code=status.HTTP_401_UNAUTHORIZED)
     return await call_next(request)
 
 
@@ -64,18 +108,16 @@ class Credentials(BaseModel):
 
 
 @router.post("/login")
-async def login(body: Credentials) -> Dict[str, object]:
+async def login(body: Credentials, request: Request) -> Dict[str, object]:
     if not login_enabled():
         raise HTTPException(status.HTTP_403_FORBIDDEN, "admin sign-in is switched off: set ADMIN_PASSWORD on the server")
-    now = time.monotonic()
-    while _failures and now - _failures[0] > WINDOW_S:
-        _failures.popleft()
-    if len(_failures) >= MAX_FAILURES:
+    client = client_key(request)                                    # per client address: one client cannot lock the admin out for everyone
+    if too_many(_failures, client, MAX_FAILURES):
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "too many wrong attempts; wait a few minutes")
     ok_email = _same(body.email.strip().lower(), settings.ADMIN_EMAIL.strip().lower())
     ok_pw = _same(body.password, settings.ADMIN_PASSWORD)          # both compared, so timing does not reveal which was wrong
     if not (ok_email and ok_pw):
-        _failures.append(now)
+        record_failure(_failures, client)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "the email or password is wrong")
     token = secrets.token_urlsafe(32)
     _sessions[token] = time.time() + SESSION_TTL_S

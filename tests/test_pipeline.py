@@ -199,7 +199,7 @@ async def test_snapshot_respects_the_cut_the_locked_test_years_and_label_rules(a
     assert '"label":"fault"' in data.text and '"label":"clean"' in data.text and "unsure" not in data.text
     early = (await async_client.post("/api/pipeline/snapshots", headers=H, json={"cut_day": "2026-05-15"})).json()          # nothing after the cut
     assert early["n_rows"] < snap["n_rows"] and early["manifest"]["skipped"]["after_cut"] > 0
-    locked = (await async_client.post("/api/pipeline/snapshots", headers=H, json={"cut_day": "2026-12-31", "exclude_years": [2026]})).json()
+    locked = (await async_client.post("/api/pipeline/snapshots", headers=H, json={"cut_day": "2026-12-31", "exclude_years": list(range(2018, 2027))})).json()
     assert locked["n_rows"] == 0 and locked["manifest"]["skipped"]["excluded_year"] > 0                                        # an excluded year is left out
 
 
