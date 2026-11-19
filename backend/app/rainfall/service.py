@@ -9,17 +9,19 @@ import json
 import logging
 import math
 from collections import deque
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Any, Deque, Dict, List, Optional, Sequence
+from typing import Any, Awaitable, Callable, Deque, Dict, List, Optional, Sequence
 
 import httpx
 
 from backend.app.rainfall.catalog import Station, load_catalog, neighbours as catalog_neighbours
 from backend.app.rainfall.daily import DailyAccumulator, rain_day
-from backend.app.rainfall.scorer import score_reading
 from backend.app.rainfall.weather_union import BudgetExhausted, CallBudget, RainObservation, WeatherUnionClient
 from backend.app.geo import haversine_distance_km
+from backend.app.validation.adapters import reading_from_observation
+from backend.app.validation.checks import run_reading_checks
+from backend.app.validation.records import Reading
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +62,7 @@ class RainfallService:
         self.last_poll_at: Optional[datetime] = None
         self._task: Optional[asyncio.Task] = None
         self._catalog = {s.locality_id: s for s in stations}
+        self.on_poll: Optional[Callable[["RainfallService"], Awaitable[None]]] = None   # called after every poll cycle (live run refresh)
 
     # -- polling ---------------------------------------------------------------------------------------------------
     def _log_raw(self, obs: RainObservation) -> None:
@@ -103,6 +106,13 @@ class RainfallService:
             except Exception as e:  # keep the loop alive; the error is shown in the status
                 self.last_error = f"poll failed: {e}"
                 logger.exception("[RAINFALL] poll failed")
+            if self.on_poll is not None:
+                try:
+                    await self.on_poll(self)
+                except asyncio.CancelledError:
+                    raise
+                except Exception:   # a storage problem must not stop polling or be reported as a feed error
+                    logger.exception("[RAINFALL] live run refresh failed")
             await asyncio.sleep(self.interval)
 
     async def start(self) -> None:
@@ -119,13 +129,37 @@ class RainfallService:
         await self.client.aclose()
 
     # -- reporting -------------------------------------------------------------------------------------------------
+    def readings(self, day: Optional[date] = None) -> List[Reading]:
+        """The held history as platform Reading records (source weather_union, time_basis received, units unconfirmed, with the
+        station's catalogue coordinates). With `day`, only readings in that rain day. row_ref is station@time, stable across polls."""
+        out: List[Reading] = []
+        for sid, hist in self.history.items():
+            st = self.stations[sid]
+            for obs in hist:
+                if day is not None and rain_day(obs.observed_at) != day:
+                    continue
+                out.append(reading_from_observation(obs, self.mode, f"{sid}@{obs.observed_at.isoformat()}", st.latitude, st.longitude))
+        return out
+
+    def _quality(self, sid: str) -> Optional[Dict[str, Any]]:
+        """The catalogue's verdict for the station's latest reading, scored with every polled station's history as potential neighbours."""
+        readings = self.readings()
+        mine = [r for r in readings if r.station_id == sid and r.timestamp is not None]
+        if not mine:
+            return None
+        cat = run_reading_checks(readings, self.interval / 60.0, self.buddy_radius_km)
+        last = max(mine, key=lambda r: r.timestamp)
+        res = cat.results[readings.index(last)]
+        n_nb = max((len(h.evidence.get("neighbours", [])) for h in res.hits), default=0)
+        return {"assessment": res.verdict, "score": res.rule_score, "severity": res.severity, "score_kind": "rule score (uncalibrated)",
+                "reasons": [{"check": h.check, "weight": h.weight, "detail": h.reason, "kind": h.kind} for h in res.hits],
+                "neighbours_used": n_nb, "not_run": [n for n in cat.not_run if n.get("station_id") in (None, sid)], "method": cat.method}
+
     def station_report(self, sid: str, now: Optional[datetime] = None) -> Dict[str, Any]:
         st = self.stations[sid]
         hist = list(self.history[sid])
         now = now or datetime.now(timezone.utc)
-        nb = {n.locality_id: list(self.history[n.locality_id])
-              for n in catalog_neighbours(st, self.buddy_radius_km, self._catalog) if n.locality_id in self.history}
-        score = score_reading(hist, nb, self.mode) if hist else None
+        quality = self._quality(sid)
         total = self.acc.total(sid, rain_day(now), now=now)
         last = hist[-1] if hist else None
         return {
@@ -137,8 +171,7 @@ class RainfallService:
             "today": {"rain_day": str(total.day), "rain_day_label": "date the 03-to-03 UTC rain day ends", "total_mm": total.total_mm, "n_readings": total.n_readings,
                       "n_resets": total.n_resets, "max_gap_minutes": total.max_gap_minutes, "complete": total.complete,
                       "mode": total.mode, "units_confirmed": total.units_confirmed},
-            "quality": None if score is None else {"assessment": score.assessment, "score": score.score, "reasons": score.reasons,
-                                                   "neighbours_used": score.n_neighbours_used, "method": score.method},
+            "quality": quality,
         }
 
     def status(self) -> Dict[str, Any]:

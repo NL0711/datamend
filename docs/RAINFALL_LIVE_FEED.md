@@ -29,6 +29,9 @@ and treats a drop as a counter reset; `per_reading` sums the readings. A day is 
 over 60 minutes.
 
 ## Quality score (rules plus neighbour check, NOT a trained model)
+Implemented by the shared check catalogue (`backend/app/validation/checks.py`), the same code that validates uploads. After every poll
+the current rain day is re-scored and stored as the one open live run (`GET /api/validation/runs`, `source: live`); storage is demo
+storage and resets on restart.
 Checks and fixed weights (design choices, not calibrated; there are no labels): negative value 0.95, intensity above 300 (assumed
 mm/h) 0.9, counter jump above 50 mm in one reading 0.7, identical non-zero intensity for 6 readings 0.6, intensity above zero with a
 flat counter 0.5, isolated wet or dry against at least 3 neighbours within 10 km (75 percent agreement) 0.3, counter reset 0.1.

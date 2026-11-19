@@ -28,12 +28,29 @@ def build_service_from_settings() -> Optional[RainfallService]:
                            settings.WEATHER_UNION_RAW_LOG_PATH)
 
 
+async def refresh_live_run_from_service(svc: RainfallService) -> None:
+    """After each poll: re-score the current rain day and store it as the one open live run (spec section 5)."""
+    from datetime import datetime, timezone
+
+    from backend.app.db.database import get_db_context
+    from backend.app.rainfall.daily import rain_day
+    from backend.app.validation.runs import refresh_live_run
+
+    day = rain_day(datetime.now(timezone.utc))
+    readings = svc.readings(day)
+    if not readings:
+        return
+    async with get_db_context() as session:
+        await refresh_live_run(session, readings, day, svc.interval / 60.0, svc.mode)
+
+
 async def start_rainfall_service() -> None:
     global _service
     _service = build_service_from_settings()
     if _service is None:
         logger.info("[RAINFALL] feed disabled (set WEATHER_UNION_API_KEY and WEATHER_UNION_CITY to enable)")
         return
+    _service.on_poll = refresh_live_run_from_service
     await _service.start()
     logger.info("[RAINFALL] polling %d stations every %.0fs", len(_service.stations), _service.interval)
 

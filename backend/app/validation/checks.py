@@ -1,6 +1,6 @@
 """The one check catalogue for rainfall validation (spec section 4).
 
-It merges the checks of the live one-gauge scorer (backend/app/rainfall/scorer.py) and the daily one-station scorer
+It merges the checks of the former live one-gauge scorer (backend/app/rainfall/scorer.py, deleted; see git history) and the daily one-station scorer
 (ml-service/qc/station.py). Each check declares what it needs; a run executes the checks its input satisfies and lists the rest
 as "not run: reason". Nothing is skipped silently.
 
@@ -18,6 +18,7 @@ three bands of it (high >= 0.7, medium >= 0.3, low below 0.3), a design choice.
 from __future__ import annotations
 
 import math
+from bisect import bisect_left
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date
@@ -213,6 +214,7 @@ def run_reading_checks(readings: Sequence[Reading], interval_minutes: Optional[f
             if r.accumulation is not None:
                 last = r
 
+    epoch: Dict[str, List[float]] = {sid: [x.timestamp.timestamp() for x in lst] for sid, lst in by_station.items()}  # type: ignore[union-attr]
     coords = _coords(readings)
     nmap = _neighbour_map(coords, radius_km)
     not_run: List[Dict[str, str]] = []
@@ -277,7 +279,7 @@ def run_reading_checks(readings: Sequence[Reading], interval_minutes: Optional[f
                     votes: List[Tuple[str, bool]] = []
                     dist: Dict[str, float] = {}
                     for nid in nmap[sid]:
-                        near = _nearest(by_station.get(nid, []), r, align)
+                        near = _nearest(by_station.get(nid, []), epoch[nid], r, align)
                         if near is not None:
                             votes.append((nid, wet[id(near)]))
                             dist[nid] = haversine_distance_km(la, lo, coords[nid][0], coords[nid][1])  # type: ignore[arg-type]
@@ -300,12 +302,16 @@ def run_reading_checks(readings: Sequence[Reading], interval_minutes: Optional[f
     return CatalogueResult("reading", out, not_run)
 
 
-def _nearest(series: Sequence[Reading], ref: Reading, align_minutes: float) -> Optional[Reading]:
+def _nearest(series: Sequence[Reading], times: Sequence[float], ref: Reading, align_minutes: float) -> Optional[Reading]:
+    """The reading of `series` (sorted; `times` are its epoch seconds) closest in time to `ref`, within align_minutes. O(log n)."""
+    t = ref.timestamp.timestamp()  # type: ignore[union-attr]
+    i = bisect_left(times, t)
     best, best_d = None, None
-    for x in series:
-        d = abs((x.timestamp - ref.timestamp).total_seconds()) / 60.0  # type: ignore[operator]
-        if d <= align_minutes and (best_d is None or d < best_d):
-            best, best_d = x, d
+    for j in (i - 1, i):
+        if 0 <= j < len(times):
+            d = abs(times[j] - t) / 60.0
+            if d <= align_minutes and (best_d is None or d < best_d):
+                best, best_d = series[j], d
     return best
 
 
