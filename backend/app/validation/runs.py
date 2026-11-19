@@ -26,7 +26,7 @@ from backend.app.places.grid import GridError
 from backend.app.places.lookup import locate
 from backend.app.validation import checks
 from backend.app.validation.ingest import InputRejected, ParsedInput, UploadOptions, parse_upload
-from backend.app.validation.models import Explanation, ValidationCheckHit, ValidationResult, ValidationRun
+from backend.app.validation.models import Explanation, Review, ValidationCheckHit, ValidationResult, ValidationRun
 from backend.app.validation.records import DailyTotal, Reading
 
 RUN_CAP = 50
@@ -176,6 +176,7 @@ async def prune_runs(session: AsyncSession, cap: int = RUN_CAP) -> int:
 async def _delete_runs(session: AsyncSession, ids: List[int]) -> None:
     if not ids:
         return
+    await session.execute(delete(Review).where(Review.run_id.in_(ids)))
     await session.execute(delete(Explanation).where(Explanation.run_id.in_(ids)))
     await session.execute(delete(ValidationCheckHit).where(ValidationCheckHit.run_id.in_(ids)))
     await session.execute(delete(ValidationResult).where(ValidationResult.run_id.in_(ids)))
@@ -276,9 +277,11 @@ async def get_run(session: AsyncSession, run_id: int) -> Optional[ValidationRun]
 
 
 async def rows_page(session: AsyncSession, run_id: int, page: int = 1, page_size: int = PAGE_SIZE, verdict: Optional[str] = None,
-                    check: Optional[str] = None, station: Optional[str] = None, flagged_only: bool = True) -> Dict[str, Any]:
-    """Server-side page of rows sorted by rule score (highest first). Flagged = verdict SUSPECT or UNCERTAIN unless a verdict is named.
-    Evidence is NOT included; GET one row for it."""
+                    check: Optional[str] = None, station: Optional[str] = None, flagged_only: bool = True, sort: str = "score",
+                    time_from: Optional[str] = None, time_to: Optional[str] = None) -> Dict[str, Any]:
+    """Server-side page of rows, by default sorted by rule score (highest first) and limited to flagged rows (SUSPECT or UNCERTAIN)
+    unless a verdict is named or flagged_only is False (the Data Explorer asks for every row, sorted by time). time_from and time_to are
+    ISO date or timestamp prefixes compared as text. Evidence is NOT included; GET one row for it."""
     page_size = max(1, min(page_size, PAGE_SIZE))
     page = max(1, page)
     q = select(ValidationResult).where(ValidationResult.run_id == run_id)
@@ -288,10 +291,16 @@ async def rows_page(session: AsyncSession, run_id: int, page: int = 1, page_size
         q = q.where(ValidationResult.verdict.in_(("SUSPECT", "UNCERTAIN")))
     if station:
         q = q.where(ValidationResult.station_id == station)
+    if time_from:
+        q = q.where(ValidationResult.time_key >= time_from)
+    if time_to:
+        q = q.where(ValidationResult.time_key <= time_to + "￿")      # a date prefix includes the whole day
     if check:
         q = q.where(ValidationResult.id.in_(select(ValidationCheckHit.result_id).where(ValidationCheckHit.run_id == run_id, ValidationCheckHit.check == check)))
     total = (await session.execute(select(func.count()).select_from(q.subquery()))).scalar_one()
-    rows = (await session.execute(q.order_by(ValidationResult.rule_score.desc(), ValidationResult.position).limit(page_size).offset((page - 1) * page_size))).scalars().all()
+    order = (ValidationResult.station_id, ValidationResult.time_key, ValidationResult.position) if sort == "time" \
+        else (ValidationResult.rule_score.desc(), ValidationResult.position)
+    rows = (await session.execute(q.order_by(*order).limit(page_size).offset((page - 1) * page_size))).scalars().all()
     names: Dict[int, List[str]] = defaultdict(list)
     if rows:
         for rid, name in (await session.execute(select(ValidationCheckHit.result_id, ValidationCheckHit.check).where(
@@ -299,7 +308,28 @@ async def rows_page(session: AsyncSession, run_id: int, page: int = 1, page_size
             names[rid].append(name)
     return {"page": page, "page_size": page_size, "total": total, "pages": (total + page_size - 1) // page_size,
             "rows": [{"id": r.id, "row_ref": r.row_ref, "station_id": r.station_id, "time": r.time_key, "verdict": r.verdict,
-                      "rule_score": r.rule_score, "severity": r.severity, "checks": names.get(r.id, [])} for r in rows]}
+                      "rule_score": r.rule_score, "severity": r.severity, "checks": names.get(r.id, []),
+                      "intensity": r.intensity, "accumulation": r.accumulation, "mm": r.mm} for r in rows]}
+
+
+async def row_context(session: AsyncSession, run_id: int, row: ValidationResult, before: int = 6, after: int = 6) -> Dict[str, Any]:
+    """The rows of the same station just before and after one row, in time order (event forensics): the original values, the verdict
+    and the checks that fired, so a flag can be read against what the gauge did around it."""
+    before, after = max(0, min(before, 24)), max(0, min(after, 24))
+    base = select(ValidationResult).where(ValidationResult.run_id == run_id, ValidationResult.station_id == row.station_id,
+                                          ValidationResult.time_key.is_not(None))
+    prev = (await session.execute(base.where(ValidationResult.time_key < row.time_key).order_by(ValidationResult.time_key.desc()).limit(before))).scalars().all() \
+        if row.time_key and before else []
+    nxt = (await session.execute(base.where(ValidationResult.time_key > row.time_key).order_by(ValidationResult.time_key).limit(after))).scalars().all() \
+        if row.time_key and after else []
+    seq = list(reversed(prev)) + [row] + list(nxt)
+    names: Dict[int, List[str]] = defaultdict(list)
+    for rid, name in (await session.execute(select(ValidationCheckHit.result_id, ValidationCheckHit.check).where(
+            ValidationCheckHit.result_id.in_([r.id for r in seq])))).all():
+        names[rid].append(name)
+    return {"station_id": row.station_id, "selected_id": row.id,
+            "rows": [{"id": r.id, "row_ref": r.row_ref, "time": r.time_key, "intensity": r.intensity, "accumulation": r.accumulation, "mm": r.mm,
+                      "verdict": r.verdict, "rule_score": r.rule_score, "checks": names.get(r.id, [])} for r in seq]}
 
 
 async def row_evidence(session: AsyncSession, run_id: int, result_id: int) -> Optional[Dict[str, Any]]:
@@ -348,14 +378,26 @@ async def series(session: AsyncSession, run_id: int, station: str, max_points: i
 
 # ------------------------------------------------------------------------------------------------ exports
 
+async def _latest_reviews(session: AsyncSession, run_id: int) -> Dict[str, Review]:
+    out: Dict[str, Review] = {}
+    for r in (await session.execute(select(Review).where(Review.run_id == run_id).order_by(Review.id))).scalars():
+        out[r.row_ref] = r                                              # ascending id: the newest wins
+    return out
+
+
 async def export_json(session: AsyncSession, run: ValidationRun) -> Dict[str, Any]:
     rows = (await session.execute(select(ValidationResult).where(ValidationResult.run_id == run.id).order_by(ValidationResult.position))).scalars().all()
     hits: Dict[int, List[ValidationCheckHit]] = defaultdict(list)
     for h in (await session.execute(select(ValidationCheckHit).where(ValidationCheckHit.run_id == run.id))).scalars():
         hits[h.result_id].append(h)
+    reviews = await _latest_reviews(session, run.id)
     return {"run": run_dict(run, full=True), "export_note": "full run record; the durable copy (server storage resets on restart)",
+            "review_note": "reviewer decisions are one person's judgement on the rows they reviewed; not ground truth",
             "rows": [{"row_ref": r.row_ref, "station_id": r.station_id, "time": r.time_key, "original_row": r.original_row,
                       "input_issues": r.issues, "verdict": r.verdict, "rule_score": r.rule_score, "severity": r.severity,
+                      "review": ({"decision": reviews[r.row_ref].decision, "note": reviews[r.row_ref].note, "reviewer": reviews[r.row_ref].reviewer,
+                                  "at": reviews[r.row_ref].created_at.isoformat() if reviews[r.row_ref].created_at else None}
+                                 if r.row_ref in reviews else None),
                       "hits": [{"check": h.check, "layer": h.layer, "kind": h.kind, "weight": h.weight, "reason": h.reason, "evidence": h.evidence}
                                for h in hits.get(r.id, [])]} for r in rows]}
 
@@ -385,12 +427,14 @@ async def export_csv(session: AsyncSession, run: ValidationRun) -> str:
         for k in r.original_row:
             if k not in cols:
                 cols.append(k)
-    extra = ["verdict", "rule_score", "severity", "fired_checks", "input_issues"]
+    extra = ["verdict", "rule_score", "severity", "fired_checks", "input_issues", "review_decision"]
     extra = [e if e not in cols else f"validation_{e}" for e in extra]
+    reviews = await _latest_reviews(session, run.id)
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\n")
     w.writerow(cols + extra)
     for r in rows:
         w.writerow([_csv_cell(r.original_row.get(c, "")) for c in cols] + [r.verdict, r.rule_score, r.severity or "", ";".join(names.get(r.id, [])),
-                                                                 ";".join(i["code"] for i in r.issues)])
+                                                                 ";".join(i["code"] for i in r.issues),
+                                                                 reviews[r.row_ref].decision if r.row_ref in reviews else ""])
     return buf.getvalue()

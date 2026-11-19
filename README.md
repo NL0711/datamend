@@ -12,7 +12,7 @@
 | Path | What |
 |---|---|
 | `backend/` | FastAPI backend. `app/validation` (input contract, check catalogue, runs, evidence, explainers), `app/rainfall` (live Weather Union feed), `app/places` (stateless place lookup), `app/api` (routes). |
-| `frontend/` | React + Vite dashboard: Runs, Run view, Live gauge feed, Settings. |
+| `frontend/` | React + Vite dashboard: Overview, Runs, Run view, Data explorer, Review queue (the admin review loop), Anomaly lab (synthetic faults), Locations, Live gauge feed, Settings. |
 | `ml-service/` | The optional model system (`ml-service/qc`) and its training code. See `ml-service/README.md`. Imports nothing from `backend/`. |
 | `data/samples/` | Two small **synthetic** uploads with injected faults (made by `scripts/make_synthetic_sample.py`). |
 | `docs/contracts/` | The `evidence-v1` JSON Schema with an example, and the proposed narrator request and response (awaiting the AI team's confirmation). |

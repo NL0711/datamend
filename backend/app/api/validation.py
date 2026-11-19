@@ -11,13 +11,15 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Respon
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.api.settings import require_admin
 from backend.app.db.database import get_db
-from backend.app.validation import narrate
+from backend.app.validation import lab, narrate, overview as overview_svc, review as review_svc
 from backend.app.validation import runs as svc
 from backend.app.validation.explain import NarratorRateLimited, NarratorUnavailable
 from backend.app.validation.ingest import MAX_BYTES, InputRejected, UploadOptions
 
 router = APIRouter(prefix="/api/validation", tags=["validation"])
+_TIME = r"^\d{4}-\d{2}-\d{2}([T ][0-9:.+Z-]*)?$"          # an ISO date or timestamp (compared as text)
 
 
 async def _run_or_404(session: AsyncSession, run_id: int):
@@ -63,10 +65,23 @@ async def get_run(run_id: int, session: AsyncSession = Depends(get_db)) -> Dict[
 
 @router.get("/runs/{run_id}/rows")
 async def get_rows(run_id: int, page: int = Query(1, ge=1), page_size: int = Query(svc.PAGE_SIZE, ge=1, le=svc.PAGE_SIZE),
-                   verdict: Optional[str] = Query(None, pattern="^(OK|SUSPECT|UNCERTAIN|NO_DATA)$"), check: Optional[str] = None,
-                   station: Optional[str] = None, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+                   verdict: Optional[str] = Query(None, pattern="^(OK|SUSPECT|UNCERTAIN|NO_DATA)$"), check: Optional[str] = Query(None, max_length=48),
+                   station: Optional[str] = Query(None, max_length=64), scope: Literal["flagged", "all"] = "flagged",
+                   sort: Literal["score", "time"] = "score", time_from: Optional[str] = Query(None, pattern=_TIME, max_length=40),
+                   time_to: Optional[str] = Query(None, pattern=_TIME, max_length=40), session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """Pages of rows. Default: flagged rows by rule score. scope=all and sort=time give the Data Explorer every row in time order."""
     await _run_or_404(session, run_id)
-    return await svc.rows_page(session, run_id, page, page_size, verdict, check, station)
+    return await svc.rows_page(session, run_id, page, page_size, verdict, check, station, flagged_only=(scope == "flagged"), sort=sort,
+                               time_from=time_from, time_to=time_to)
+
+
+@router.get("/runs/{run_id}/rows/{result_id}/context")
+async def get_context(run_id: int, result_id: int, before: int = Query(6, ge=0, le=24), after: int = Query(6, ge=0, le=24),
+                      session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """Event forensics: the same station's rows just before and after this one."""
+    await _run_or_404(session, run_id)
+    row = await _row_or_404(session, run_id, result_id)
+    return await svc.row_context(session, run_id, row, before, after)
 
 
 @router.get("/runs/{run_id}/rows/{result_id}")
@@ -83,6 +98,75 @@ async def _row_or_404(session: AsyncSession, run_id: int, result_id: int):
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"row {result_id} not in run {run_id}")
     return row
+
+
+@router.get("/overview")
+async def get_overview(session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    return await overview_svc.overview(session)
+
+
+# ---------------------------------------------------------------- the admin review loop
+class ReviewRequest(BaseModel):
+    decision: Literal["confirmed_fault", "false_alarm", "genuine_extreme", "needs_followup"]
+    note: Optional[str] = Field(None, max_length=1000)
+    reviewer: Optional[str] = Field(None, max_length=60)
+
+
+@router.get("/review/queue")
+async def review_queue(page: int = Query(1, ge=1), page_size: int = Query(review_svc.PAGE, ge=1, le=review_svc.PAGE),
+                       status_: Literal["unreviewed", "reviewed", "all"] = Query("unreviewed", alias="status"),
+                       verdict: Optional[Literal["SUSPECT", "UNCERTAIN"]] = None, check: Optional[str] = Query(None, max_length=48),
+                       run_id: Optional[int] = None, synthetic: Optional[bool] = None, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """Flagged rows across every run with their review state, highest rule score first."""
+    return await review_svc.queue(session, page, page_size, status_, verdict, check, run_id, synthetic)
+
+
+@router.get("/review/summary")
+async def review_summary(session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    return await review_svc.summary(session)
+
+
+@router.get("/runs/{run_id}/rows/{result_id}/reviews")
+async def get_reviews(run_id: int, result_id: int, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    await _run_or_404(session, run_id)
+    row = await _row_or_404(session, run_id, result_id)
+    return {"reviews": [review_svc.review_dict(r) for r in await review_svc.reviews_for_row(session, run_id, row.row_ref)], "decisions": list(review_svc.DECISIONS)}
+
+
+@router.post("/runs/{run_id}/rows/{result_id}/review", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
+async def post_review(run_id: int, result_id: int, body: ReviewRequest, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """Record a reviewer's decision on a flagged row (admin token required). It never changes the verdict, score or evidence."""
+    await _run_or_404(session, run_id)
+    row = await _row_or_404(session, run_id, result_id)
+    try:
+        rev = await review_svc.add_review(session, row, body.decision, body.note, body.reviewer)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
+    return review_svc.review_dict(rev)
+
+
+# ---------------------------------------------------------------- Anomaly Lab (synthetic)
+class LabRequest(BaseModel):
+    profile: Literal["reading", "daily"] = "reading"
+    n_stations: int = Field(6, ge=lab.STATIONS[0], le=lab.STATIONS[1])
+    length: int = Field(144, ge=30, le=288)
+    faults: List[str] = Field(default_factory=list, max_length=8)
+    seed: int = Field(1, ge=0, le=2 ** 31 - 1)
+
+
+@router.get("/lab/options")
+async def lab_options() -> Dict[str, Any]:
+    return {"label": "SYNTHETIC", "faults": {p: list(f) for p, f in lab.FAULTS.items()}, "expected_check": lab.EXPECTED_CHECK,
+            "stations": list(lab.STATIONS), "length": {p: list(v) for p, v in lab.LENGTH.items()}}
+
+
+@router.post("/lab/generate", status_code=status.HTTP_201_CREATED)
+async def lab_generate(body: LabRequest, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """Generate a synthetic upload with injected faults, validate it through the real pipeline as a SYNTHETIC run, and say what was caught."""
+    try:
+        return await lab.run_lab(session, body.profile, body.n_stations, body.length, body.faults, body.seed)
+    except lab.LabError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
 
 
 @router.get("/narrator")

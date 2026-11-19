@@ -41,7 +41,7 @@ Layered and explainable: deterministic checks, statistics, an optional trained s
 | Explainer | One interface, two implementations (baseline, narrator) | t04 |
 | Place lookup | Stateless `locate(lat, lon)` in `backend/app/places`: RF25 cell, land/sea, client region | t09 |
 | API | Read-only evidence endpoints; one write (store an explanation) | t04 |
-| Dashboard | Four rail items, layout D | t06 |
+| Dashboard | Layout D; four rail items plus five views brought back (section 7) | t06 |
 
 **Rules that bind every slice**
 - Raw data is never overwritten. A corrected value, if ever added, is stored separately.
@@ -115,7 +115,17 @@ At real size: 50 flagged rows per page from the server, sorted by rule score, fi
 
 Always on screen: the original row untouched, evidence with basis tags, the baseline explanation marked generated, the narrator slot marked NOT IMPLEMENTED until delivered, synthetic data labelled synthetic.
 
-Dropped: Command Center, Live Telemetry, Alert Center, Sensor Health, Event Forensics, Data Explorer, Anomaly Lab, XAI Reasoner, Locations. The prototype variants stay on `prototype/validation-dashboard` as a source; only layout D is rebuilt (slice 7).
+Dropped at first: Command Center, Live Telemetry, Alert Center, Sensor Health, Event Forensics, Data Explorer, Anomaly Lab, XAI Reasoner, Locations. The prototype variants stay on `prototype/validation-dashboard` as a source; only layout D is rebuilt (slice 7).
+
+**Amendment (owner request, 2026-11-19): views brought back, rebuilt for rainfall.** The rail now has nine items: the four above plus
+- **Overview** (was Command Center): runs, rows (uploaded or live and synthetic counted apart), verdict shares, checks that fired, latest run, live feed and narrator state. Counts of stored rows only; no grade.
+- **Data explorer**: every row of a run in time order, one station at a time, 50 per page from the server, filtered by verdict, check and time window; opens the evidence.
+- **Review queue** (the admin review loop, was Alert Center triage and operator feedback): flagged rows across all runs by rule score; a reviewer records `confirmed_fault`, `false_alarm`, `genuine_extreme` or `needs_followup` with a note. Reviews are stored apart from the evidence, never change a verdict, score or evidence, key on (run, `row_ref`) so they survive live re-scoring, appear in the exports, and need the admin token to write (there are no accounts; `reviewer` is a free-text label). The summary counts decisions per check and states that they are one person's judgement on the rows chosen for review: **not ground truth, not precision or recall**.
+- **Event forensics**, inside the decision pane: the same station's readings before and after the selected row.
+- **Anomaly lab** (was the injector): generates a SYNTHETIC upload with faults injected at known places (seeded, reproducible), validates it through the real pipeline, and reports whether each injected fault was flagged by the check it targets. It shows that each check fires on a clean case; it is not an accuracy measurement.
+- **Locations**: the stateless place lookup and the published Weather Union gauge catalogue with each gauge's RF25 cell. No weather, no model product.
+
+Still out: Sensor Health (hardware health trends and degradation prediction), alerting and notifications, and the XAI Reasoner as a separate page (explanations and the chat live in the decision pane).
 
 ## 8. Evaluation and demo (t07)
 

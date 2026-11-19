@@ -1,7 +1,8 @@
 // Typed client of /api/validation and /api/rainfall. Errors carry the server's plain-language reason.
 import type {
-  Evidence, ExplanationItem, FeedStation, FeedStatus, FeedTestResult, NarratorStatus, RowDetail, RowsPage, RunFull, RunSummary, Series,
-  SettingsState, SettingsUpdate,
+  Decision, Evidence, ExplanationItem, ExplorerPage, FeedStation, FeedStatus, FeedTestResult, LabOptions, LabResult, NarratorStatus,
+  Overview, PlaceInfo, GaugeStation, Profile, QueuePage, ReviewItem, ReviewSummary, RowContext, RowDetail, RowsPage, RunFull, RunSummary,
+  Series, SettingsState, SettingsUpdate,
 } from './types';
 
 const V = '/api/validation';
@@ -46,6 +47,28 @@ export const getNarrator = () => get<NarratorStatus>(`${V}/narrator`);
 export const getChat = (id: number) => get<{ messages: ExplanationItem[] }>(`${V}/runs/${id}/chat`);
 export const sendChat = (id: number, message: string, rowId?: number) =>
   post<ExplanationItem>(`${V}/runs/${id}/chat`, { message, row_id: rowId ?? null });
+
+export const getOverview = () => get<Overview>(`${V}/overview`);
+export const getExplorer = (id: number, query: string) => get<ExplorerPage>(`${V}/runs/${id}/rows?${query}`);
+export const getContext = (id: number, rowId: number) => get<RowContext>(`${V}/runs/${id}/rows/${rowId}/context?before=6&after=6`);
+export const getQueue = (query: string) => get<QueuePage>(`${V}/review/queue?${query}`);
+export const getReviewSummary = () => get<ReviewSummary>(`${V}/review/summary`);
+export const getReviews = (id: number, rowId: number) => get<{ reviews: ReviewItem[]; decisions: Decision[] }>(`${V}/runs/${id}/rows/${rowId}/reviews`);
+export const getLabOptions = () => get<LabOptions>(`${V}/lab/options`);
+export const locate = (lat: number, lon: number) => get<PlaceInfo>(`/api/places/locate?lat=${lat}&lon=${lon}`);
+export const getGauges = (city?: string) =>
+  get<{ cities: string[]; count: number; shown: number; stations: GaugeStation[] }>(`/api/places/stations${city ? `?city=${encodeURIComponent(city)}` : ''}`);
+
+/** The admin token is kept for this browser tab only (sessionStorage). Reviews and Settings need it; reading never does. */
+export const ADMIN_TOKEN_KEY = 'datamend-admin-token';
+export const storedToken = () => sessionStorage.getItem(ADMIN_TOKEN_KEY) ?? '';
+export const rememberToken = (v: string) => sessionStorage.setItem(ADMIN_TOKEN_KEY, v);
+
+export const postReview = (id: number, rowId: number, body: { decision: Decision; note?: string; reviewer?: string }, token: string) =>
+  fetch(`${V}/runs/${id}/rows/${rowId}/review`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token }, body: JSON.stringify(body) })
+    .then((r) => json<ReviewItem>(r));
+
+export const generateLab = (body: { profile: Profile; n_stations: number; length: number; faults: string[]; seed: number }) => post<LabResult>(`${V}/lab/generate`, body);
 
 export const getSettings = () => get<SettingsState>('/api/settings');
 

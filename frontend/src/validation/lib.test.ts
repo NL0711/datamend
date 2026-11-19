@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, getFeed, getRows, saveSettings, sendChat, uploadRun } from './api';
-import { PAGE_SIZE, asPlainText, buildLanes, buildSettingsUpdate, chartData, completenessText, lanePosition, markerY, pct, rowsQuery } from './lib';
+import { ADMIN_TOKEN_KEY, ApiError, generateLab, getExplorer, getFeed, getQueue, getRows, postReview, rememberToken, saveSettings, sendChat, storedToken, uploadRun } from './api';
+import { ALL_CHECKS, DECISION_LABEL, PAGE_SIZE, asPlainText, buildLanes, buildSettingsUpdate, chartData, completenessText, explorerQuery, lanePosition, markerY, pct, queueQuery, rowsQuery } from './lib';
 import type { SeriesPoint, SettingsState } from './types';
 
 const pt = (id: number, time: string, over: Partial<SeriesPoint> = {}): SeriesPoint => ({
@@ -59,6 +59,27 @@ describe('timeline helpers', () => {
   });
 });
 
+describe('explorer and review queries', () => {
+  it('asks for every row in time order, 50 per page, with only the filters that are set', () => {
+    expect(explorerQuery({ page: 1 })).toBe('scope=all&sort=time&page=1&page_size=50');
+    expect(explorerQuery({ page: 2, station: 'A', verdict: 'OK', check: 'counter_jump', from: '2026-07-01', to: '2026-07-31' }))
+      .toBe('scope=all&sort=time&page=2&page_size=50&station=A&verdict=OK&check=counter_jump&time_from=2026-07-01&time_to=2026-07-31');
+    expect(explorerQuery({ page: 0, verdict: 'ALL', station: '' })).toBe('scope=all&sort=time&page=1&page_size=50');
+  });
+  it('builds the review queue query: unreviewed by default, data filter mapped to the synthetic flag', () => {
+    expect(queueQuery({ page: 1, status: 'unreviewed' })).toBe('status=unreviewed&page=1&page_size=50');
+    expect(queueQuery({ page: 3, status: 'all', verdict: 'SUSPECT', check: 'frozen_intensity', runId: 7, synthetic: 'synthetic' }))
+      .toBe('status=all&page=3&page_size=50&verdict=SUSPECT&check=frozen_intensity&run_id=7&synthetic=true');
+    expect(queueQuery({ page: 1, status: 'reviewed', synthetic: 'real' })).toContain('synthetic=false');
+    expect(queueQuery({ page: 1, status: 'reviewed', synthetic: 'all' })).not.toContain('synthetic');
+  });
+  it('labels every decision and lists every check once', () => {
+    expect(Object.keys(DECISION_LABEL).sort()).toEqual(['confirmed_fault', 'false_alarm', 'genuine_extreme', 'needs_followup']);
+    expect(new Set(ALL_CHECKS).size).toBe(ALL_CHECKS.length);
+    expect(ALL_CHECKS).toContain('neighbour_isolated_wet');
+  });
+});
+
 describe('settings update', () => {
   const current = {
     editing_enabled: true, cities: ['Mumbai', 'Pune'], accumulation_modes: ['cumulative', 'per_reading'], interval_limits_seconds: [60, 86400],
@@ -110,6 +131,36 @@ describe('api client', () => {
     vi.stubGlobal('fetch', f);
     await getRows(7, rowsQuery({ page: 1, verdict: 'SUSPECT' }));
     expect(f.mock.calls[0][0]).toBe('/api/validation/runs/7/rows?page=1&page_size=50&verdict=SUSPECT');
+  });
+  it('posts a review with the admin token and surfaces a refusal without one', async () => {
+    const f = respond(401, { detail: 'the admin token is missing or wrong' });
+    vi.stubGlobal('fetch', f);
+    await expect(postReview(3, 9, { decision: 'false_alarm', note: 'n' }, '')).rejects.toMatchObject({ status: 401 });
+    const [url, init] = f.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/validation/runs/3/rows/9/review');
+    expect(init.method).toBe('POST');
+    expect((init.headers as Record<string, string>)['X-Admin-Token']).toBe('');
+    expect(JSON.parse(init.body as string)).toEqual({ decision: 'false_alarm', note: 'n' });
+  });
+  it('requests the queue, the explorer page and the lab with the right URLs', async () => {
+    const f = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ rows: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', f);
+    await getQueue(queueQuery({ page: 1, status: 'unreviewed' }));
+    await getExplorer(4, explorerQuery({ page: 1, station: 'A' }));
+    await generateLab({ profile: 'daily', n_stations: 6, length: 60, faults: ['repeated_value'], seed: 5 });
+    expect(f.mock.calls.map((c) => c[0])).toEqual([
+      '/api/validation/review/queue?status=unreviewed&page=1&page_size=50',
+      '/api/validation/runs/4/rows?scope=all&sort=time&page=1&page_size=50&station=A',
+      '/api/validation/lab/generate']);
+    expect(JSON.parse((f.mock.calls[2][1] as RequestInit).body as string)).toEqual({ profile: 'daily', n_stations: 6, length: 60, faults: ['repeated_value'], seed: 5 });
+  });
+  it('keeps the admin token for this tab only', () => {
+    const store: Record<string, string> = {};
+    vi.stubGlobal('sessionStorage', { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; } });
+    expect(storedToken()).toBe('');
+    rememberToken('abc');
+    expect(storedToken()).toBe('abc');
+    expect(store[ADMIN_TOKEN_KEY]).toBe('abc');
   });
   it('sends the admin token as a header and surfaces a refusal', async () => {
     const f = respond(401, { detail: 'the admin token is missing or wrong' });
