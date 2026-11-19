@@ -1,8 +1,9 @@
 """Admin sign-in for the dashboard. One admin account (ADMIN_EMAIL and ADMIN_PASSWORD from the environment, never stored in the database).
 
 A successful sign-in returns a random session token that the dashboard sends as X-Admin-Token, exactly like the older ADMIN_TOKEN, so every
-write endpoint keeps one check (api/settings.py, require_admin). Sessions live in memory: a restart signs everyone out. Reading never needs a
-sign-in. Wrong attempts are rate limited. There are no other accounts and no password reset.
+write endpoint keeps one check (api/settings.py, require_admin). Sessions live in memory: a restart signs everyone out. With REQUIRE_LOGIN on
+(the default) the ``require_login`` middleware below also refuses every other /api route without a session, so nothing is readable signed
+out; only login, me and logout are open. Wrong attempts are rate limited. There are no other accounts and no password reset.
 """
 from __future__ import annotations
 
@@ -83,7 +84,8 @@ async def login(body: Credentials) -> Dict[str, object]:
 
 @router.get("/me")
 async def me(x_admin_token: Optional[str] = Header(None)) -> Dict[str, object]:
-    ok = session_valid(x_admin_token)
+    # a script holding ADMIN_TOKEN is accepted everywhere else, so it counts as signed in here too
+    ok = session_valid(x_admin_token) or bool(settings.ADMIN_TOKEN and x_admin_token and _same(x_admin_token, settings.ADMIN_TOKEN))
     return {"signed_in": ok, "email": settings.ADMIN_EMAIL if ok else None, "login_enabled": login_enabled()}
 
 

@@ -6,6 +6,7 @@ DataMend — FastAPI entrypoint of the rainfall time-series validation platform.
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -33,6 +34,8 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown: create the tables, start the live rain-gauge feed if it is configured."""
     logger.info("Initializing %s v%s database...", settings.PROJECT_NAME, settings.VERSION)
     await init_db()
+    if os.environ.get("ENVIRONMENT", "").lower() == "production" and settings.ADMIN_PASSWORD == "admin":
+        logger.warning("ADMIN_PASSWORD is still the public default 'admin' on a production deployment: anyone can sign in. Set ADMIN_EMAIL and ADMIN_PASSWORD.")
     from backend.app.pipeline.jobs import fail_interrupted_jobs
     try:
         n_cut = await fail_interrupted_jobs()

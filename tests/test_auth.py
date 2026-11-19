@@ -65,6 +65,15 @@ async def test_with_require_login_nothing_can_be_read_without_a_session(async_cl
 
 
 @pytest.mark.asyncio
+async def test_me_accepts_the_script_token_like_every_other_route(async_client: AsyncClient, monkeypatch):
+    monkeypatch.setattr(settings, "ADMIN_TOKEN", "s" * 32)
+    assert (await async_client.get("/api/auth/me", headers={"X-Admin-Token": "s" * 32})).json()["signed_in"] is True
+    assert (await async_client.get("/api/auth/me", headers={"X-Admin-Token": "w" * 32})).json()["signed_in"] is False
+    monkeypatch.setattr(settings, "ADMIN_TOKEN", "")
+    assert (await async_client.get("/api/auth/me", headers={"X-Admin-Token": ""})).json()["signed_in"] is False
+
+
+@pytest.mark.asyncio
 async def test_sessions_expire_and_an_empty_password_switches_login_off(async_client: AsyncClient, monkeypatch):
     tok = (await login(async_client)).json()["token"]
     auth_api._sessions[tok] = 0.0

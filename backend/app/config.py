@@ -63,19 +63,21 @@ class Settings(BaseSettings):
     NARRATOR_TOKEN: str = ""
     NARRATOR_TIMEOUT_SECONDS: float = 20.0
 
-    # Editing settings from the dashboard (api/settings.py) is DISABLED unless this is set; callers must send it as X-Admin-Token.
-    # A long random string, in .env only. There are no user accounts: anyone who has this token can change the feed key and the narrator.
+    # A long random string for SCRIPTS (sent as X-Admin-Token); the dashboard signs in with ADMIN_EMAIL and ADMIN_PASSWORD below instead.
+    # In .env only. Anyone who has this token can change the feed key and the narrator.
     ADMIN_TOKEN: str = ""
+
     # The admin sign-in of the dashboard (api/auth.py). The defaults are for local and demo use ONLY: anyone who knows them can sign in, so
-    # set both in the server's environment on any public deployment. An empty ADMIN_PASSWORD switches the sign-in off.
+    # set both in the server's environment on any public deployment (the server logs a warning at start-up when ENVIRONMENT=production and
+    # the password is still the default). An empty ADMIN_PASSWORD switches the sign-in off.
+    ADMIN_EMAIL: str = "admin@admin.com"
+    ADMIN_PASSWORD: str = "admin"
+    # When true (the default) every /api route except the sign-in itself needs a signed-in session: nobody reads any data without signing in.
+    REQUIRE_LOGIN: bool = True
+
     # Kaggle retraining (pipeline/kaggle_trigger.py): the owner's Kaggle account. Secrets: environment only, never a tracked file.
     KAGGLE_USERNAME: str = ""
     KAGGLE_KEY: str = ""
-
-    # When true (the default) every /api route except the sign-in itself needs a signed-in session: nobody reads any data without signing in.
-    REQUIRE_LOGIN: bool = True
-    ADMIN_EMAIL: str = "admin@admin.com"
-    ADMIN_PASSWORD: str = "admin"
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

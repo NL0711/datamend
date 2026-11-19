@@ -3,8 +3,9 @@
 #   docker compose up --build        then open http://localhost:5173
 #
 # Storage is SQLite inside the backend container ("demo storage, resets on restart" unless you mount a volume); the JSON export of a run
-# is the durable copy. PostgreSQL is NOT part of this stack: the tables are written to move there later (set DATABASE_URL to a
-# postgresql+asyncpg:// URL), but that path is untested.
+# is the durable copy. PostgreSQL (including TimescaleDB, for example on Tiger Cloud) is NOT part of this stack. Set DATABASE_URL to a
+# Postgres string (a postgres:// string is accepted as given) to use one: table creation was checked against a Tiger Cloud service, but
+# the Timescale hypertable and compression step is untested and there are no schema migrations.
 # Configuration comes from .env (copy .env.example). The live feed and the AI narrator stay off unless you set their variables.
 services:
   backend:

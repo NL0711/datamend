@@ -1,7 +1,7 @@
 """NOAA ISD India replay endpoints (backend/app/rainfall/isd_replay.py). The replay is real station data, labelled REPLAY, never live.
 
-GET  /api/validation/replay/isd   status of the replay job and of the stored replay run (reading is open)
-POST /api/validation/replay/isd   start it (admin token); it runs in the background and replaces an earlier replay run
+GET  /api/validation/replay/isd   status of the replay job and of the stored replay run (needs a signed-in session like every /api route)
+POST /api/validation/replay/isd   start it (admin session or ADMIN_TOKEN); it runs in the background and replaces an earlier replay run
 """
 from __future__ import annotations
 

@@ -7,8 +7,8 @@ import { ValidationApp } from './validation/ValidationApp';
 import './index.css';
 import './rain.css';
 
-// The home page is at "/", the dashboard at "/#/app" and the admin sign-in at "/#/login" (hash routes, so the static host needs no rewrite rule).
-// The legacy temperature/pressure/humidity dashboard (src/App.tsx and src/components) is no longer mounted and is deleted in slice 9.
+// The home page is at "/", the dashboard at "/#/app" and the sign-in at "/#/login" (hash routes, so the static host needs no rewrite rule).
+// The dashboard is only shown to a signed-in user.
 const page = () => (window.location.hash.startsWith('#/app') ? 'app' : window.location.hash.startsWith('#/login') ? 'login' : 'home');
 
 function Root() {
