@@ -61,6 +61,9 @@ data/weather_union_raw.jsonl
 skyguard.db*
 backend/app/skyguard.db*
 
+# Claude Code agent worktrees (never commit these)
+.claude/worktrees/
+
 # IDEs
 .idea/
 .vscode/
