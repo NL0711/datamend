@@ -129,10 +129,40 @@ const kaggleHeaders = (): Record<string, string> => {
   const a = storedKaggle();
   return a ? { 'X-Kaggle-Username': a.username, 'X-Kaggle-Key': a.key } : {};
 };
+/** The visitor's own AWS account for the AWS training target, kept for this browser tab only (sessionStorage). Sent as X-Aws-* headers on the AWS
+ *  start and check requests, and nowhere else; the server uses it for that request and does not store it. */
+export const AWS_ACCOUNT_KEY = 'datamend-aws-account';
+export interface AwsAccount { accessKeyId: string; secret: string; sessionToken: string; region: string; bucket: string }
+export const AWS_INSTANCE_TYPES = [
+  { id: 't3.small', gpu: false }, { id: 't3.medium', gpu: false }, { id: 'c6i.large', gpu: false },
+  { id: 'g4dn.xlarge', gpu: true }, { id: 'g5.xlarge', gpu: true },
+] as const;
+export const storedAws = (): AwsAccount | null => {
+  if (typeof sessionStorage === 'undefined') return null;
+  try {
+    const a = JSON.parse(sessionStorage.getItem(AWS_ACCOUNT_KEY) ?? 'null');
+    return a && a.accessKeyId && a.secret && a.region && a.bucket ? { accessKeyId: a.accessKeyId, secret: a.secret, sessionToken: a.sessionToken ?? '', region: a.region, bucket: a.bucket } : null;
+  } catch { return null; }
+};
+export const rememberAws = (a: AwsAccount | null) => {
+  if (typeof sessionStorage === 'undefined') return;
+  if (a) sessionStorage.setItem(AWS_ACCOUNT_KEY, JSON.stringify(a)); else sessionStorage.removeItem(AWS_ACCOUNT_KEY);
+};
+const awsHeaders = (): Record<string, string> => {
+  const a = storedAws();
+  if (!a) return {};
+  return { 'X-Aws-Access-Key-Id': a.accessKeyId, 'X-Aws-Secret-Access-Key': a.secret, ...(a.sessionToken ? { 'X-Aws-Session-Token': a.sessionToken } : {}),
+    'X-Aws-Region': a.region, 'X-Aws-Bucket': a.bucket };
+};
+export interface AwsOptions { instanceType: string; maxMinutes: number; spot: boolean }
 export const startTraining = (snapshotId: number, target: 'local' | 'kaggle') =>
   post<TrainingJob>(`${P}/train`, { snapshot_id: snapshotId, target }, target === 'kaggle' ? kaggleHeaders() : {});
-export const listTrainingJobs = () => get<{ jobs: TrainingJob[]; kaggle_configured: boolean; byo_supported?: boolean }>(`${P}/train/jobs`);
-export const refreshTrainingJob = (id: number) => post<TrainingJob>(`${P}/train/jobs/${id}/refresh`, {}, kaggleHeaders());
+export const startAwsTraining = (snapshotId: number, o: AwsOptions) =>
+  post<TrainingJob & { gpu_note?: string }>(`${P}/train`, { snapshot_id: snapshotId, target: 'aws', instance_type: o.instanceType, max_minutes: o.maxMinutes, spot: o.spot }, awsHeaders());
+export const listTrainingJobs = () =>
+  get<{ jobs: TrainingJob[]; kaggle_configured: boolean; byo_supported?: boolean; aws_supported?: boolean; aws_configured?: boolean }>(`${P}/train/jobs`);
+export const refreshTrainingJob = (id: number, target: 'kaggle' | 'aws' = 'kaggle') =>
+  post<TrainingJob>(`${P}/train/jobs/${id}/refresh`, {}, target === 'aws' ? awsHeaders() : kaggleHeaders());
 export const getLineage = () => get<Lineage>(`${P}/lineage`);
 export const listModels = () => get<{ models: PipelineModel[]; not_implemented: string[] }>(`${P}/models`);
 export const registerModel = (body: { name: string; version: string; metrics: Record<string, unknown>; snapshot_id?: number }) => post<PipelineModel>(`${P}/models`, body);

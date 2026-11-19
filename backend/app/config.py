@@ -79,6 +79,11 @@ class Settings(BaseSettings):
     KAGGLE_USERNAME: str = ""
     KAGGLE_KEY: str = ""
 
+    # AWS retraining (pipeline/aws_trigger.py): region and S3 bucket used when a request brings none of its own. The credentials themselves come
+    # from boto3's default chain (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in the server's environment), never from a tracked file.
+    AWS_REGION: str = "ap-southeast-2"
+    AWS_TRAIN_BUCKET: str = ""
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def _parse_cors_origins(cls, v):

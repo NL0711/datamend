@@ -51,7 +51,7 @@ async def build(session: AsyncSession) -> Dict[str, Any]:
     tjobs = (await session.execute(select(TrainingJob).order_by(TrainingJob.id))).scalars().all()
     for t in tjobs:
         nodes.append({"id": f"train:{t.id}", "kind": "train", "label": f"training {t.id} ({t.target})", "status": t.status,
-                      "facts": {"target": t.target, "notebook": t.slug or "-", "error": t.error or "-"}})
+                      "facts": {"target": t.target, ("instance" if t.target == "aws" else "notebook"): t.slug or "-", "error": t.error or "-"}})
         edge(f"snapshot:{t.snapshot_id}", f"train:{t.id}")
     models = (await session.execute(select(ModelVersion).order_by(ModelVersion.id))).scalars().all()
     for m in models:
