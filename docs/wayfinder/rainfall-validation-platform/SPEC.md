@@ -1,6 +1,6 @@
 ---
 title: Rainfall time-series validation platform (spec)
-status: draft, written from the closed tickets t00 to t09; awaiting owner confirmation
+status: confirmed by the owner 2026-11-19; written from the closed tickets t00 to t09
 ---
 
 # DataMend rainfall validation platform: spec
