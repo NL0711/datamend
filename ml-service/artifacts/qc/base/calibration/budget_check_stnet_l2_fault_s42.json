@@ -1,0 +1,194 @@
+[
+ {
+  "client": 1,
+  "role": "training",
+  "rule": "global",
+  "budget": 1.0,
+  "false_per_1000": 0.9896662870494497,
+  "ci95": [
+   0.620992312686455,
+   1.3355228074813443
+  ],
+  "clean_cell_days": 475918
+ },
+ {
+  "client": 1,
+  "role": "training",
+  "rule": "per_client",
+  "budget": 1.0,
+  "false_per_1000": 0.9980710962812922,
+  "ci95": [
+   0.656406010919534,
+   1.3073563990703265
+  ],
+  "clean_cell_days": 475918
+ },
+ {
+  "client": 2,
+  "role": "training",
+  "rule": "global",
+  "budget": 1.0,
+  "false_per_1000": 0.6550655500809582,
+  "ci95": [
+   0.4063201174157365,
+   0.9500212723565222
+  ],
+  "clean_cell_days": 459496
+ },
+ {
+  "client": 2,
+  "role": "training",
+  "rule": "per_client",
+  "budget": 1.0,
+  "false_per_1000": 1.0119783414871946,
+  "ci95": [
+   0.6128820868084819,
+   1.4866791854384858
+  ],
+  "clean_cell_days": 459496
+ },
+ {
+  "client": 3,
+  "role": "held-out",
+  "rule": "global",
+  "budget": 1.0,
+  "false_per_1000": 4.813961605584642,
+  "ci95": [
+   3.525027896745302,
+   5.8808644395045215
+  ],
+  "clean_cell_days": 358125
+ },
+ {
+  "client": 3,
+  "role": "held-out",
+  "rule": "per_client",
+  "budget": 1.0,
+  "false_per_1000": 4.813961605584642,
+  "ci95": [
+   3.6853440016305825,
+   6.193772928319192
+  ],
+  "clean_cell_days": 358125
+ },
+ {
+  "client": 4,
+  "role": "training",
+  "rule": "global",
+  "budget": 1.0,
+  "false_per_1000": 0.34669678640425283,
+  "ci95": [
+   0.1414506539148711,
+   0.593540001421253
+  ],
+  "clean_cell_days": 458614
+ },
+ {
+  "client": 4,
+  "role": "training",
+  "rule": "per_client",
+  "budget": 1.0,
+  "false_per_1000": 1.08588050081332,
+  "ci95": [
+   0.5326383384025414,
+   1.9730049974831425
+  ],
+  "clean_cell_days": 458614
+ },
+ {
+  "client": 5,
+  "role": "training",
+  "rule": "global",
+  "budget": 1.0,
+  "false_per_1000": 0.86696017124216,
+  "ci95": [
+   0.5082530857749746,
+   1.2469971724965416
+  ],
+  "clean_cell_days": 427932
+ },
+ {
+  "client": 5,
+  "role": "training",
+  "rule": "per_client",
+  "budget": 1.0,
+  "false_per_1000": 1.0609162203340718,
+  "ci95": [
+   0.6310335206688863,
+   1.5850950646588713
+  ],
+  "clean_cell_days": 427932
+ },
+ {
+  "client": 6,
+  "role": "held-out",
+  "rule": "global",
+  "budget": 1.0,
+  "false_per_1000": 0.36301608615031755,
+  "ci95": [
+   0.21703951366978563,
+   0.5448368011338479
+  ],
+  "clean_cell_days": 484827
+ },
+ {
+  "client": 6,
+  "role": "held-out",
+  "rule": "per_client",
+  "budget": 1.0,
+  "false_per_1000": 0.36301608615031755,
+  "ci95": [
+   0.20984525992314154,
+   0.4872203576918244
+  ],
+  "clean_cell_days": 484827
+ },
+ {
+  "client": 7,
+  "role": "training",
+  "rule": "global",
+  "budget": 1.0,
+  "false_per_1000": 1.0184564175174504,
+  "ci95": [
+   0.6217218430238225,
+   1.5085109282156504
+  ],
+  "clean_cell_days": 483084
+ },
+ {
+  "client": 7,
+  "role": "training",
+  "rule": "per_client",
+  "budget": 1.0,
+  "false_per_1000": 1.0060362173038229,
+  "ci95": [
+   0.6271960591761812,
+   1.5356903126266999
+  ],
+  "clean_cell_days": 483084
+ },
+ {
+  "client": 8,
+  "role": "training",
+  "rule": "global",
+  "budget": 1.0,
+  "false_per_1000": 2.082362411557853,
+  "ci95": [
+   1.601263655092415,
+   2.705662429878372
+  ],
+  "clean_cell_days": 472060
+ },
+ {
+  "client": 8,
+  "role": "training",
+  "rule": "per_client",
+  "budget": 1.0,
+  "false_per_1000": 1.0041096470787612,
+  "ci95": [
+   0.7682762077178048,
+   1.3142179608966185
+  ],
+  "clean_cell_days": 472060
+ }
+]
