@@ -12,7 +12,8 @@ import time
 from collections import deque
 from typing import Deque, Dict, Optional
 
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from backend.app.config import settings
@@ -40,6 +41,20 @@ def session_valid(token: Optional[str]) -> bool:
 
 def _same(a: str, b: str) -> bool:
     return hmac.compare_digest(a.encode(), b.encode())
+
+
+_OPEN_PATHS = ("/api/auth/login", "/api/auth/me", "/api/auth/logout")
+
+
+async def require_login(request: Request, call_next):
+    """Middleware: with REQUIRE_LOGIN on, every /api request needs a signed-in session (or the ADMIN_TOKEN, for scripts)."""
+    path = request.url.path
+    if settings.REQUIRE_LOGIN and path.startswith("/api/") and path not in _OPEN_PATHS and request.method != "OPTIONS":
+        tok = request.headers.get("x-admin-token")
+        ok = session_valid(tok) or bool(settings.ADMIN_TOKEN and tok and _same(tok, settings.ADMIN_TOKEN))
+        if not ok:
+            return JSONResponse({"detail": "sign in to use the dashboard"}, status_code=status.HTTP_401_UNAUTHORIZED)
+    return await call_next(request)
 
 
 class Credentials(BaseModel):

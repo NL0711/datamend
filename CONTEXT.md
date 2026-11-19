@@ -112,6 +112,26 @@ A heavy value at a gauge that has no neighbours or grid to confirm it. It is jud
 **Score provider**:
 An optional source of trained-component scores that adds a layer to a run. The platform runs fully on rules and statistics without one.
 
+## Ingest and feedback-loop language
+
+Terms for the bulk-ingest and reviewer-driven model loop, settled in the wayfinder map `docs/wayfinder/ingest-and-feedback-loop`.
+
+**Proposal**:
+A correction or explanation suggested by AI for a flagged value. It is stored apart from the data, always marked generated, and has no effect until a reviewer accepts it.
+_Avoid_: fix, auto-correction
+
+**Correction**:
+A reviewer-accepted replacement value for an observation. The original value is kept beside it; raw data is never overwritten.
+
+**Label**:
+A reviewer's decision on a flagged or audited item (confirmed fault, false alarm, genuine extreme, needs follow-up), stored with who, when and its label tier. Only labels, never proposals, may train a model.
+
+**Audit sample**:
+A random sample of unflagged data sent to the reviewer, weighted by how unlikely it was to be drawn, so that missed faults can be estimated and the model does not only learn to agree with its own flags.
+
+**Training snapshot**:
+A frozen, versioned export of observations and labels cut by time, used for one offline training run. It never contains data from after its cut or from the locked test years.
+
 ## Example dialogue
 
 > **Dev:** "The spatial component flagged this cell-day. Could the cell's own value have leaked into the prediction?"

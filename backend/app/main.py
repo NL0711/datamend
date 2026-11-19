@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.app.api.auth import router as auth_router
+from backend.app.api.auth import require_login, router as auth_router
 from backend.app.api.places import router as places_router
 from backend.app.api.rainfall import router as rainfall_router
 from backend.app.api.replay import router as replay_router
@@ -60,6 +60,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.middleware("http")(require_login)          # added first, so CORS wraps it and a refusal still carries the CORS headers
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,

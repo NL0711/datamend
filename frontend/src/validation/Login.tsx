@@ -63,7 +63,7 @@ export function AdminChip({ onSignIn }: { onSignIn: () => void }) {
   return signedIn ? (
     <div className="px-3 py-2 text-xs text-slate-600 border-t border-slate-200 mt-2">
       <div className="truncate" title={email}>Signed in as <b className="text-slate-900">{email}</b></div>
-      <button onClick={() => void signOut()} className="mt-1 inline-flex items-center gap-1 text-slate-700 underline"><LogOut className="w-3.5 h-3.5" />Sign out</button>
+      <button onClick={() => { void signOut(); window.location.hash = '#/'; }} className="mt-1 inline-flex items-center gap-1 text-slate-700 underline"><LogOut className="w-3.5 h-3.5" />Sign out</button>
     </div>) : (
-    <div className="px-3 py-2 border-t border-slate-200 mt-2"><button onClick={onSignIn} className="rain-nav-item"><LogIn className="w-4 h-4" />Admin sign in</button></div>);
+    <div className="px-3 py-2 border-t border-slate-200 mt-2"><button onClick={onSignIn} className="rain-nav-item"><LogIn className="w-4 h-4" />Sign in</button></div>);
 }

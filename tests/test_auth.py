@@ -50,6 +50,21 @@ async def test_email_is_case_insensitive_and_attempts_are_limited(async_client: 
 
 
 @pytest.mark.asyncio
+async def test_with_require_login_nothing_can_be_read_without_a_session(async_client: AsyncClient, monkeypatch):
+    monkeypatch.setattr(settings, "REQUIRE_LOGIN", True)
+    for url in ("/api/validation/runs", "/api/validation/overview", "/api/places/stations", "/api/settings", "/api/validation/replay/isd"):
+        r = await async_client.get(url)
+        assert r.status_code == 401, url
+    assert (await async_client.get("/api/auth/me")).status_code == 200          # the sign-in itself stays reachable
+    assert (await async_client.get("/", headers={})).status_code == 200         # the health check is not under /api
+    tok = (await login(async_client)).json()["token"]
+    h = {"X-Admin-Token": tok}
+    assert (await async_client.get("/api/validation/overview", headers=h)).status_code == 200
+    await async_client.post("/api/auth/logout", headers=h)
+    assert (await async_client.get("/api/validation/overview", headers=h)).status_code == 401
+
+
+@pytest.mark.asyncio
 async def test_sessions_expire_and_an_empty_password_switches_login_off(async_client: AsyncClient, monkeypatch):
     tok = (await login(async_client)).json()["token"]
     auth_api._sessions[tok] = 0.0

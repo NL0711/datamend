@@ -3,7 +3,7 @@
 // worklist item select the same row.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Download, Radio } from 'lucide-react';
-import { exportUrl, getFeed, getNarrator, getRows, getRun, getSeries } from './api';
+import { downloadExport, getFeed, getNarrator, getRows, getRun, getSeries } from './api';
 import { ChatPanel } from './ChatPanel';
 import { EvidencePane } from './EvidencePane';
 import { Timeline } from './Timeline';
@@ -43,8 +43,8 @@ function Headline({ run }: { run: RunFull }) {
         {run.synthetic && <SyntheticBadge />}
         <span className="text-[10px] font-mono text-slate-500" title={`platform v${run.platform_version} · commit ${run.git_commit} · input sha256 ${run.input_sha256 ?? 'n/a'}`}>{run.profile} profile · {run.source} · {run.status}</span>
         <span className="ml-auto flex items-center gap-2">
-          <a href={exportUrl(run.id, 'json')} className="px-2 py-1 rounded border border-[#D3DCE7] text-[11px] font-bold flex items-center gap-1"><Download className="w-3 h-3" />JSON</a>
-          <a href={exportUrl(run.id, 'csv')} className="px-2 py-1 rounded border border-[#D3DCE7] text-[11px] font-bold flex items-center gap-1"><Download className="w-3 h-3" />CSV</a>
+          <button onClick={() => void downloadExport(run.id, 'json').catch(() => undefined)} className="px-2 py-1 rounded border border-[#D3DCE7] text-[11px] font-bold flex items-center gap-1"><Download className="w-3 h-3" />JSON</button>
+          <button onClick={() => void downloadExport(run.id, 'csv').catch(() => undefined)} className="px-2 py-1 rounded border border-[#D3DCE7] text-[11px] font-bold flex items-center gap-1"><Download className="w-3 h-3" />CSV</button>
         </span>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
