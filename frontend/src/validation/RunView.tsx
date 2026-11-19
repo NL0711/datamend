@@ -147,7 +147,7 @@ export function RunView({ runId }: { runId: number }) {
           </div>
         </Panel>
         <div className="space-y-3">
-          <EvidencePane runId={run.id} rowId={selected} narrator={narrator} />
+          <EvidencePane runId={run.id} rowId={selected} narrator={narrator} onSelectRow={pick} />
           <ChatPanel runId={run.id} rowId={selected} narrator={narrator} />
         </div>
       </div>

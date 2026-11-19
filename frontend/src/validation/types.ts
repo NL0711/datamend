@@ -83,6 +83,62 @@ export interface ExplanationItem {
 
 export interface NarratorStatus { connected: boolean; message: string; implemented: boolean; host?: string; note?: string }
 
+export type Decision = 'confirmed_fault' | 'false_alarm' | 'genuine_extreme' | 'needs_followup';
+
+export interface ReviewItem {
+  id: number; run_id: number; row_ref: string; station_id: string; decision: Decision; note: string | null; reviewer: string | null;
+  verdict_at_review: Verdict; created_at: string | null;
+}
+
+export interface QueueRow {
+  id: number; run_id: number; run_label: string | null; synthetic: boolean; source: string; row_ref: string; station_id: string;
+  time: string | null; verdict: Verdict; rule_score: number; severity: Severity; checks: string[]; review: ReviewItem | null;
+}
+
+export interface QueuePage { page: number; page_size: number; total: number; pages: number; status: string; rows: QueueRow[] }
+
+export interface ReviewSummary {
+  flagged_rows: number; reviewed_rows: number; unreviewed_rows: number; by_decision: Record<Decision, number>;
+  by_check: Record<string, Record<Decision, number>>; truncated: boolean; caveat: string;
+}
+
+export interface ExplorerRow extends RowItem { intensity: number | null; accumulation: number | null; mm: number | null }
+export interface ExplorerPage extends Omit<RowsPage, 'rows'> { rows: ExplorerRow[] }
+
+export interface ContextRow {
+  id: number; row_ref: string; time: string | null; intensity: number | null; accumulation: number | null; mm: number | null;
+  verdict: Verdict; rule_score: number; checks: string[];
+}
+export interface RowContext { station_id: string; selected_id: number; rows: ContextRow[] }
+
+export interface Overview {
+  storage: string;
+  runs: { total: number; completed: number; open_live: number; rejected_uploads: number };
+  rows: { total: number; uploaded_or_live: number; synthetic: number };
+  verdicts: Record<Verdict, number>; checks_fired: Record<string, number>;
+  latest_run: RunSummary | null; live_run: RunSummary | null; note: string;
+}
+
+export interface LabOptions {
+  label: string; faults: Record<Profile, string[]>; expected_check: Record<string, string>; stations: [number, number]; length: Record<Profile, [number, number]>;
+}
+
+export interface LabResult {
+  run: RunFull; seed: number; note: string;
+  injected: Array<{ fault: string; station_id: string; row_ref: string; time: string; expected_check: string; caught: boolean }>;
+  summary: { injected: number; caught: number; other_flagged_rows: number; rows: number; label: string };
+}
+
+export interface PlaceInfo {
+  latitude: number; longitude: number; cell: { row: number; col: number; lat: number; lon: number; grid: string };
+  is_land: boolean | null; client_region: number | null; imd_subdivision: { status: string; reason: string };
+}
+
+export interface GaugeStation {
+  station_id: string; city: string; place: string; latitude: number; longitude: number; device: string;
+  cell: { row: number; col: number; lat: number; lon: number; grid: string } | null; is_land: boolean | null;
+}
+
 export interface SettingsState {
   editing_enabled: boolean; cities: string[]; accumulation_modes: string[]; interval_limits_seconds: [number, number];
   weather_union: {

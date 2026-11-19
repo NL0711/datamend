@@ -11,7 +11,7 @@ from backend.app.db.database import async_session_factory
 from backend.app.places import grid
 from backend.app.places.lookup import locate
 from backend.app.places.scores import FileScoreProvider, model_block
-from backend.app.validation.models import Explanation, ValidationCheckHit, ValidationResult, ValidationRun
+from backend.app.validation.models import Explanation, Review, ValidationCheckHit, ValidationResult, ValidationRun
 
 
 # ---------------------------------------------------------------- grid (carried over)
@@ -82,7 +82,7 @@ def test_model_scores_are_never_invented(tmp_path):
 @pytest_asyncio.fixture(autouse=True)
 async def _clean():
     async with async_session_factory() as s:
-        for m in (Explanation, ValidationCheckHit, ValidationResult, ValidationRun):
+        for m in (Review, Explanation, ValidationCheckHit, ValidationResult, ValidationRun):
             await s.execute(delete(m))
         await s.commit()
     yield

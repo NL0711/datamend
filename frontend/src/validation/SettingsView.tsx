@@ -1,12 +1,11 @@
 // Settings: the Weather Union feed (key, city, interval, accumulation mode) and the AI narrator (URL, token). Saving needs the admin token
 // (ADMIN_TOKEN in the server's .env); it is kept for this browser session only. Secrets are write-only: the server never sends them back.
 import { useCallback, useEffect, useState } from 'react';
-import { getSettings, saveSettings, testFeed } from './api';
+import { getSettings, rememberToken as saveToken, saveSettings, storedToken, testFeed } from './api';
 import { buildSettingsUpdate } from './lib';
 import type { FeedTestResult, SettingsState } from './types';
 import { Notice, Panel, formatError } from './ui';
 
-const TOKEN_KEY = 'datamend-admin-token';
 const field = 'text-xs border border-[#D3DCE7] rounded px-2 py-1.5 w-full disabled:bg-slate-100';
 const Label = ({ children, hint }: { children: React.ReactNode; hint?: string }) => (
   <label className="text-[11px] font-bold text-slate-700 block space-y-1"><span>{children}</span>{hint && <span className="block font-normal text-slate-500">{hint}</span>}</label>
@@ -14,7 +13,7 @@ const Label = ({ children, hint }: { children: React.ReactNode; hint?: string })
 
 export function SettingsView() {
   const [state, setState] = useState<SettingsState | null>(null);
-  const [token, setToken] = useState(() => sessionStorage.getItem(TOKEN_KEY) ?? '');
+  const [token, setToken] = useState(storedToken);
   const [form, setForm] = useState({ apiKey: '', city: '', intervalMinutes: '', mode: '', narratorUrl: '', narratorToken: '' });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: 'info' | 'error' | 'warn'; text: string } | null>(null);
@@ -28,7 +27,7 @@ export function SettingsView() {
   useEffect(() => { void load(); }, [load]);
 
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const rememberToken = (v: string) => { setToken(v); sessionStorage.setItem(TOKEN_KEY, v); };
+  const rememberToken = (v: string) => { setToken(v); saveToken(v); };
 
   const save = async (clear: string[] = []) => {
     if (!state) return;

@@ -11,7 +11,7 @@ from sqlalchemy import delete, func, select
 
 from backend.app.db.database import async_session_factory
 from backend.app.validation import runs as svc
-from backend.app.validation.models import ValidationCheckHit, ValidationResult, ValidationRun
+from backend.app.validation.models import Explanation, Review, ValidationCheckHit, ValidationResult, ValidationRun
 from backend.app.validation.records import Reading
 
 T0 = datetime(2026, 7, 1, 6, 0, tzinfo=timezone.utc)
@@ -20,7 +20,7 @@ T0 = datetime(2026, 7, 1, 6, 0, tzinfo=timezone.utc)
 @pytest_asyncio.fixture(autouse=True)
 async def _clean_runs():
     async with async_session_factory() as s:
-        for m in (ValidationCheckHit, ValidationResult, ValidationRun):
+        for m in (Review, Explanation, ValidationCheckHit, ValidationResult, ValidationRun):
             await s.execute(delete(m))
         await s.commit()
     yield

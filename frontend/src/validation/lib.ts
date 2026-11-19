@@ -26,6 +26,38 @@ export function rowsQuery(opts: { page: number; verdict?: Verdict | 'ALL'; check
   return q.toString();
 }
 
+/** Data Explorer query: every row (not only flagged), in time order, server-side pages of 50, with optional filters. */
+export function explorerQuery(o: { page: number; station?: string; verdict?: Verdict | 'ALL'; check?: string; from?: string; to?: string }): string {
+  const q = new URLSearchParams({ scope: 'all', sort: 'time', page: String(Math.max(1, Math.floor(o.page))), page_size: String(PAGE_SIZE) });
+  if (o.station) q.set('station', o.station);
+  if (o.verdict && o.verdict !== 'ALL') q.set('verdict', o.verdict);
+  if (o.check) q.set('check', o.check);
+  if (o.from) q.set('time_from', o.from);
+  if (o.to) q.set('time_to', o.to);
+  return q.toString();
+}
+
+/** Review queue query across runs. status unreviewed is the default work list. */
+export function queueQuery(o: { page: number; status: 'unreviewed' | 'reviewed' | 'all'; verdict?: 'SUSPECT' | 'UNCERTAIN' | ''; check?: string; runId?: number | null; synthetic?: 'all' | 'synthetic' | 'real' }): string {
+  const q = new URLSearchParams({ status: o.status, page: String(Math.max(1, Math.floor(o.page))), page_size: String(PAGE_SIZE) });
+  if (o.verdict) q.set('verdict', o.verdict);
+  if (o.check) q.set('check', o.check);
+  if (o.runId) q.set('run_id', String(o.runId));
+  if (o.synthetic === 'synthetic') q.set('synthetic', 'true');
+  if (o.synthetic === 'real') q.set('synthetic', 'false');
+  return q.toString();
+}
+
+/** Every check in the catalogue (backend/app/validation/checks.py), for filters. */
+export const ALL_CHECKS = [
+  'negative_value', 'intensity_above_ceiling', 'counter_jump', 'counter_reset', 'frozen_intensity', 'intensity_counter_mismatch',
+  'neighbour_isolated_wet', 'neighbour_isolated_dry', 'impossible_value', 'repeated_value', 'climatology_upper_tail', 'duplicate_row',
+];
+
+export const DECISION_LABEL: Record<string, string> = {
+  confirmed_fault: 'Confirmed fault', false_alarm: 'False alarm', genuine_extreme: 'Genuine extreme', needs_followup: 'Needs follow-up',
+};
+
 export function timeMs(t: string): number {
   return Date.parse(t.length === 10 ? `${t}T00:00:00Z` : t);
 }

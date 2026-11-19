@@ -2,6 +2,8 @@
 // with measured/assumed/derived tags, generated explanations marked as generated, and the narrator slot with its real state.
 import { useCallback, useEffect, useState } from 'react';
 import { explain, getEvidence, getExplanations, getRow } from './api';
+import { ContextTable } from './ContextTable';
+import { ReviewBox } from './ReviewBox';
 import { asPlainText } from './lib';
 import type { Evidence, ExplanationItem, NarratorStatus, RowDetail } from './types';
 import { BasisTag, Notice, Panel, SeverityPill, VerdictBadge, formatError } from './ui';
@@ -68,7 +70,9 @@ function ExplanationCard({ e }: { e: ExplanationItem }) {
   );
 }
 
-export function EvidencePane({ runId, rowId, narrator }: { runId: number; rowId: number | null; narrator: NarratorStatus | null }) {
+export function EvidencePane({ runId, rowId, narrator, onSelectRow, onReviewed }: {
+  runId: number; rowId: number | null; narrator: NarratorStatus | null; onSelectRow?: (id: number) => void; onReviewed?: () => void;
+}) {
   const [row, setRow] = useState<RowDetail | null>(null);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [explanations, setExplanations] = useState<ExplanationItem[]>([]);
@@ -114,6 +118,8 @@ export function EvidencePane({ runId, rowId, narrator }: { runId: number; rowId:
           {evidence.length === 0
             ? <p className="text-xs text-slate-500">No check fired for this row.</p>
             : <div className="grid xl:grid-cols-2 gap-3">{evidence.map((ev) => <EvidenceCard key={ev.check} ev={ev} />)}</div>}
+          <ContextTable runId={runId} rowId={row.id} onSelect={onSelectRow} />
+          <ReviewBox runId={runId} rowId={row.id} verdict={row.verdict} onReviewed={onReviewed ? () => onReviewed() : undefined} />
           {explanations.map((e) => <ExplanationCard key={e.id} e={e} />)}
           <div className="flex items-center gap-2 flex-wrap">
             <button disabled={busy || evidence.length === 0} onClick={() => run('baseline')}

@@ -63,6 +63,24 @@ class ValidationResult(Base):
     issues: Mapped[List[Dict[str, str]]] = mapped_column(JSON, default=list)   # input-integrity issues from the parser
 
 
+class Review(Base):
+    """A reviewer's decision on a flagged row (spec: the admin review loop). Stored SEPARATELY from the evidence and never changes a
+    verdict, rule score or evidence. Not ground truth: it is one person's judgement on the rows they chose to review. Keyed by (run, row_ref)
+    so it survives a live run re-scoring its rows. There are no accounts: ``reviewer`` is a free-text label, and writing needs the admin token."""
+    __tablename__ = "reviews"
+    __table_args__ = (Index("ix_reviews_run_row", "run_id", "row_ref"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(Integer, ForeignKey("validation_runs.id", ondelete="CASCADE"), index=True)
+    row_ref: Mapped[str] = mapped_column(String(64))
+    station_id: Mapped[str] = mapped_column(String(64))
+    decision: Mapped[str] = mapped_column(String(20))        # confirmed_fault | false_alarm | genuine_extreme | needs_followup
+    note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    reviewer: Mapped[Optional[str]] = mapped_column(String(60), nullable=True)
+    verdict_at_review: Mapped[str] = mapped_column(String(12))   # the verdict the reviewer saw (it cannot change, but a live row can be re-scored)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
 class Explanation(Base):
     """An explanation of a flag, stored SEPARATELY from the evidence and always marked generated (spec section 6).
 

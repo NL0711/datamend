@@ -15,7 +15,7 @@ from backend.app.main import app
 from backend.app.validation import narrate
 from backend.app.validation.evidence import MAX_PAYLOAD_BYTES, evidence_v1
 from backend.app.validation.explain import BaselineExplainer, NarratorExplainer, NarratorUnavailable, _Limiter
-from backend.app.validation.models import Explanation, ValidationCheckHit, ValidationResult, ValidationRun
+from backend.app.validation.models import Explanation, Review, ValidationCheckHit, ValidationResult, ValidationRun
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = json.loads((ROOT / "docs/contracts/evidence-v1.schema.json").read_text(encoding="utf8"))
@@ -25,7 +25,7 @@ T0 = datetime(2026, 7, 1, 6, 0, tzinfo=timezone.utc)
 @pytest_asyncio.fixture(autouse=True)
 async def _clean():
     async with async_session_factory() as s:
-        for m in (Explanation, ValidationCheckHit, ValidationResult, ValidationRun):
+        for m in (Review, Explanation, ValidationCheckHit, ValidationResult, ValidationRun):
             await s.execute(delete(m))
         await s.commit()
     yield

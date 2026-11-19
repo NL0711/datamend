@@ -29,7 +29,9 @@ upload (CSV, JSON) or live Weather Union feed
 | Settings editable from the dashboard (Weather Union key, city, interval, mode; narrator URL and token): `/api/settings`, admin-token protected, secrets write-only | IMPLEMENTED against mocked transports; no real Weather Union call made |
 | Place lookup (`backend/app/places`: RF25 cell, land, client region) | IMPLEMENTED; IMD sub-division NOT IMPLEMENTED |
 | Score-provider seam for trained scores | seam only; NO trained score is connected |
-| Dashboard (`frontend/src/validation`: Runs, Run view, Live gauge feed, Settings) | IMPLEMENTED; type-checked and unit-tested, not looked at in a browser by the author |
+| Admin review loop (`validation/review.py`): reviewer decisions on flagged rows, stored apart from the evidence, admin-token protected, summary says they are not ground truth | IMPLEMENTED |
+| Overview, Data explorer, event-forensics context, Anomaly lab (synthetic faults), gauge catalogue | IMPLEMENTED |
+| Dashboard (`frontend/src/validation`: Overview, Runs, Run view, Data explorer, Review queue, Anomaly lab, Locations, Live gauge feed, Settings) | IMPLEMENTED; type-checked and unit-tested, not looked at in a browser by the author |
 | PDF export, Parquet input, unit conversion, MCP hosting, accounts, composite quality grade | NOT IMPLEMENTED |
 
 The legacy temperature, pressure and humidity app and the Locations feature were removed (see git history).
