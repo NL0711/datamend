@@ -69,7 +69,7 @@ async def chat_turn(session: AsyncSession, run: ValidationRun, message: str, nar
     """One chat question to the narrator, grounded in the selected row's strongest evidence (or the run's headline numbers)."""
     message = (message or "").strip()
     if not message or len(message) > MAX_QUESTION_CHARS:
-        raise ValueError(f"the question must be 1 to {MAX_QUESTION_CHARS} characters")
+        raise ValueError(f"the question must be 1 to {MAX_QUESTION_CHARS} characters")   # the API validates first; this guards other callers
     if narrator is None:
         raise NarratorUnavailable("AI narrator not connected")
     evidence: Optional[Dict[str, Any]] = None

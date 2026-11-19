@@ -150,6 +150,38 @@ async def test_run_cap_prunes_the_oldest_runs():
 
 
 @pytest.mark.asyncio
+async def test_rejected_uploads_are_pruned_before_completed_runs():
+    """Review finding: 50 bad uploads must not evict completed runs."""
+    async with async_session_factory() as s:
+        done = []
+        for i in range(10):
+            r = ValidationRun(profile="daily", source="upload", label=f"ok{i}", platform_version="t", git_commit="t", status="completed")
+            s.add(r)
+            await s.flush()
+            done.append(r.id)
+        for i in range(45):
+            s.add(ValidationRun(profile="daily", source="upload", label=f"bad{i}", platform_version="t", git_commit="t", status="failed", error="x"))
+        await s.commit()
+        assert await svc.prune_runs(s) == 5
+        await s.commit()
+        kept_ok = (await s.execute(select(func.count()).select_from(ValidationRun).where(ValidationRun.status == "completed"))).scalar_one()
+    assert kept_ok == 10
+
+
+@pytest.mark.asyncio
+async def test_csv_export_defuses_formulas_but_keeps_numbers_and_json_cells(async_client: AsyncClient):
+    """Review finding: a text cell starting with = + - @ is a formula in a spreadsheet; numbers such as -3.0 must stay numbers."""
+    body = {"rows": [{"day": "2026-07-01", "station_id": '=HYPERLINK("http://x","y")', "mm": -3.0, "note": {"a": 1}}, {"day": "2026-07-02", "station_id": "+cmd", "mm": 1.0, "note": "-5"}]}
+    r = await async_client.post("/api/validation/runs", files={"file": ("d.json", json.dumps(body).encode(), "application/json")}, data={"profile": "daily"})
+    assert r.status_code == 201, r.text
+    text = (await async_client.get(f"/api/validation/runs/{r.json()['id']}/export.csv")).text
+    rows = list(csv.DictReader(io.StringIO(text)))
+    assert rows[0]["station_id"].startswith("'=HYPERLINK") and rows[1]["station_id"] == "'+cmd"
+    assert rows[0]["mm"] == "-3.0" and rows[1]["note"] == "-5"
+    assert json.loads(rows[0]["note"]) == {"a": 1}
+
+
+@pytest.mark.asyncio
 async def test_open_live_run_is_never_pruned():
     async with async_session_factory() as s:
         live = ValidationRun(profile="reading", source="live", label="live", platform_version="t", git_commit="t", status="open", rain_day="2026-07-02")

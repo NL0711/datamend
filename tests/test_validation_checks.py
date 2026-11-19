@@ -112,6 +112,22 @@ def test_isolated_dry_and_agreeing_neighbours():
     assert all(not any(h.check.startswith("neighbour") for h in r.hits) for r in quiet.results)
 
 
+def test_per_reading_mode_counts_each_positive_value_as_rain_not_only_a_rise():
+    """Review finding: in per_reading mode the value IS the interval's rain, so 0.2, 0.2, 0.2 is wet three times (and 0.5 then 0.2 is not a drop)."""
+    def stations(vals_by_station):
+        out = []
+        for k, (sid, vals) in enumerate(vals_by_station.items()):
+            out += [rd(sid, i, v, None, lat=19.0 + 0.001 * k, lon=72.8, mode="per_reading") for i, v in enumerate(vals)]
+        return out
+    # A rains 0.2 mm every interval; B, C, D are dry: A is isolated wet at EVERY reading, including the repeats the old rule called dry
+    res = run_reading_checks(stations({"A": [0.2, 0.2, 0.2], "B": [0, 0, 0], "C": [0, 0, 0], "D": [0, 0, 0]}), interval_minutes=15)
+    a = [i for i, r in enumerate(res.results) if r.station_id == "A"]
+    assert [("neighbour_isolated_wet" in names(res, i)) for i in a] == [True, True, True]
+    # all four rain the same amounts, including a fall from 0.5 to 0.2: nobody is isolated
+    same = run_reading_checks(stations({s: [0.5, 0.2, 0.2] for s in "ABCD"}), interval_minutes=15)
+    assert all(not any(h.check.startswith("neighbour") for h in r.hits) for r in same.results)
+
+
 def test_neighbour_check_is_not_run_with_too_few_stations_or_no_coordinates():
     res = run_reading_checks(cluster({"A": True, "B": False, "C": False}), interval_minutes=15)       # only 2 neighbours
     assert {n["station_id"] for n in res.not_run if n["check"] == "neighbour"} == {"A", "B", "C"}

@@ -8,6 +8,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import json
 import os
 import subprocess
 import time
@@ -165,7 +166,9 @@ async def prune_runs(session: AsyncSession, cap: int = RUN_CAP) -> int:
     excess = total - cap
     if excess <= 0:
         return 0
-    ids = (await session.execute(select(ValidationRun.id).where(ValidationRun.status != "open").order_by(ValidationRun.id).limit(excess))).scalars().all()
+    # rejected uploads go first, so repeated bad files cannot evict completed runs (and their explanations); then the oldest
+    ids = (await session.execute(select(ValidationRun.id).where(ValidationRun.status != "open")
+                                 .order_by((ValidationRun.status != "failed"), ValidationRun.id).limit(excess))).scalars().all()
     await _delete_runs(session, list(ids))
     return len(ids)
 
@@ -257,6 +260,11 @@ def run_dict(run: ValidationRun, full: bool = False) -> Dict[str, Any]:
         d.update({"input_sha256": run.input_sha256, "settings": run.settings, "platform_version": run.platform_version, "git_commit": run.git_commit,
                   "not_run": run.not_run, "renamed_headers": run.renamed_headers, "issue_counts": run.issue_counts, "report": run.report})
     return d
+
+
+async def get_row(session: AsyncSession, run_id: int, result_id: int) -> Optional[ValidationResult]:
+    row = await session.get(ValidationResult, result_id)
+    return row if row is not None and row.run_id == run_id else None
 
 
 async def list_runs(session: AsyncSession) -> List[ValidationRun]:
@@ -352,6 +360,20 @@ async def export_json(session: AsyncSession, run: ValidationRun) -> Dict[str, An
                                for h in hits.get(r.id, [])]} for r in rows]}
 
 
+def _csv_cell(v: Any) -> Any:
+    """An uploaded cell as written back to CSV. Numbers and plain text are untouched; a TEXT cell that starts with = + - @ (a spreadsheet
+    formula when opened in Excel or Sheets) gets a leading apostrophe; a JSON object or list is written as JSON, not a Python repr."""
+    if isinstance(v, (dict, list)):
+        return json.dumps(v)
+    if isinstance(v, str) and v[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        try:
+            float(v)
+            return v                                    # a number such as -3.0 stays as it was
+        except ValueError:
+            return "'" + v
+    return v
+
+
 async def export_csv(session: AsyncSession, run: ValidationRun) -> str:
     """One row per input row: the original columns untouched, then verdict, rule_score, severity, fired_checks, input_issues."""
     rows = (await session.execute(select(ValidationResult).where(ValidationResult.run_id == run.id).order_by(ValidationResult.position))).scalars().all()
@@ -369,6 +391,6 @@ async def export_csv(session: AsyncSession, run: ValidationRun) -> str:
     w = csv.writer(buf, lineterminator="\n")
     w.writerow(cols + extra)
     for r in rows:
-        w.writerow([r.original_row.get(c, "") for c in cols] + [r.verdict, r.rule_score, r.severity or "", ";".join(names.get(r.id, [])),
+        w.writerow([_csv_cell(r.original_row.get(c, "")) for c in cols] + [r.verdict, r.rule_score, r.severity or "", ";".join(names.get(r.id, [])),
                                                                  ";".join(i["code"] for i in r.issues)])
     return buf.getvalue()

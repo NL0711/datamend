@@ -62,6 +62,7 @@ class RainfallService:
         self.last_poll_at: Optional[datetime] = None
         self._task: Optional[asyncio.Task] = None
         self._catalog = {s.locality_id: s for s in stations}
+        self._scored_cache: Optional[tuple] = None
         self.on_poll: Optional[Callable[["RainfallService"], Awaitable[None]]] = None   # called after every poll cycle (live run refresh)
 
     # -- polling ---------------------------------------------------------------------------------------------------
@@ -141,15 +142,24 @@ class RainfallService:
                 out.append(reading_from_observation(obs, self.mode, f"{sid}@{obs.observed_at.isoformat()}", st.latitude, st.longitude))
         return out
 
+    def _scored(self):
+        """(readings, catalogue result, result by reading id), computed once per change of the held history and reused by every station
+        report, so listing N stations scores the history once, not N times."""
+        key = (self.last_poll_at, sum(len(h) for h in self.history.values()))
+        if self._scored_cache is None or self._scored_cache[0] != key:
+            readings = self.readings()
+            cat = run_reading_checks(readings, self.interval / 60.0, self.buddy_radius_km)
+            self._scored_cache = (key, readings, cat, {id(r): res for r, res in zip(readings, cat.results)})
+        return self._scored_cache[1], self._scored_cache[2], self._scored_cache[3]
+
     def _quality(self, sid: str) -> Optional[Dict[str, Any]]:
         """The catalogue's verdict for the station's latest reading, scored with every polled station's history as potential neighbours."""
-        readings = self.readings()
+        readings, cat, by_id = self._scored()
         mine = [r for r in readings if r.station_id == sid and r.timestamp is not None]
         if not mine:
             return None
-        cat = run_reading_checks(readings, self.interval / 60.0, self.buddy_radius_km)
         last = max(mine, key=lambda r: r.timestamp)
-        res = cat.results[readings.index(last)]
+        res = by_id[id(last)]
         n_nb = max((len(h.evidence.get("neighbours", [])) for h in res.hits), default=0)
         return {"assessment": res.verdict, "score": res.rule_score, "severity": res.severity, "score_kind": "rule score (uncalibrated)",
                 "reasons": [{"check": h.check, "weight": h.weight, "detail": h.reason, "kind": h.kind} for h in res.hits],

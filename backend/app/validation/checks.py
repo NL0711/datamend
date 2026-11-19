@@ -209,7 +209,10 @@ def run_reading_checks(readings: Sequence[Reading], interval_minutes: Optional[f
         last: Optional[Reading] = None
         for r in lst:
             prev_acc[id(r)] = last
-            inc = last is not None and r.accumulation is not None and last.accumulation is not None and r.accumulation > last.accumulation
+            if r.accumulation_mode == "per_reading":      # the value IS the rain of this interval
+                inc = r.accumulation is not None and r.accumulation > 0
+            else:                                         # cumulative counter: rain means it rose since the previous reading
+                inc = last is not None and r.accumulation is not None and last.accumulation is not None and r.accumulation > last.accumulation
             wet[id(r)] = bool((r.intensity is not None and r.intensity > 0) or inc)
             if r.accumulation is not None:
                 last = r

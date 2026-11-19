@@ -243,6 +243,7 @@ async def test_chat_input_validation_and_missing_things(async_client: AsyncClien
     run, rows = await make_run(async_client)
     base = f"/api/validation/runs/{run['id']}/chat"
     assert (await async_client.post(base, json={"message": ""})).status_code == 422
+    assert (await async_client.post(base, json={"message": "     "})).status_code == 422      # review finding: was a 500
     assert (await async_client.post(base, json={"message": "x" * 2001})).status_code == 422
     assert (await async_client.post(base, json={"message": "hi", "row_id": 999999})).status_code == 404
     assert (await async_client.post("/api/validation/runs/999999/chat", json={"message": "hi"})).status_code == 404

@@ -8,7 +8,7 @@ import json
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.database import get_db
@@ -79,9 +79,8 @@ async def get_row_evidence(run_id: int, result_id: int, session: AsyncSession = 
 
 
 async def _row_or_404(session: AsyncSession, run_id: int, result_id: int):
-    from backend.app.validation.models import ValidationResult
-    row = await session.get(ValidationResult, result_id)
-    if row is None or row.run_id != run_id:
+    row = await svc.get_row(session, run_id, result_id)
+    if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"row {result_id} not in run {run_id}")
     return row
 
@@ -138,6 +137,14 @@ async def explain(run_id: int, result_id: int, body: ExplainRequest, session: As
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=narrate.MAX_QUESTION_CHARS)
     row_id: Optional[int] = None
+
+    @field_validator("message")
+    @classmethod
+    def _not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("the question is empty")
+        return v
 
 
 @router.get("/runs/{run_id}/chat")

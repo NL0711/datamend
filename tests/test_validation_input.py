@@ -123,6 +123,14 @@ def test_intensity_only_file_needs_no_mode():
     assert p.records[0].intensity == 3.0 and p.records[0].accumulation_mode is None
 
 
+@pytest.mark.parametrize("bad", [0, -5, float("nan"), float("inf")])
+def test_interval_minutes_must_be_a_positive_finite_number(bad):
+    """Review finding: a negative interval flagged every row as a gap and gave a negative expected count."""
+    with pytest.raises(InputRejected, match="interval_minutes"):
+        reading(CLEAN, interval_minutes=bad)
+    assert reading(CLEAN, interval_minutes=0.5).issue_counts is not None
+
+
 def test_oversize_file_is_rejected():
     with pytest.raises(InputRejected, match="larger than"):
         parse_upload(b"x" * (10 * 1024 * 1024 + 1), UploadOptions(profile="reading"))

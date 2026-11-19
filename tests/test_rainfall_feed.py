@@ -129,6 +129,20 @@ def test_live_readings_are_platform_records_with_received_time_and_unconfirmed_u
     assert rs[0].latitude == stations[0].latitude and rs[0].row_ref.startswith(stations[0].locality_id + "@")
 
 
+def test_listing_stations_scores_the_history_once_and_rescores_when_it_changes():
+    """Review finding: every station report used to re-run the whole catalogue."""
+    svc, stations = _service_with_history([[(0.0, 0.0)], [(0.0, 0.0)], [(0.0, 0.0)]])
+    for st in stations:
+        svc.station_report(st.locality_id)
+    first = svc._scored_cache
+    for st in stations:
+        svc.station_report(st.locality_id)
+    assert svc._scored_cache is first                                   # nothing recomputed
+    svc.history[stations[0].locality_id].append(obs(1, 0.0, 0.0, sid=stations[0].locality_id))
+    svc.station_report(stations[0].locality_id)
+    assert svc._scored_cache is not first                               # new reading: scored again
+
+
 def test_live_station_report_uses_the_catalogue_and_labels_the_score():
     svc, stations = _service_with_history([[(0.0, 0.0), (900.0, 80.0)]])
     q = svc.station_report(stations[0].locality_id)["quality"]

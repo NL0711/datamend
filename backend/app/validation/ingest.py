@@ -196,6 +196,9 @@ def parse_upload(content: bytes, opts: UploadOptions) -> ParsedInput:
         raise InputRejected("the file is empty")
     if len(content) > MAX_BYTES:
         raise InputRejected(f"the file is larger than {MAX_BYTES // (1024 * 1024)} MB")
+    if opts.interval_minutes is not None and not (isinstance(opts.interval_minutes, (int, float)) and math.isfinite(opts.interval_minutes)
+                                                  and opts.interval_minutes > 0):
+        raise InputRejected("interval_minutes must be a number greater than 0")
     if opts.accumulation_mode is not None and opts.accumulation_mode not in ACCUMULATION_MODES:
         raise InputRejected(f"accumulation_mode must be one of {ACCUMULATION_MODES}")
 
