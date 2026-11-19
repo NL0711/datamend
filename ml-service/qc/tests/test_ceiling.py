@@ -43,6 +43,15 @@ def test_radius_groups_partition_the_faults_and_centre_cells_split_by_radius(rea
     assert "by footprint radius of its event" in md and "single cell" in md
 
 
+def test_memory_bins_partition_the_faults_and_min_day_keeps_late_days_only(ready):
+    p = ready
+    res = C.analyse(C.fault_table(p, "rules", 1.0), 1.0)
+    assert sum(v["all"]["n"] for v in res["by_memory_days"].values()) == res["overall"]["n"]
+    late = C.fault_table(p, "rules", 1.0, min_day=200)
+    assert late["day"].min() >= 200 and late["flag"].size < res["overall"]["n"]
+    assert "memory" in C.markdown("rules", res) and "drift" in C.markdown("rules", res)
+
+
 def test_strong_group_is_defined_and_inside_the_whole(ready):
     res = C.analyse(C.fault_table(ready, "rules", 1.0), 1.0)
     assert 0 < res["strong"]["n"] <= res["overall"]["n"] and res["strong"]["recall"] is not None
