@@ -28,6 +28,9 @@ STRONG_MM = 5.0
 STRONG_WEIGHT = 0.5
 CHANGE_BINS = [(0.0, 0.1), (0.1, 1.0), (1.0, 5.0), (5.0, 20.0), (20.0, 100.0), (100.0, np.inf)]
 WEIGHT_BINS = [(0.0, 0.25), (0.25, 0.5), (0.5, 0.75), (0.75, 1.0001)]
+# Footprint radius of the event the cell-day belongs to, cells: 0 = a single cell (no neighbour is affected), then growing footprints.
+# A neighbour-based score reads a ring outside the 2-cell hidden disc, so for radius above about 2 the ring is inside the fault too.
+RADIUS_BINS = [("single cell", 0.0, 0.0001), ("radius 1.5-2.5", 0.0001, 2.5), ("radius 2.5-4", 2.5, 4.0001), ("radius above 4", 4.0001, np.inf)]
 
 
 def _recall(flag: np.ndarray, mask: np.ndarray) -> Dict:
@@ -40,7 +43,7 @@ def fault_table(p: Prepared, component: str, budget: float, store=None, years: O
     store = store or score_store(p)
     thr = thresholds_for(p, component, [budget], store)[float(budget)]
     cells = group_cells(p, "seen")
-    cols: Dict[str, List[np.ndarray]] = {k: [] for k in ("change", "weight", "kind", "centre", "flag")}
+    cols: Dict[str, List[np.ndarray]] = {k: [] for k in ("change", "weight", "kind", "centre", "flag", "radius")}
     for ys in load_years(p, component, "val", list(years) if years else holdout_years(p), store):
         fs, clean = ys.bench.faults, ys.bench.clean
         keep = cells[fs.cell]
@@ -52,6 +55,7 @@ def fault_table(p: Prepared, component: str, budget: float, store=None, years: O
         cols["weight"].append(fs.weight[keep])
         cols["kind"].append(np.array([events[e]["kind"] for e in ev]))
         cols["centre"].append(np.array([events[e]["centre"] == cell for e, cell in zip(ev, c)], bool))
+        cols["radius"].append(np.array([events[e]["radius"] for e in ev], float))
         cols["flag"].append(score > thr)
     if not cols["flag"]:
         raise ValueError("no fault cell-days to analyse")
@@ -71,10 +75,16 @@ def analyse(tab: Dict, budget: float) -> Dict:
         "by_weight": {f"{lo:g}-{min(hi, 1.0):g}": _recall(flag, (weight >= lo) & (weight < hi)) for lo, hi in WEIGHT_BINS},
         "by_kind": {},
     }
+    radius = tab["radius"]
+    out["by_kind_radius_centre"] = {}
     for k in sorted(set(kind.tolist())):
         m = kind == k
         out["by_kind"][k] = {"all": _recall(flag, m), "centre_cells": _recall(flag, m & centre), "strong": _recall(flag, m & strong),
                              "change_under_1mm_share": float((change[m] < 1.0).mean())}
+        # Centre cells of events of each footprint radius: the best case for the kind. A fall with radius, with the change at the
+        # centre as large as before, points at the footprint (the evidence around the cell is faulty too), not at the detector.
+        out["by_kind_radius_centre"][k] = {name: _recall(flag, m & centre & (radius >= lo) & (radius < hi)) for name, lo, hi in RADIUS_BINS}
+    out["by_radius_all"] = {name: _recall(flag, (radius >= lo) & (radius < hi)) for name, lo, hi in RADIUS_BINS}
     return out
 
 
@@ -92,6 +102,11 @@ def markdown(component: str, res: Dict) -> str:
     o += ["", "| kind | all | centre cells | strong | share under 1 mm |", "|---|---|---|---|---|"]
     o += [f"| {k} | {f(v['all'])} | {f(v['centre_cells'])} | {f(v['strong'])} | {v['change_under_1mm_share']:.1%} |"
           for k, v in res["by_kind"].items()]
+    names = [n for n, _, _ in RADIUS_BINS]
+    o += ["", "Recall of the CENTRE cell, by footprint radius of its event (single cell = no neighbour is faulty):", "",
+          "| kind | " + " | ".join(names) + " |", "|---|" + "---|" * len(names)]
+    o += [f"| {k} | " + " | ".join(f(v[n]) for n in names) + " |" for k, v in res["by_kind_radius_centre"].items()]
+    o += ["", "All cell-days, by footprint radius: " + "; ".join(f"{n} {f(v)}" for n, v in res["by_radius_all"].items())]
     return "\n".join(o) + "\n"
 
 

@@ -34,6 +34,15 @@ def test_bins_partition_the_fault_cell_days(ready):
         assert v["centre_cells"]["n"] <= v["all"]["n"] and v["strong"]["n"] <= v["all"]["n"]
 
 
+def test_radius_groups_partition_the_faults_and_centre_cells_split_by_radius(ready):
+    res = C.analyse(C.fault_table(ready, "rules", 1.0), 1.0)
+    assert sum(v["n"] for v in res["by_radius_all"].values()) == res["overall"]["n"]
+    for k, v in res["by_kind_radius_centre"].items():
+        assert sum(x["n"] for x in v.values()) == res["by_kind"][k]["centre_cells"]["n"]
+    md = C.markdown("rules", res)
+    assert "by footprint radius of its event" in md and "single cell" in md
+
+
 def test_strong_group_is_defined_and_inside_the_whole(ready):
     res = C.analyse(C.fault_table(ready, "rules", 1.0), 1.0)
     assert 0 < res["strong"]["n"] <= res["overall"]["n"] and res["strong"]["recall"] is not None
