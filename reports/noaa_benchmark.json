@@ -1,0 +1,44 @@
+{
+  "benchmark_timestamp": "2026-08-25T10:18:27.472373+00:00",
+  "dataset": {
+    "path": "data\\noaa_benchmark.csv",
+    "total_observations": 500,
+    "stations": [
+      "725650-03017"
+    ],
+    "start_timestamp": "2023-07-01T00:00:00+00:00",
+    "end_timestamp": "2023-07-21T19:00:00+00:00"
+  },
+  "anomaly_summary": {
+    "total_flagged_anomalies": 0,
+    "anomaly_rate": 0.0,
+    "sensor_faults_count": 0,
+    "meteorological_extremes_count": 0
+  },
+  "score_distribution": {
+    "mean_score": 0.3857,
+    "median_score": 0.3984,
+    "std_score": 0.0498,
+    "min_score": 0.0143,
+    "max_score": 0.4099,
+    "p90_score": 0.4034,
+    "p95_score": 0.4048,
+    "p99_score": 0.4092
+  },
+  "tier_contributions": {
+    "tier1_violations_count": 0,
+    "tier1_violation_rate": 0.0,
+    "tier2_isolation_forest_mean": 0.7373,
+    "tier2_gru_autoencoder_mean": 0.942,
+    "tier3_mahalanobis_mean": 0.0
+  },
+  "classification_breakdown": {
+    "NORMAL": 500
+  },
+  "sensor_health_summary": {
+    "mean_shi": 77.85,
+    "min_shi": 76.02,
+    "final_shi": 76.02
+  },
+  "evaluation_notes": "Evaluated on real-world observational data. Distinguishes genuine natural extremes from isolated physical sensor faults without supervised label leakage."
+}

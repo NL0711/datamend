@@ -1,0 +1,9 @@
+{
+ "config_digest": "b5af58ff5130c309",
+ "seed": 42,
+ "git_commit": "5078117c094c1426ddf27450d1188955478c58a0",
+ "started": "2026-11-18T15:39:51",
+ "profile": "single-gpu",
+ "split_manifest_hash": "a079504cc9e89c1b",
+ "resumed": "2026-11-19T10:01:32"
+}

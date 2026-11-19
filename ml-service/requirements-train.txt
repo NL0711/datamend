@@ -1,0 +1,16 @@
+# Minimal deps for `python -m training` on Kaggle / Colab / any Linux box.
+# torch is preinstalled on Kaggle and Colab (GPU build) - do not reinstall it there.
+# Not tied to uv or Python 3.10: works on any Python >=3.10.
+numpy
+pandas
+scipy
+scikit-learn
+xarray
+netCDF4
+pytest
+matplotlib
+pyyaml
+pyarrow
+kagglehub
+psutil
+nvidia-ml-py

@@ -1,0 +1,139 @@
+# Base configuration for the precipitation QC system. Experiments extend this file.
+# Decisions behind every value: docs/qc-system-spec.md.
+
+name: base
+seed: 0
+
+paths:
+  rf25: null      # RF25 folder; null = auto-detect ($DATAMEND_RF25_DIR, $DATAMEND_DATA_DIR/rf25, ml-service/data/rf25, /kaggle/input)
+  work: null      # where splits/, benchmarks/ and cache/ live; null = $DATAMEND_DATA_DIR or ml-service/data
+  out: artifacts/qc   # run folders; relative paths go under $DATAMEND_OUT_DIR, /kaggle/working, or the current folder
+
+# Data contract: what the RF25 files must look like. A mismatch stops the run.
+grid:
+  n_lat: 129
+  n_lon: 135
+  lat0: 6.5
+  lon0: 66.5
+  step: 0.25
+  land_cells: 4964
+  fill_value: -999.0
+  units: mm
+
+years:            # inclusive ranges
+  train: [1951, 2012]
+  val: [2013, 2017]
+  test: [2018, 2025]   # RF25 2024 and 2025 are in the data; extended from 2023 before any real run
+  fusion_fit: [2013, 2015]   # fusion is fitted on synthetic faults in these validation years
+  threshold: [2016, 2017]    # false-alarm budgets are set on clean data from these validation years
+  stress: [1901, 1950]       # evaluation-only stress test; never used for fitting
+
+clients:
+  k: 8
+  seed: 0
+  heldout: [3, 6]     # unseen clients, numbered as in qc/assets/client_map.json
+  buffer_cells: 6     # training cells within this many cells of a held-out client are not used
+
+normalization:
+  wet_mm: 0.1
+  wet_quantile: 99.9  # scale = log1p of this percentile of training wet days; rescales, never clips
+
+extremes:
+  quantile: 99.0      # heavy-rain threshold: this percentile of the cell's wet days in training years
+  min_cells: 4        # connected cells (8-neighbour) all above their threshold = protected extreme
+
+compute:
+  profile: single-gpu
+
+# Corruption benchmark (frozen for validation, test and stress years). Synthetic faults are a stress
+# test, not real QC labels.
+benchmark:
+  name: v1
+  rate: 0.01                 # share of land cell-days carrying a fault
+  footprint_share: 0.5       # share of faults with a footprint (radius > 0)
+  radius: {min: 1.5, max_seen: 4.0, max: 6.0}   # cells; radii above max_seen appear in test only
+  min_strength_seen: 0.25    # strengths below this appear in test only
+  kinds_seen: [spike, stuck, scale, phantom_rain, zeroed, drift, combination]
+  kinds_test_only: [repeat, edge]
+  seeds: {val: 1001, test: 2002, stress: 3003}
+  expected_hash: null          # the benchmark pin was REMOVED by the owner on 2026-11-18 (it was 442851b03d5f95a4 for test 2018-2025). The hash is still computed and
+                               # recorded in the benchmark manifest, the budgets log and the test report, so a changed benchmark is visible but no longer refused.
+  allow_unpinned: true
+
+components:
+  hidden_radius: 2           # cells; the spatial component, slow comparison and neighbour baseline never read inside it
+  history_days: 90           # days of history given to every component in front of the scored year
+  slow:
+    windows: [30, 90]        # trailing totals, days
+    ring_outer: 4            # neighbours for the slow comparison lie between hidden_radius and this distance
+  neighbour_baseline:
+    radius: 6
+  spatial:
+    radius: 6                # patch half-width in cells; must not exceed clients.buffer_cells
+    width: 32
+    dense: 128
+  temporal:
+    history: 30              # the cell's own previous days (never the scored day); must not exceed history_days
+    hidden: 64
+    dense: 64
+  plain_gru:
+    history: 30
+    hidden: 64
+
+# Training of the centralized components (gate 4). One year-step = one visit to one training year.
+train:
+  epochs: 3
+  steps_per_year: 40
+  batch_size: null           # null = compute.batch_size
+  infer_batch_size: 16384
+  lr: 0.001
+  weight_decay: 0.0001
+  grad_clip: 1.0
+  corruption: true           # corrupt the inputs on the fly with the seen fault settings; targets stay clean
+  seeds: [0, 1, 2]
+
+# Federated simulation (gate 6). No privacy claim: everything runs on one machine.
+federated:
+  rounds: null               # null = set so total gradient steps match the centralized run
+  prox_mu: 0.0               # > 0 switches FedProx on in every variant
+  finetune_steps: 40         # gradient steps of the per-client fine-tune in the fedft variant
+  fusion_rounds: 20          # rounds of federated averaging for the shared logistic fusion
+
+# Fusion (gate 5): fitted on synthetic faults of years.fusion_fit; thresholds from clean years.threshold.
+fusion:
+  max_rows: 3000000          # fit rows (all fault cell-days kept; clean ones subsampled and reweighted)
+  C: 1.0                     # inverse L2 strength of the logistic regression
+  boosted_iter: 100
+  curve_budgets: [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50]   # false alerts per 1,000 clean cell-days, for the validation curves
+
+evaluation:
+  # Candidate false-alarm budgets (false alerts per 1,000 clean cell-days) for curves. The two operating
+  # points are chosen from validation curves at gate 5 and logged in docs/qc-evaluation-protocol.md.
+  budgets: [0.5, 1, 2, 5, 10]
+  bootstrap: 200             # resamples of WHOLE YEARS (regions fixed) for confidence intervals; none are given for fewer than 5 years (docs/research/bootstrap-unit-check.md)
+
+# Offline comparison (qc/offline.py): existing rainnet / scalenet / msnet / lstm_ae artifacts, non-causal references.
+# Set offline.artifacts.<arch> to an artifact folder. None ship with the repo; unset ones are listed as NOT RUN.
+offline:
+  artifacts: {}
+
+# Architecture decision rule (qc/crossscale_run.py decide_architecture), frozen by the owner on 2026-11-18 in docs/qc-evaluation-protocol.md.
+architecture:
+  final_budget: 1.0            # false alarms per 1,000 clean cell-days at which recall is compared
+  min_recall_gain: 0.02        # a combination replaces daily-only only if recall is at least this much higher (absolute), within the guards
+  frozen_on: "2026-11-18"
+
+# Bridge check of a live daily product against RF25 (qc/bridge.py). Limits confirmed by the owner on 2026-11-18, to be logged in
+# docs/qc-evaluation-protocol.md and committed BEFORE the check is run. Pass/fail is at primary_rain_mm; report_rain_mm only reported.
+bridge:
+  min_pss: 0.5
+  max_far: 0.5
+  max_abs_bias_pct: 20.0
+  max_pct_rmse: 150.0
+  min_corr: 0.8                # cell-level pooled correlation; the area-mean correlation is reported beside it
+  p99_ratio_band: [0.8, 1.25]  # outside it is a WARNING: recalibrate the standardisation reference on the product's clean days
+  primary_rain_mm: 0.5
+  report_rain_mm: [2.5]
+  allowed_years: [2013, 2014, 2015, 2016, 2017]   # the validation years (widened from 2016-2017 on 2026-11-18, before any run, for IMERG, which was then dropped; no product is bridged now); never a test year
+  confirmed_by_owner: true
+  frozen_on: "2026-11-18"

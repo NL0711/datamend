@@ -1,0 +1,687 @@
+{
+ "label": "SYNTHETIC faults, held-out threshold years only",
+ "evaluation_years": [
+  2016,
+  2017
+ ],
+ "mode": "max",
+ "daily": "fusion_logistic_s42",
+ "scorers": {
+  "monthly": "loo_median",
+  "yearly": "gamma_zero"
+ },
+ "protected_factor": 0.5,
+ "budgets": [
+  0.5,
+  1.0,
+  2.0,
+  5.0,
+  10.0
+ ],
+ "rows": [
+  {
+   "combination": "daily only",
+   "scales": [],
+   "fusion": "daily",
+   "component": "fusion_logistic_s42",
+   "budget_per_1000": 0.5,
+   "recall": 0.35909684514399615,
+   "event_recall": 0.5145348837209303,
+   "false_per_1000_clean": 0.5058200234132808,
+   "protected_flagged": 0.05720289516693906,
+   "pr_auc": 0.4588361408713502
+  },
+  {
+   "combination": "daily only",
+   "scales": [],
+   "fusion": "daily",
+   "component": "fusion_logistic_s42",
+   "budget_per_1000": 1.0,
+   "recall": 0.4356656814901368,
+   "event_recall": 0.5726744186046512,
+   "false_per_1000_clean": 1.0523967681375597,
+   "protected_flagged": 0.10763483539575064,
+   "pr_auc": 0.4588361408713502
+  },
+  {
+   "combination": "daily only",
+   "scales": [],
+   "fusion": "daily",
+   "component": "fusion_logistic_s42",
+   "budget_per_1000": 2.0,
+   "recall": 0.4450477696061585,
+   "event_recall": 0.6337209302325582,
+   "false_per_1000_clean": 2.0538476346363717,
+   "protected_flagged": 0.16367032453887462,
+   "pr_auc": 0.4588361408713502
+  },
+  {
+   "combination": "daily only",
+   "scales": [],
+   "fusion": "daily",
+   "component": "fusion_logistic_s42",
+   "budget_per_1000": 5.0,
+   "recall": 0.4617499484500653,
+   "event_recall": 0.7412790697674418,
+   "false_per_1000_clean": 5.014532318442453,
+   "protected_flagged": 0.225542843801074,
+   "pr_auc": 0.4588361408713502
+  },
+  {
+   "combination": "daily only",
+   "scales": [],
+   "fusion": "daily",
+   "component": "fusion_logistic_s42",
+   "budget_per_1000": 10.0,
+   "recall": 0.4872156161935528,
+   "event_recall": 0.8343023255813954,
+   "false_per_1000_clean": 9.965018360539052,
+   "protected_flagged": 0.28531403222040624,
+   "pr_auc": 0.4588361408713502
+  },
+  {
+   "combination": "daily + monthly",
+   "scales": [
+    "monthly"
+   ],
+   "fusion": "fixed",
+   "component": "xscale_max_daily+monthly",
+   "budget_per_1000": 0.5,
+   "recall": 0.3595779778678947,
+   "event_recall": 0.5290697674418605,
+   "false_per_1000_clean": 1.7197880796051548,
+   "protected_flagged": 0.030819519028718188,
+   "pr_auc": 0.4133452129180837
+  },
+  {
+   "combination": "daily + monthly",
+   "scales": [
+    "monthly"
+   ],
+   "fusion": "fixed",
+   "component": "xscale_max_daily+monthly",
+   "budget_per_1000": 1.0,
+   "recall": 0.438999243934291,
+   "event_recall": 0.5726744186046512,
+   "false_per_1000_clean": 4.777997775119696,
+   "protected_flagged": 0.04739668456689237,
+   "pr_auc": 0.4133452129180837
+  },
+  {
+   "combination": "daily + monthly",
+   "scales": [
+    "monthly"
+   ],
+   "fusion": "fixed",
+   "component": "xscale_max_daily+monthly",
+   "budget_per_1000": 2.0,
+   "recall": 0.47855522716337895,
+   "event_recall": 0.6104651162790697,
+   "false_per_1000_clean": 7.888608969462663,
+   "protected_flagged": 0.06350688769554051,
+   "pr_auc": 0.4133452129180837
+  },
+  {
+   "combination": "daily + monthly",
+   "scales": [
+    "monthly"
+   ],
+   "fusion": "fixed",
+   "component": "xscale_max_daily+monthly",
+   "budget_per_1000": 5.0,
+   "recall": 0.4903429788988934,
+   "event_recall": 0.6337209302325582,
+   "false_per_1000_clean": 12.756125971747586,
+   "protected_flagged": 0.07868316600513658,
+   "pr_auc": 0.4133452129180837
+  },
+  {
+   "combination": "daily + monthly",
+   "scales": [
+    "monthly"
+   ],
+   "fusion": "fixed",
+   "component": "xscale_max_daily+monthly",
+   "budget_per_1000": 10.0,
+   "recall": 0.5095195546085641,
+   "event_recall": 0.6598837209302325,
+   "false_per_1000_clean": 19.293576849891174,
+   "protected_flagged": 0.09082418865281344,
+   "pr_auc": 0.4133452129180837
+  },
+  {
+   "combination": "daily + monthly (learned)",
+   "scales": [
+    "monthly"
+   ],
+   "fusion": "learned",
+   "component": "xscale_learned_daily+monthly",
+   "budget_per_1000": 0.5,
+   "recall": 0.35789401333424975,
+   "event_recall": 0.5116279069767442,
+   "false_per_1000_clean": 0.530929074935235,
+   "protected_flagged": 0.009806210600046696,
+   "pr_auc": 0.47303712294786615
+  },
+  {
+   "combination": "daily + monthly (learned)",
+   "scales": [
+    "monthly"
+   ],
+   "fusion": "learned",
+   "component": "xscale_learned_daily+monthly",
+   "budget_per_1000": 1.0,
+   "recall": 0.4357000481132724,
+   "event_recall": 0.5726744186046512,
+   "false_per_1000_clean": 1.0607664519782112,
+   "protected_flagged": 0.03922484240018678,
+   "pr_auc": 0.47303712294786615
+  },
+  {
+   "combination": "daily + monthly (learned)",
+   "scales": [
+    "monthly"
+   ],
+   "fusion": "learned",
+   "component": "xscale_learned_daily+monthly",
+   "budget_per_1000": 2.0,
+   "recall": 0.44965289710633033,
+   "event_recall": 0.6395348837209303,
+   "false_per_1000_clean": 2.1029740397880214,
+   "protected_flagged": 0.08405323371468597,
+   "pr_auc": 0.47303712294786615
+  },
+  {
+   "combination": "daily + monthly (learned)",
+   "scales": [
+    "monthly"
+   ],
+   "fusion": "learned",
+   "component": "xscale_learned_daily+monthly",
+   "budget_per_1000": 5.0,
+   "recall": 0.48769674891745135,
+   "event_recall": 0.7587209302325582,
+   "false_per_1000_clean": 6.7201283254482425,
+   "protected_flagged": 0.1340182115339715,
+   "pr_auc": 0.47303712294786615
+  },
+  {
+   "combination": "daily + monthly (learned)",
+   "scales": [
+    "monthly"
+   ],
+   "fusion": "learned",
+   "component": "xscale_learned_daily+monthly",
+   "budget_per_1000": 10.0,
+   "recall": 0.5303800948518799,
+   "event_recall": 0.8459302325581395,
+   "false_per_1000_clean": 14.01885653379369,
+   "protected_flagged": 0.16997431706747607,
+   "pr_auc": 0.47303712294786615
+  },
+  {
+   "combination": "daily + yearly",
+   "scales": [
+    "yearly"
+   ],
+   "fusion": "fixed",
+   "component": "xscale_max_daily+yearly",
+   "budget_per_1000": 0.5,
+   "recall": 0.36493917107705,
+   "event_recall": 0.5174418604651163,
+   "false_per_1000_clean": 2.109160327844155,
+   "protected_flagged": 0.031286481438244224,
+   "pr_auc": 0.3669191822100581
+  },
+  {
+   "combination": "daily + yearly",
+   "scales": [
+    "yearly"
+   ],
+   "fusion": "fixed",
+   "component": "xscale_max_daily+yearly",
+   "budget_per_1000": 1.0,
+   "recall": 0.42116296652690904,
+   "event_recall": 0.5465116279069767,
+   "false_per_1000_clean": 3.677566299722745,
+   "protected_flagged": 0.044127947700210134,
+   "pr_auc": 0.3669191822100581
+  },
+  {
+   "combination": "daily + yearly",
+   "scales": [
+    "yearly"
+   ],
+   "fusion": "fixed",
+   "component": "xscale_max_daily+yearly",
+   "budget_per_1000": 2.0,
+   "recall": 0.45075262904666985,
+   "event_recall": 0.5784883720930233,
+   "false_per_1000_clean": 5.578212330145454,
+   "protected_flagged": 0.06374036890030353,
+   "pr_auc": 0.3669191822100581
+  },
+  {
+   "combination": "daily + yearly",
+   "scales": [
+    "yearly"
+   ],
+   "fusion": "fixed",
+   "component": "xscale_max_daily+yearly",
+   "budget_per_1000": 5.0,
+   "recall": 0.4607533163791326,
+   "event_recall": 0.6308139534883721,
+   "false_per_1000_clean": 16.446064847582598,
+   "protected_flagged": 0.07985057202895167,
+   "pr_auc": 0.3669191822100581
+  },
+  {
+   "combination": "daily + yearly",
+   "scales": [
+    "yearly"
+   ],
+   "fusion": "fixed",
+   "component": "xscale_max_daily+yearly",
+   "budget_per_1000": 10.0,
+   "recall": 0.4643274451852361,
+   "event_recall": 0.6395348837209303,
+   "false_per_1000_clean": 22.38744867655284,
+   "protected_flagged": 0.07985057202895167,
+   "pr_auc": 0.3669191822100581
+  },
+  {
+   "combination": "daily + yearly (learned)",
+   "scales": [
+    "yearly"
+   ],
+   "fusion": "learned",
+   "component": "xscale_learned_daily+yearly",
+   "budget_per_1000": 0.5,
+   "recall": 0.35909684514399615,
+   "event_recall": 0.5145348837209303,
+   "false_per_1000_clean": 0.5058200234132808,
+   "protected_flagged": 0.011207097828624796,
+   "pr_auc": 0.4659305736623925
+  },
+  {
+   "combination": "daily + yearly (learned)",
+   "scales": [
+    "yearly"
+   ],
+   "fusion": "learned",
+   "component": "xscale_learned_daily+yearly",
+   "budget_per_1000": 1.0,
+   "recall": 0.4356656814901368,
+   "event_recall": 0.5726744186046512,
+   "false_per_1000_clean": 1.0523967681375597,
+   "protected_flagged": 0.04132617324305393,
+   "pr_auc": 0.4659305736623925
+  },
+  {
+   "combination": "daily + yearly (learned)",
+   "scales": [
+    "yearly"
+   ],
+   "fusion": "learned",
+   "component": "xscale_learned_daily+yearly",
+   "budget_per_1000": 2.0,
+   "recall": 0.4450477696061585,
+   "event_recall": 0.6337209302325582,
+   "false_per_1000_clean": 2.0538476346363717,
+   "protected_flagged": 0.0873219705813682,
+   "pr_auc": 0.4659305736623925
+  },
+  {
+   "combination": "daily + yearly (learned)",
+   "scales": [
+    "yearly"
+   ],
+   "fusion": "learned",
+   "component": "xscale_learned_daily+yearly",
+   "budget_per_1000": 5.0,
+   "recall": 0.4617499484500653,
+   "event_recall": 0.7412790697674418,
+   "false_per_1000_clean": 5.014532318442453,
+   "protected_flagged": 0.1393882792435209,
+   "pr_auc": 0.4659305736623925
+  },
+  {
+   "combination": "daily + yearly (learned)",
+   "scales": [
+    "yearly"
+   ],
+   "fusion": "learned",
+   "component": "xscale_learned_daily+yearly",
+   "budget_per_1000": 10.0,
+   "recall": 0.4872156161935528,
+   "event_recall": 0.8343023255813954,
+   "false_per_1000_clean": 9.965018360539052,
+   "protected_flagged": 0.183049264534205,
+   "pr_auc": 0.4659305736623925
+  },
+  {
+   "combination": "daily + monthly + yearly",
+   "scales": [
+    "monthly",
+    "yearly"
+   ],
+   "fusion": "fixed",
+   "component": "xscale_max_daily+monthly+yearly",
+   "budget_per_1000": 0.5,
+   "recall": 0.36542030380094853,
+   "event_recall": 0.5319767441860465,
+   "false_per_1000_clean": 3.2805521662379324,
+   "protected_flagged": 0.031286481438244224,
+   "pr_auc": 0.3671336234489881
+  },
+  {
+   "combination": "daily + monthly + yearly",
+   "scales": [
+    "monthly",
+    "yearly"
+   ],
+   "fusion": "fixed",
+   "component": "xscale_max_daily+monthly+yearly",
+   "budget_per_1000": 1.0,
+   "recall": 0.43308818475496597,
+   "event_recall": 0.5668604651162791,
+   "false_per_1000_clean": 6.8675075409031905,
+   "protected_flagged": 0.04296054167639505,
+   "pr_auc": 0.3671336234489881
+  },
+  {
+   "combination": "daily + monthly + yearly",
+   "scales": [
+    "monthly",
+    "yearly"
+   ],
+   "fusion": "fixed",
+   "component": "xscale_max_daily+monthly+yearly",
+   "budget_per_1000": 2.0,
+   "recall": 0.4758058973125301,
+   "event_recall": 0.5988372093023255,
+   "false_per_1000_clean": 10.026517341802968,
+   "protected_flagged": 0.05673593275741303,
+   "pr_auc": 0.3671336234489881
+  },
+  {
+   "combination": "daily + monthly + yearly",
+   "scales": [
+    "monthly",
+    "yearly"
+   ],
+   "fusion": "fixed",
+   "component": "xscale_max_daily+monthly+yearly",
+   "budget_per_1000": 5.0,
+   "recall": 0.496907003917795,
+   "event_recall": 0.6511627906976745,
+   "false_per_1000_clean": 22.589776685918153,
+   "protected_flagged": 0.07144524865748307,
+   "pr_auc": 0.3671336234489881
+  },
+  {
+   "combination": "daily + monthly + yearly",
+   "scales": [
+    "monthly",
+    "yearly"
+   ],
+   "fusion": "fixed",
+   "component": "xscale_max_daily+monthly+yearly",
+   "budget_per_1000": 10.0,
+   "recall": 0.5050862602240704,
+   "event_recall": 0.6656976744186046,
+   "false_per_1000_clean": 29.42926398092003,
+   "protected_flagged": 0.07985057202895167,
+   "pr_auc": 0.3671336234489881
+  },
+  {
+   "combination": "daily + monthly + yearly (learned)",
+   "scales": [
+    "monthly",
+    "yearly"
+   ],
+   "fusion": "learned",
+   "component": "xscale_learned_daily+monthly+yearly",
+   "budget_per_1000": 0.5,
+   "recall": 0.35789401333424975,
+   "event_recall": 0.5116279069767442,
+   "false_per_1000_clean": 0.530929074935235,
+   "protected_flagged": 0.009806210600046696,
+   "pr_auc": 0.4730376817324039
+  },
+  {
+   "combination": "daily + monthly + yearly (learned)",
+   "scales": [
+    "monthly",
+    "yearly"
+   ],
+   "fusion": "learned",
+   "component": "xscale_learned_daily+monthly+yearly",
+   "budget_per_1000": 1.0,
+   "recall": 0.4357000481132724,
+   "event_recall": 0.5726744186046512,
+   "false_per_1000_clean": 1.0607664519782112,
+   "protected_flagged": 0.03922484240018678,
+   "pr_auc": 0.4730376817324039
+  },
+  {
+   "combination": "daily + monthly + yearly (learned)",
+   "scales": [
+    "monthly",
+    "yearly"
+   ],
+   "fusion": "learned",
+   "component": "xscale_learned_daily+monthly+yearly",
+   "budget_per_1000": 2.0,
+   "recall": 0.44965289710633033,
+   "event_recall": 0.6395348837209303,
+   "false_per_1000_clean": 2.1029740397880214,
+   "protected_flagged": 0.08405323371468597,
+   "pr_auc": 0.4730376817324039
+  },
+  {
+   "combination": "daily + monthly + yearly (learned)",
+   "scales": [
+    "monthly",
+    "yearly"
+   ],
+   "fusion": "learned",
+   "component": "xscale_learned_daily+monthly+yearly",
+   "budget_per_1000": 5.0,
+   "recall": 0.48769674891745135,
+   "event_recall": 0.7587209302325582,
+   "false_per_1000_clean": 6.7201283254482425,
+   "protected_flagged": 0.1340182115339715,
+   "pr_auc": 0.4730376817324039
+  },
+  {
+   "combination": "daily + monthly + yearly (learned)",
+   "scales": [
+    "monthly",
+    "yearly"
+   ],
+   "fusion": "learned",
+   "component": "xscale_learned_daily+monthly+yearly",
+   "budget_per_1000": 10.0,
+   "recall": 0.5303800948518799,
+   "event_recall": 0.8459302325581395,
+   "false_per_1000_clean": 14.017764835901431,
+   "protected_flagged": 0.16997431706747607,
+   "pr_auc": 0.4730376817324039
+  }
+ ],
+ "fusions": {
+  "xscale_max_daily+monthly": {
+   "name": "xscale_max_daily+monthly",
+   "parts": {
+    "daily": "fusion_logistic_s42",
+    "monthly": "scale_monthly_loo_median"
+   },
+   "references": {
+    "daily": 0.19981951583922491,
+    "monthly": 8.80296802520752
+   },
+   "mode": "max",
+   "protected_factor": 0.5,
+   "learned": null,
+   "driver_share": {
+    "daily": 0.13340321950022638,
+    "monthly": 0.8665967804997736
+   }
+  },
+  "xscale_learned_daily+monthly": {
+   "name": "xscale_learned_daily+monthly",
+   "parts": {
+    "daily": "fusion_logistic_s42",
+    "monthly": "scale_monthly_loo_median"
+   },
+   "references": {
+    "daily": 0.19981951583922491,
+    "monthly": 8.80296802520752
+   },
+   "mode": "learned",
+   "protected_factor": 0.5,
+   "learned": {
+    "weights": [
+     3.243744573728936,
+     0.7914327639269455
+    ],
+    "intercept": -3.726084323532388,
+    "fit_years": [
+     2013,
+     2014,
+     2015
+    ],
+    "rows": 770952,
+    "positive_rows": 36712,
+    "parts": [
+     "daily",
+     "monthly"
+    ]
+   },
+   "driver_share": {
+    "daily": 0.37721099032420063,
+    "monthly": 0.6227890096757994
+   }
+  },
+  "xscale_max_daily+yearly": {
+   "name": "xscale_max_daily+yearly",
+   "parts": {
+    "daily": "fusion_logistic_s42",
+    "yearly": "scale_yearly_gamma_zero"
+   },
+   "references": {
+    "daily": 0.19981951583922491,
+    "yearly": 2.3557322025299072
+   },
+   "mode": "max",
+   "protected_factor": 0.5,
+   "learned": null,
+   "driver_share": {
+    "daily": 0.13397734223098534,
+    "yearly": 0.8660226577690147
+   }
+  },
+  "xscale_learned_daily+yearly": {
+   "name": "xscale_learned_daily+yearly",
+   "parts": {
+    "daily": "fusion_logistic_s42",
+    "yearly": "scale_yearly_gamma_zero"
+   },
+   "references": {
+    "daily": 0.19981951583922491,
+    "yearly": 2.3557322025299072
+   },
+   "mode": "learned",
+   "protected_factor": 0.5,
+   "learned": {
+    "weights": [
+     3.2945013992783414,
+     0.0
+    ],
+    "intercept": -3.6292428005258515,
+    "fit_years": [
+     2013,
+     2014,
+     2015
+    ],
+    "rows": 770952,
+    "positive_rows": 36712,
+    "parts": [
+     "daily",
+     "yearly"
+    ]
+   },
+   "driver_share": {
+    "daily": 1.0,
+    "yearly": 0.0
+   }
+  },
+  "xscale_max_daily+monthly+yearly": {
+   "name": "xscale_max_daily+monthly+yearly",
+   "parts": {
+    "daily": "fusion_logistic_s42",
+    "monthly": "scale_monthly_loo_median",
+    "yearly": "scale_yearly_gamma_zero"
+   },
+   "references": {
+    "daily": 0.19981951583922491,
+    "monthly": 8.80296802520752,
+    "yearly": 2.3557322025299072
+   },
+   "mode": "max",
+   "protected_factor": 0.5,
+   "learned": null,
+   "driver_share": {
+    "daily": 0.041247254051735474,
+    "monthly": 0.48511760028172174,
+    "yearly": 0.4736351456665428
+   }
+  },
+  "xscale_learned_daily+monthly+yearly": {
+   "name": "xscale_learned_daily+monthly+yearly",
+   "parts": {
+    "daily": "fusion_logistic_s42",
+    "monthly": "scale_monthly_loo_median",
+    "yearly": "scale_yearly_gamma_zero"
+   },
+   "references": {
+    "daily": 0.19981951583922491,
+    "monthly": 8.80296802520752,
+    "yearly": 2.3557322025299072
+   },
+   "mode": "learned",
+   "protected_factor": 0.5,
+   "learned": {
+    "weights": [
+     3.243807750717992,
+     0.7913518351546119,
+     0.0
+    ],
+    "intercept": -3.7263248627092977,
+    "fit_years": [
+     2013,
+     2014,
+     2015
+    ],
+    "rows": 770952,
+    "positive_rows": 36712,
+    "parts": [
+     "daily",
+     "monthly",
+     "yearly"
+    ]
+   },
+   "driver_share": {
+    "daily": 0.37723945374936124,
+    "monthly": 0.6227605462506388,
+    "yearly": 0.0
+   }
+  }
+ },
+ "caveats": [
+  "the daily fusion is fitted on the fusion-fit years, so only the threshold years are held out",
+  "thresholds come from the clean version of the same years (as in the existing validation curves)",
+  "2 evaluation years: no confidence interval (fewer than 5 years)"
+ ]
+}

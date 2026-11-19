@@ -1,0 +1,23 @@
+{
+  "measured_at": "2026-10-02T18:31:42.714669+00:00",
+  "transport": "in-process-ASGI",
+  "endpoint": "POST /api/telemetry/live",
+  "total_requests": 500,
+  "concurrency": 500,
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.13.1",
+  "p50_ms": 16914.95,
+  "p95_ms": 29307.94,
+  "p99_ms": 29790.15,
+  "max_ms": 30169.9,
+  "mean_ms": 16709.14,
+  "wall_ms": 33119.36,
+  "throughput_rps": 15.1,
+  "errors": 1,
+  "status_counts": {
+    "201": 499,
+    "500": 1
+  },
+  "budget_p99_ms": 20.0,
+  "budget_met": false
+}
