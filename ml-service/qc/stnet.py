@@ -74,10 +74,10 @@ class STConfig:
     holdout_kinds: Tuple[str, ...] = ()
     epochs: int = 3
     steps: int = 40                       # gradient steps per year visit, stage 1
-    batch: int = 4
-    window: int = 24                      # days per training window
-    burn: int = 8                         # first days of a window: memory warm-up, no loss
-    crop: int = 64                        # side of the loss region; the input crop adds MARGIN on every side
+    batch: int = 2                        # every day of a window keeps its activations for backprop: batch x window x crop^2 sets the GPU memory
+    window: int = 16                      # days per training window
+    burn: int = 6                         # first days of a window: memory warm-up, no loss
+    crop: int = 48                        # side of the loss region; the input crop adds MARGIN on every side
     long_epochs: int = 1
     long_steps: int = 20
     long_cells: int = 1024
