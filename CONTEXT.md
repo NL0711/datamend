@@ -132,6 +132,13 @@ A random sample of unflagged data sent to the reviewer, weighted by how unlikely
 **Training snapshot**:
 A frozen, versioned export of observations and labels cut by time, used for one offline training run. It never contains data from after its cut or from the locked test years.
 
+**Ingest job**:
+One accepted file of source data being read into the raw store. It records what was read, stored, already stored and rejected, and every assumption made about the source. It is not a validation run; a run is made from stored data in a separate step.
+_Avoid_: run, import
+
+**Champion and challenger**:
+A registered model is a challenger until the promotion gate passes, and then the champion; the replaced champion is archived, and a model that fails the gate is rejected. Its metrics are declared by the training job, not verified by the platform, and a champion does not yet change any verdict.
+
 ## Example dialogue
 
 > **Dev:** "The spatial component flagged this cell-day. Could the cell's own value have leaked into the prediction?"
