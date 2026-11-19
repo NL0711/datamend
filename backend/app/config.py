@@ -63,6 +63,16 @@ class Settings(BaseSettings):
     PHYSICAL_AWS_TIMEOUT_SECONDS: float = 30.0
     PHYSICAL_DEFAULT_STATION_ID: str = "AWS-ESP32-001"
 
+    # Weather Union live rain-gauge feed (backend/app/rainfall). Off unless a key AND a city are set.
+    WEATHER_UNION_API_KEY: str = ""
+    WEATHER_UNION_BASE_URL: str = "https://www.weatherunion.com/gw/weather/external/v0"
+    WEATHER_UNION_CITY: str = ""                      # e.g. "Mumbai": poll the stations closest to the city's centre
+    WEATHER_UNION_MAX_STATIONS: int = 9               # 9 stations x 96 polls/day = 864 calls, under the 1000/day free limit
+    WEATHER_UNION_POLL_INTERVAL_SECONDS: float = 900.0
+    WEATHER_UNION_DAILY_CALL_BUDGET: int = 900
+    WEATHER_UNION_ACCUMULATION_MODE: str = "cumulative"   # cumulative | per_reading; the provider does not document it
+    WEATHER_UNION_RAW_LOG_PATH: str = "data/weather_union_raw.jsonl"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 settings = Settings()

@@ -49,6 +49,9 @@ dist/
 dist-ssr/
 *.local
 
+# Raw log of live rain-gauge readings (Weather Union)
+data/weather_union_raw.jsonl
+
 # Database
 *.db
 *.sqlite
