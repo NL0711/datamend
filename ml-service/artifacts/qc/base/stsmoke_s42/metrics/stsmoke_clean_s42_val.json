@@ -1,0 +1,1448 @@
+{
+ "component": "stsmoke_clean_s42",
+ "split": "val",
+ "years": [
+  2013,
+  2017
+ ],
+ "label_tier": "synthetic faults",
+ "benchmark_hash": "c37de7e3cf2be90e",
+ "caveats": [],
+ "thresholds_from": {
+  "years": [
+   2016,
+   2017
+  ],
+  "cells": "training clients, clean data"
+ },
+ "groups": {
+  "seen": {
+   "pr_auc": 0.021400692473614164,
+   "by_budget": {
+    "0.5": {
+     "threshold": 5.902470588684082,
+     "faults": {
+      "events": 935,
+      "cell_days": 65810,
+      "recall": 0.009056374411183711,
+      "event_recall": 0.15080213903743314,
+      "recall_ci": [
+       0.006278156448201889,
+       0.012542141955344453
+      ],
+      "event_recall_ci": [
+       0.13428779146586234,
+       0.16649431230610134
+      ],
+      "ci_unit": "whole years (5); regions fixed; none below 5 years",
+      "footprint_iou": 0.6355249380616509,
+      "delay_days_median": 5.0,
+      "delay_days_p90": 22.699999999999996,
+      "never_detected": 232
+     },
+     "by_kind": {
+      "combination": {
+       "events": 138,
+       "cell_days": 25075,
+       "recall": 0.015234297108673979,
+       "event_recall": 0.26811594202898553,
+       "recall_ci": [
+        0.009185718824481728,
+        0.02441817589008481
+       ],
+       "event_recall_ci": [
+        0.2076136363636364,
+        0.34445724157788654
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.6437411731563614
+      },
+      "drift": {
+       "events": 132,
+       "cell_days": 9026,
+       "recall": 0.0013294925769997785,
+       "event_recall": 0.030303030303030304,
+       "recall_ci": [
+        0.0,
+        0.0022476962937738156
+       ],
+       "event_recall_ci": [
+        0.0,
+        0.06667682926829269
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.02395785214311687,
+       "delay_days_median": 11.5,
+       "delay_days_p90": 34.300000000000004,
+       "never_detected": 128
+      },
+      "phantom_rain": {
+       "events": 139,
+       "cell_days": 14486,
+       "recall": 0.0,
+       "event_recall": 0.0,
+       "recall_ci": [
+        0.0,
+        0.0
+       ],
+       "event_recall_ci": [
+        0.0,
+        0.0
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years"
+      },
+      "scale": {
+       "events": 138,
+       "cell_days": 3799,
+       "recall": 0.011318768096867597,
+       "event_recall": 0.07246376811594203,
+       "recall_ci": [
+        0.0021117295936222743,
+        0.02620306263627443
+       ],
+       "event_recall_ci": [
+        0.03424657534246575,
+        0.10569105691056911
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.3486756146840283
+      },
+      "spike": {
+       "events": 149,
+       "cell_days": 2829,
+       "recall": 0.03852951572993991,
+       "event_recall": 0.44966442953020136,
+       "recall_ci": [
+        0.027227625140591422,
+        0.056230874770689485
+       ],
+       "event_recall_ci": [
+        0.3730125100887813,
+        0.5626187865497077
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.8135746094701317
+      },
+      "stuck": {
+       "events": 108,
+       "cell_days": 7425,
+       "recall": 0.0028282828282828283,
+       "event_recall": 0.037037037037037035,
+       "recall_ci": [
+        0.00013482540110556829,
+        0.008210095574954853
+       ],
+       "event_recall_ci": [
+        0.008766306792622582,
+        0.06862745098039216
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.6257507507507507,
+       "delay_days_median": 0.5,
+       "delay_days_p90": 5.900000000000001,
+       "never_detected": 104
+      },
+      "zeroed": {
+       "events": 131,
+       "cell_days": 3170,
+       "recall": 0.00914826498422713,
+       "event_recall": 0.1450381679389313,
+       "recall_ci": [
+        0.006367225189623892,
+        0.012752742709079883
+       ],
+       "event_recall_ci": [
+        0.11592809364548495,
+        0.1810344827586207
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.2734475508943594
+      }
+     },
+     "by_radius": {
+      "radius 1.5-4": {
+       "events": 460,
+       "cell_days": 62113,
+       "recall": 0.0015616698597717064,
+       "event_recall": 0.08043478260869565,
+       "recall_ci": [
+        0.0007571216377154386,
+        0.0025302057717354553
+       ],
+       "event_recall_ci": [
+        0.047518211638408456,
+        0.12019464444746338
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.06309151724038171,
+       "delay_days_median": 8.5,
+       "delay_days_p90": 32.800000000000004,
+       "never_detected": 97
+      },
+      "single cell": {
+       "events": 475,
+       "cell_days": 3697,
+       "recall": 0.13497430348931566,
+       "event_recall": 0.21894736842105264,
+       "recall_ci": [
+        0.09788239212169539,
+        0.18044545342011736
+       ],
+       "event_recall_ci": [
+        0.20356201593440437,
+        0.2355723659748734
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.8391791358538333,
+       "delay_days_median": 0.5,
+       "delay_days_p90": 10.100000000000001,
+       "never_detected": 135
+      }
+     },
+     "by_setting": {
+      "seen settings": {
+       "events": 935,
+       "cell_days": 65810,
+       "recall": 0.009056374411183711,
+       "event_recall": 0.15080213903743314,
+       "recall_ci": [
+        0.006369990798660259,
+        0.012353521338660337
+       ],
+       "event_recall_ci": [
+        0.13094969224058547,
+        0.1682509505703422
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.6355249380616509,
+       "delay_days_median": 5.0,
+       "delay_days_p90": 22.699999999999996,
+       "never_detected": 232
+      },
+      "test-only settings": {
+       "events": 0
+      }
+     },
+     "false_alerts": {
+      "clean_cell_days": 6867311,
+      "false_alerts": 3987,
+      "per_1000_clean": 0.5805765895850646,
+      "per_daily_field": 2.8819821907002607,
+      "per_1000_clean_ci": [
+       0.42470922128777777,
+       0.7363787403468579
+      ]
+     },
+     "protected_extremes": {
+      "label": "plausible, unverified",
+      "cell_days": 14838,
+      "events": 993,
+      "flagged_share_of_cell_days": 0.012198409489149482,
+      "events_with_any_flag_share": 0.041289023162134945,
+      "cell_days_flagged_by": {
+       "client": {
+        "1": {
+         "cell_days": 2660,
+         "flagged_share": 0.05338345864661654
+        },
+        "2": {
+         "cell_days": 2348,
+         "flagged_share": 0.005536626916524702
+        },
+        "4": {
+         "cell_days": 1610,
+         "flagged_share": 0.002484472049689441
+        },
+        "5": {
+         "cell_days": 2501,
+         "flagged_share": 0.006397441023590564
+        },
+        "7": {
+         "cell_days": 3726,
+         "flagged_share": 0.0005367686527106817
+        },
+        "8": {
+         "cell_days": 1993,
+         "flagged_share": 0.002007024586051179
+        }
+       },
+       "season": {
+        "monsoon (Jun-Sep)": {
+         "cell_days": 11142,
+         "flagged_share": 0.0032310177705977385
+        },
+        "rest of year": {
+         "cell_days": 3696,
+         "flagged_share": 0.03923160173160173
+        }
+       },
+       "size": {
+        "10-29 cells": {
+         "cell_days": 4259,
+         "flagged_share": 0.0061047194177036865
+        },
+        "30+ cells": {
+         "cell_days": 7510,
+         "flagged_share": 0.01944074567243675
+        },
+        "4-9 cells": {
+         "cell_days": 3069,
+         "flagged_share": 0.002932551319648094
+        }
+       }
+      }
+     },
+     "ambiguous_extremes": {
+      "cell_days": 1811,
+      "flagged_share": 0.0176697956929873
+     }
+    },
+    "1.0": {
+     "threshold": 5.533905982971191,
+     "faults": {
+      "events": 935,
+      "cell_days": 65810,
+      "recall": 0.01113812490502963,
+      "event_recall": 0.19572192513368983,
+      "recall_ci": [
+       0.007801234624488341,
+       0.015063259735972171
+      ],
+      "event_recall_ci": [
+       0.1795333123821496,
+       0.2165532879818594
+      ],
+      "ci_unit": "whole years (5); regions fixed; none below 5 years",
+      "footprint_iou": 0.567301654569569,
+      "delay_days_median": 1.0,
+      "delay_days_p90": 15.600000000000023,
+      "never_detected": 220
+     },
+     "by_kind": {
+      "combination": {
+       "events": 138,
+       "cell_days": 25075,
+       "recall": 0.01682951146560319,
+       "event_recall": 0.2971014492753623,
+       "recall_ci": [
+        0.009784155707022775,
+        0.02723439626640179
+       ],
+       "event_recall_ci": [
+        0.23484848484848486,
+        0.38949396945822395
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.6253841826772438
+      },
+      "drift": {
+       "events": 132,
+       "cell_days": 9026,
+       "recall": 0.0027697762020828715,
+       "event_recall": 0.06060606060606061,
+       "recall_ci": [
+        0.0003382402174389066,
+        0.004530154020524855
+       ],
+       "event_recall_ci": [
+        0.01082509881422925,
+        0.12954473949156814
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.017962977722900033,
+       "delay_days_median": 8.0,
+       "delay_days_p90": 33.599999999999994,
+       "never_detected": 124
+      },
+      "phantom_rain": {
+       "events": 139,
+       "cell_days": 14486,
+       "recall": 0.00027612867596299873,
+       "event_recall": 0.014388489208633094,
+       "recall_ci": [
+        0.0,
+        0.0006914651290390447
+       ],
+       "event_recall_ci": [
+        0.0,
+        0.0278186274509804
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.015210700757575758
+      },
+      "scale": {
+       "events": 138,
+       "cell_days": 3799,
+       "recall": 0.015530402737562517,
+       "event_recall": 0.09420289855072464,
+       "recall_ci": [
+        0.003284912701190205,
+        0.03513981095139286
+       ],
+       "event_recall_ci": [
+        0.0547945205479452,
+        0.136409830007391
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.30355238967549447
+      },
+      "spike": {
+       "events": 149,
+       "cell_days": 2829,
+       "recall": 0.04277129727819017,
+       "event_recall": 0.5100671140939598,
+       "recall_ci": [
+        0.029922671391696198,
+        0.06252468980607981
+       ],
+       "event_recall_ci": [
+        0.4161073825503356,
+        0.6316602602010645
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.7575706822417348
+      },
+      "stuck": {
+       "events": 108,
+       "cell_days": 7425,
+       "recall": 0.007003367003367004,
+       "event_recall": 0.1111111111111111,
+       "recall_ci": [
+        0.0021628328503558378,
+        0.015318546598765484
+       ],
+       "event_recall_ci": [
+        0.042708333333333334,
+        0.19318181818181818
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.460741745637579,
+       "delay_days_median": 0.0,
+       "delay_days_p90": 2.8000000000000007,
+       "never_detected": 96
+      },
+      "zeroed": {
+       "events": 131,
+       "cell_days": 3170,
+       "recall": 0.015772870662460567,
+       "event_recall": 0.2366412213740458,
+       "recall_ci": [
+        0.011873350923482849,
+        0.020626540834008736
+       ],
+       "event_recall_ci": [
+        0.18834308807134895,
+        0.29376566416040106
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.3532539422374701
+      }
+     },
+     "by_radius": {
+      "radius 1.5-4": {
+       "events": 460,
+       "cell_days": 62113,
+       "recall": 0.0026081496627115095,
+       "event_recall": 0.12608695652173912,
+       "recall_ci": [
+        0.0014253474284356812,
+        0.004009682667830039
+       ],
+       "event_recall_ci": [
+        0.08616512619978671,
+        0.17274939172749393
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.05871633140521098,
+       "delay_days_median": 2.0,
+       "delay_days_p90": 30.0,
+       "never_detected": 90
+      },
+      "single cell": {
+       "events": 475,
+       "cell_days": 3697,
+       "recall": 0.15444955369218286,
+       "event_recall": 0.2631578947368421,
+       "recall_ci": [
+        0.10848732732419206,
+        0.2130342688941751
+       ],
+       "event_recall_ci": [
+        0.23407874477600998,
+        0.2941904484566104
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.8032852445178313,
+       "delay_days_median": 0.0,
+       "delay_days_p90": 4.200000000000001,
+       "never_detected": 130
+      }
+     },
+     "by_setting": {
+      "seen settings": {
+       "events": 935,
+       "cell_days": 65810,
+       "recall": 0.01113812490502963,
+       "event_recall": 0.19572192513368983,
+       "recall_ci": [
+        0.007980612543350186,
+        0.014952730418712954
+       ],
+       "event_recall_ci": [
+        0.17886692884538843,
+        0.2109897900762142
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.567301654569569,
+       "delay_days_median": 1.0,
+       "delay_days_p90": 15.600000000000023,
+       "never_detected": 220
+      },
+      "test-only settings": {
+       "events": 0
+      }
+     },
+     "false_alerts": {
+      "clean_cell_days": 6867311,
+      "false_alerts": 7855,
+      "per_1000_clean": 1.1438247080989925,
+      "per_daily_field": 5.677945851003399,
+      "per_1000_clean_ci": [
+       0.8494184425755555,
+       1.4381077890759713
+      ]
+     },
+     "protected_extremes": {
+      "label": "plausible, unverified",
+      "cell_days": 14838,
+      "events": 993,
+      "flagged_share_of_cell_days": 0.02325111200970481,
+      "events_with_any_flag_share": 0.054380664652567974,
+      "cell_days_flagged_by": {
+       "client": {
+        "1": {
+         "cell_days": 2660,
+         "flagged_share": 0.10263157894736842
+        },
+        "2": {
+         "cell_days": 2348,
+         "flagged_share": 0.010221465076660987
+        },
+        "4": {
+         "cell_days": 1610,
+         "flagged_share": 0.002484472049689441
+        },
+        "5": {
+         "cell_days": 2501,
+         "flagged_share": 0.013594562175129948
+        },
+        "7": {
+         "cell_days": 3726,
+         "flagged_share": 0.0010735373054213634
+        },
+        "8": {
+         "cell_days": 1993,
+         "flagged_share": 0.0030105368790767687
+        }
+       },
+       "season": {
+        "monsoon (Jun-Sep)": {
+         "cell_days": 11142,
+         "flagged_share": 0.005474780111290612
+        },
+        "rest of year": {
+         "cell_days": 3696,
+         "flagged_share": 0.07683982683982683
+        }
+       },
+       "size": {
+        "10-29 cells": {
+         "cell_days": 4259,
+         "flagged_share": 0.012209438835407373
+        },
+        "30+ cells": {
+         "cell_days": 7510,
+         "flagged_share": 0.0374167776298269
+        },
+        "4-9 cells": {
+         "cell_days": 3069,
+         "flagged_share": 0.0039100684261974585
+        }
+       }
+      }
+     },
+     "ambiguous_extremes": {
+      "cell_days": 1811,
+      "flagged_share": 0.025952512424075095
+     }
+    },
+    "2.0": {
+     "threshold": 5.140337944030762,
+     "faults": {
+      "events": 935,
+      "cell_days": 65810,
+      "recall": 0.014754596565871449,
+      "event_recall": 0.24385026737967913,
+      "recall_ci": [
+       0.010859872281973363,
+       0.018990482416176457
+      ],
+      "event_recall_ci": [
+       0.22570194384449244,
+       0.2606261119047202
+      ],
+      "ci_unit": "whole years (5); regions fixed; none below 5 years",
+      "footprint_iou": 0.5423552400689926,
+      "delay_days_median": 0.5,
+      "delay_days_p90": 13.50000000000001,
+      "never_detected": 208
+     },
+     "by_kind": {
+      "combination": {
+       "events": 138,
+       "cell_days": 25075,
+       "recall": 0.02057826520438684,
+       "event_recall": 0.35507246376811596,
+       "recall_ci": [
+        0.012941455958797456,
+        0.03224967490247074
+       ],
+       "event_recall_ci": [
+        0.2608695652173913,
+        0.4492753623188406
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.586448217356061
+      },
+      "drift": {
+       "events": 132,
+       "cell_days": 9026,
+       "recall": 0.004542432971415909,
+       "event_recall": 0.09090909090909091,
+       "recall_ci": [
+        0.0006496881496881497,
+        0.007157621737696272
+       ],
+       "event_recall_ci": [
+        0.02717684659090909,
+        0.1704214559386973
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.01870643743656956,
+       "delay_days_median": 8.0,
+       "delay_days_p90": 20.400000000000002,
+       "never_detected": 120
+      },
+      "phantom_rain": {
+       "events": 139,
+       "cell_days": 14486,
+       "recall": 0.00041419301394449815,
+       "event_recall": 0.02158273381294964,
+       "recall_ci": [
+        6.182158255559422e-05,
+        0.0009887787345701827
+       ],
+       "event_recall_ci": [
+        0.006753400751745123,
+        0.040983606557377046
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.01883534959192854
+      },
+      "scale": {
+       "events": 138,
+       "cell_days": 3799,
+       "recall": 0.02132140036851803,
+       "event_recall": 0.14492753623188406,
+       "recall_ci": [
+        0.005641944445336305,
+        0.04642429498231632
+       ],
+       "event_recall_ci": [
+        0.08886261261261262,
+        0.20588235294117646
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.25219121287774005
+      },
+      "spike": {
+       "events": 149,
+       "cell_days": 2829,
+       "recall": 0.05231530576175327,
+       "event_recall": 0.5838926174496645,
+       "recall_ci": [
+        0.036891936010447275,
+        0.07820869450223661
+       ],
+       "event_recall_ci": [
+        0.47651006711409394,
+        0.7216691138917263
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.7259889982303775
+      },
+      "stuck": {
+       "events": 108,
+       "cell_days": 7425,
+       "recall": 0.015622895622895623,
+       "event_recall": 0.18518518518518517,
+       "recall_ci": [
+        0.010523856369896703,
+        0.02480544747081712
+       ],
+       "event_recall_ci": [
+        0.12677095292766935,
+        0.2401797752808989
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.7046182514932514,
+       "delay_days_median": 0.0,
+       "delay_days_p90": 1.2000000000000028,
+       "never_detected": 88
+      },
+      "zeroed": {
+       "events": 131,
+       "cell_days": 3170,
+       "recall": 0.019873817034700314,
+       "event_recall": 0.2824427480916031,
+       "recall_ci": [
+        0.01400166779670828,
+        0.02587463556851312
+       ],
+       "event_recall_ci": [
+        0.23006940601365064,
+        0.33633830950378474
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.33358963929205443
+      }
+     },
+     "by_radius": {
+      "radius 1.5-4": {
+       "events": 460,
+       "cell_days": 62113,
+       "recall": 0.0046206108222111315,
+       "event_recall": 0.17608695652173914,
+       "recall_ci": [
+        0.0025372577773530155,
+        0.007513348588863463
+       ],
+       "event_recall_ci": [
+        0.13630506091846298,
+        0.22657952069716775
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.06531266619635072,
+       "delay_days_median": 2.5,
+       "delay_days_p90": 18.900000000000006,
+       "never_detected": 87
+      },
+      "single cell": {
+       "events": 475,
+       "cell_days": 3697,
+       "recall": 0.1850148769272383,
+       "event_recall": 0.3094736842105263,
+       "recall_ci": [
+        0.13761682242990655,
+        0.23764006436884383
+       ],
+       "event_recall_ci": [
+        0.29478595380864314,
+        0.3261904761904762
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.8052154338355503,
+       "delay_days_median": 0.0,
+       "delay_days_p90": 4.800000000000004,
+       "never_detected": 121
+      }
+     },
+     "by_setting": {
+      "seen settings": {
+       "events": 935,
+       "cell_days": 65810,
+       "recall": 0.014754596565871449,
+       "event_recall": 0.24385026737967913,
+       "recall_ci": [
+        0.011152246269788679,
+        0.0194246167733739
+       ],
+       "event_recall_ci": [
+        0.2250879249706917,
+        0.26328088248297815
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.5423552400689926,
+       "delay_days_median": 0.5,
+       "delay_days_p90": 13.50000000000001,
+       "never_detected": 208
+      },
+      "test-only settings": {
+       "events": 0
+      }
+     },
+     "false_alerts": {
+      "clean_cell_days": 6867311,
+      "false_alerts": 15358,
+      "per_1000_clean": 2.23639209000437,
+      "per_daily_field": 11.101450334781694,
+      "per_1000_clean_ci": [
+       1.7259273910357225,
+       2.7481820069719443
+      ]
+     },
+     "protected_extremes": {
+      "label": "plausible, unverified",
+      "cell_days": 14838,
+      "events": 993,
+      "flagged_share_of_cell_days": 0.0372017792155277,
+      "events_with_any_flag_share": 0.07955689828801611,
+      "cell_days_flagged_by": {
+       "client": {
+        "1": {
+         "cell_days": 2660,
+         "flagged_share": 0.15977443609022557
+        },
+        "2": {
+         "cell_days": 2348,
+         "flagged_share": 0.02129471890971039
+        },
+        "4": {
+         "cell_days": 1610,
+         "flagged_share": 0.0037267080745341614
+        },
+        "5": {
+         "cell_days": 2501,
+         "flagged_share": 0.02039184326269492
+        },
+        "7": {
+         "cell_days": 3726,
+         "flagged_share": 0.0029522275899087494
+        },
+        "8": {
+         "cell_days": 1993,
+         "flagged_share": 0.004515805318615153
+        }
+       },
+       "season": {
+        "monsoon (Jun-Sep)": {
+         "cell_days": 11142,
+         "flagged_share": 0.00906479985639921
+        },
+        "rest of year": {
+         "cell_days": 3696,
+         "flagged_share": 0.12202380952380952
+        }
+       },
+       "size": {
+        "10-29 cells": {
+         "cell_days": 4259,
+         "flagged_share": 0.021836111763324725
+        },
+        "30+ cells": {
+         "cell_days": 7510,
+         "flagged_share": 0.05765645805592543
+        },
+        "4-9 cells": {
+         "cell_days": 3069,
+         "flagged_share": 0.008471814923427827
+        }
+       }
+      }
+     },
+     "ambiguous_extremes": {
+      "cell_days": 1811,
+      "flagged_share": 0.03699613473219216
+     }
+    },
+    "5.0": {
+     "threshold": 4.529669284820557,
+     "faults": {
+      "events": 935,
+      "cell_days": 65810,
+      "recall": 0.02419085245403434,
+      "event_recall": 0.34010695187165774,
+      "recall_ci": [
+       0.019420131291028448,
+       0.029735182560687037
+      ],
+      "event_recall_ci": [
+       0.32971000634514,
+       0.35294117647058826
+      ],
+      "ci_unit": "whole years (5); regions fixed; none below 5 years",
+      "footprint_iou": 0.4596007027405765,
+      "delay_days_median": 2.0,
+      "delay_days_p90": 27.800000000000004,
+      "never_detected": 175
+     },
+     "by_kind": {
+      "combination": {
+       "events": 138,
+       "cell_days": 25075,
+       "recall": 0.03110667996011964,
+       "event_recall": 0.4492753623188406,
+       "recall_ci": [
+        0.01979721416511858,
+        0.04636082075106465
+       ],
+       "event_recall_ci": [
+        0.37942673419732853,
+        0.5099337748344371
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.5286337315394395
+      },
+      "drift": {
+       "events": 132,
+       "cell_days": 9026,
+       "recall": 0.01573232882783071,
+       "event_recall": 0.25757575757575757,
+       "recall_ci": [
+        0.0059771309771309775,
+        0.021804177070758855
+       ],
+       "event_recall_ci": [
+        0.190333850931677,
+        0.3337155963302753
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.035435618685865276,
+       "delay_days_median": 14.5,
+       "delay_days_p90": 32.7,
+       "never_detected": 98
+      },
+      "phantom_rain": {
+       "events": 139,
+       "cell_days": 14486,
+       "recall": 0.0013116112108242442,
+       "event_recall": 0.05755395683453238,
+       "recall_ci": [
+        0.0008364436741218757,
+        0.0020234010732823084
+       ],
+       "event_recall_ci": [
+        0.03870967741935484,
+        0.08262323122375993
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.030740050140204936
+      },
+      "scale": {
+       "events": 138,
+       "cell_days": 3799,
+       "recall": 0.03711503027112398,
+       "event_recall": 0.2463768115942029,
+       "recall_ci": [
+        0.014563468827357694,
+        0.07021926172633916
+       ],
+       "event_recall_ci": [
+        0.17777777777777778,
+        0.336
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.2710423608561573
+      },
+      "spike": {
+       "events": 149,
+       "cell_days": 2829,
+       "recall": 0.07811947684694238,
+       "event_recall": 0.697986577181208,
+       "recall_ci": [
+        0.059104567413263066,
+        0.11164401624433548
+       ],
+       "event_recall_ci": [
+        0.6148636136136136,
+        0.799261854818205
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.6415600021350163
+      },
+      "stuck": {
+       "events": 108,
+       "cell_days": 7425,
+       "recall": 0.026262626262626262,
+       "event_recall": 0.28703703703703703,
+       "recall_ci": [
+        0.018773126782312355,
+        0.0392631496912054
+       ],
+       "event_recall_ci": [
+        0.20149253731343283,
+        0.36376875551632837
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.6915155142064078,
+       "delay_days_median": 0.0,
+       "delay_days_p90": 3.0,
+       "never_detected": 77
+      },
+      "zeroed": {
+       "events": 131,
+       "cell_days": 3170,
+       "recall": 0.02965299684542587,
+       "event_recall": 0.3435114503816794,
+       "recall_ci": [
+        0.021726535341830822,
+        0.03702410059378274
+       ],
+       "event_recall_ci": [
+        0.28354898892633607,
+        0.39655172413793105
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.3233853166237186
+      }
+     },
+     "by_radius": {
+      "radius 1.5-4": {
+       "events": 460,
+       "cell_days": 62113,
+       "recall": 0.012187464781929709,
+       "event_recall": 0.31956521739130433,
+       "recall_ci": [
+        0.009471237795077745,
+        0.01554293241129497
+       ],
+       "event_recall_ci": [
+        0.2846930241024909,
+        0.3625866050808314
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.07499536997549641,
+       "delay_days_median": 8.5,
+       "delay_days_p90": 31.700000000000006,
+       "never_detected": 69
+      },
+      "single cell": {
+       "events": 475,
+       "cell_days": 3697,
+       "recall": 0.2258588044360292,
+       "event_recall": 0.36,
+       "recall_ci": [
+        0.19345821247569794,
+        0.27249939136428974
+       ],
+       "event_recall_ci": [
+        0.3396307907702717,
+        0.3905882352941176
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.7902263396789786,
+       "delay_days_median": 0.0,
+       "delay_days_p90": 14.400000000000002,
+       "never_detected": 106
+      }
+     },
+     "by_setting": {
+      "seen settings": {
+       "events": 935,
+       "cell_days": 65810,
+       "recall": 0.02419085245403434,
+       "event_recall": 0.34010695187165774,
+       "recall_ci": [
+        0.019864135483281545,
+        0.030526640238970643
+       ],
+       "event_recall_ci": [
+        0.3280685332773618,
+        0.3505298627696399
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.4596007027405765,
+       "delay_days_median": 2.0,
+       "delay_days_p90": 27.800000000000004,
+       "never_detected": 175
+      },
+      "test-only settings": {
+       "events": 0
+      }
+     },
+     "false_alerts": {
+      "clean_cell_days": 6867311,
+      "false_alerts": 39595,
+      "per_1000_clean": 5.765721109761885,
+      "per_daily_field": 28.621039588857997,
+      "per_1000_clean_ci": [
+       4.616892182990832,
+       6.93627706836859
+      ]
+     },
+     "protected_extremes": {
+      "label": "plausible, unverified",
+      "cell_days": 14838,
+      "events": 993,
+      "flagged_share_of_cell_days": 0.07083164847014423,
+      "events_with_any_flag_share": 0.12890231621349446,
+      "cell_days_flagged_by": {
+       "client": {
+        "1": {
+         "cell_days": 2660,
+         "flagged_share": 0.28233082706766915
+        },
+        "2": {
+         "cell_days": 2348,
+         "flagged_share": 0.0434412265758092
+        },
+        "4": {
+         "cell_days": 1610,
+         "flagged_share": 0.02360248447204969
+        },
+        "5": {
+         "cell_days": 2501,
+         "flagged_share": 0.04238304678128749
+        },
+        "7": {
+         "cell_days": 3726,
+         "flagged_share": 0.008051529790660225
+        },
+        "8": {
+         "cell_days": 1993,
+         "flagged_share": 0.012042147516307075
+        }
+       },
+       "season": {
+        "monsoon (Jun-Sep)": {
+         "cell_days": 11142,
+         "flagged_share": 0.020552863040746723
+        },
+        "rest of year": {
+         "cell_days": 3696,
+         "flagged_share": 0.2224025974025974
+        }
+       },
+       "size": {
+        "10-29 cells": {
+         "cell_days": 4259,
+         "flagged_share": 0.044846208030054006
+        },
+        "30+ cells": {
+         "cell_days": 7510,
+         "flagged_share": 0.10452729693741677
+        },
+        "4-9 cells": {
+         "cell_days": 3069,
+         "flagged_share": 0.024437927663734114
+        }
+       }
+      }
+     },
+     "ambiguous_extremes": {
+      "cell_days": 1811,
+      "flagged_share": 0.06570955273329653
+     }
+    },
+    "10.0": {
+     "threshold": 4.048885345458984,
+     "faults": {
+      "events": 935,
+      "cell_days": 65810,
+      "recall": 0.03719799422580155,
+      "event_recall": 0.44385026737967914,
+      "recall_ci": [
+       0.03087930438788437,
+       0.04559273069515743
+      ],
+      "event_recall_ci": [
+       0.43636363636363634,
+       0.45402283447684394
+      ],
+      "ci_unit": "whole years (5); regions fixed; none below 5 years",
+      "footprint_iou": 0.39633468397717087,
+      "delay_days_median": 3.0,
+      "delay_days_p90": 26.0,
+      "never_detected": 144
+     },
+     "by_kind": {
+      "combination": {
+       "events": 138,
+       "cell_days": 25075,
+       "recall": 0.04414755732801595,
+       "event_recall": 0.5942028985507246,
+       "recall_ci": [
+        0.028199491049899293,
+        0.06654084397986837
+       ],
+       "event_recall_ci": [
+        0.5424632352941177,
+        0.6462585034013606
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.4311883680970946
+      },
+      "drift": {
+       "events": 132,
+       "cell_days": 9026,
+       "recall": 0.03955240416574341,
+       "event_recall": 0.4015151515151515,
+       "recall_ci": [
+        0.015783865928262482,
+        0.05648832963037248
+       ],
+       "event_recall_ci": [
+        0.3017241379310345,
+        0.5
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.07280710690884822,
+       "delay_days_median": 14.0,
+       "delay_days_p90": 31.400000000000013,
+       "never_detected": 79
+      },
+      "phantom_rain": {
+       "events": 139,
+       "cell_days": 14486,
+       "recall": 0.003589672787518984,
+       "event_recall": 0.07194244604316546,
+       "recall_ci": [
+        0.002045708618722767,
+        0.005667892156862745
+       ],
+       "event_recall_ci": [
+        0.06097560975609756,
+        0.08851532869785082
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.04704160271965354
+      },
+      "scale": {
+       "events": 138,
+       "cell_days": 3799,
+       "recall": 0.05843643063964201,
+       "event_recall": 0.3695652173913043,
+       "recall_ci": [
+        0.03257896722284115,
+        0.0940491072309655
+       ],
+       "event_recall_ci": [
+        0.2945205479452055,
+        0.47290096082779015
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.24448010455207875
+      },
+      "spike": {
+       "events": 149,
+       "cell_days": 2829,
+       "recall": 0.10392364793213149,
+       "event_recall": 0.7785234899328859,
+       "recall_ci": [
+        0.07666831861575896,
+        0.1469851794793503
+       ],
+       "event_recall_ci": [
+        0.697841726618705,
+        0.8710928773243972
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.6105615495260454
+      },
+      "stuck": {
+       "events": 108,
+       "cell_days": 7425,
+       "recall": 0.03582491582491582,
+       "event_recall": 0.39814814814814814,
+       "recall_ci": [
+        0.023627061097427477,
+        0.052147747953022724
+       ],
+       "event_recall_ci": [
+        0.2824427480916031,
+        0.5197128851540617
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.5852902544852029,
+       "delay_days_median": 0.0,
+       "delay_days_p90": 3.0,
+       "never_detected": 65
+      },
+      "zeroed": {
+       "events": 131,
+       "cell_days": 3170,
+       "recall": 0.0473186119873817,
+       "event_recall": 0.4580152671755725,
+       "recall_ci": [
+        0.03677256996237149,
+        0.05706267539756782
+       ],
+       "event_recall_ci": [
+        0.4031878963330576,
+        0.5
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.272185815885961
+      }
+     },
+     "by_radius": {
+      "radius 1.5-4": {
+       "events": 460,
+       "cell_days": 62113,
+       "recall": 0.02350554634295558,
+       "event_recall": 0.4608695652173913,
+       "recall_ci": [
+        0.019419835793723805,
+        0.028500864410965672
+       ],
+       "event_recall_ci": [
+        0.42424242424242425,
+        0.5033674339300938
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.0815275479005517,
+       "delay_days_median": 5.0,
+       "delay_days_p90": 30.5,
+       "never_detected": 55
+      },
+      "single cell": {
+       "events": 475,
+       "cell_days": 3697,
+       "recall": 0.267243711117122,
+       "event_recall": 0.42736842105263156,
+       "recall_ci": [
+        0.24392523364485982,
+        0.31030767037717016
+       ],
+       "event_recall_ci": [
+        0.38708746450681936,
+        0.4803997508204692
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.7250987866778766,
+       "delay_days_median": 1.0,
+       "delay_days_p90": 19.1,
+       "never_detected": 89
+      }
+     },
+     "by_setting": {
+      "seen settings": {
+       "events": 935,
+       "cell_days": 65810,
+       "recall": 0.03719799422580155,
+       "event_recall": 0.44385026737967914,
+       "recall_ci": [
+        0.03145248353616571,
+        0.045939229565329996
+       ],
+       "event_recall_ci": [
+        0.43546501046501046,
+        0.45517109628962465
+       ],
+       "ci_unit": "whole years (5); regions fixed; none below 5 years",
+       "footprint_iou": 0.39633468397717087,
+       "delay_days_median": 3.0,
+       "delay_days_p90": 26.0,
+       "never_detected": 144
+      },
+      "test-only settings": {
+       "events": 0
+      }
+     },
+     "false_alerts": {
+      "clean_cell_days": 6867311,
+      "false_alerts": 78562,
+      "per_1000_clean": 11.439994489837435,
+      "per_daily_field": 56.78813264755303,
+      "per_1000_clean_ci": [
+       9.48590084816587,
+       13.41853595615797
+      ]
+     },
+     "protected_extremes": {
+      "label": "plausible, unverified",
+      "cell_days": 14838,
+      "events": 993,
+      "flagged_share_of_cell_days": 0.1033158107561666,
+      "events_with_any_flag_share": 0.19133937562940584,
+      "cell_days_flagged_by": {
+       "client": {
+        "1": {
+         "cell_days": 2660,
+         "flagged_share": 0.39210526315789473
+        },
+        "2": {
+         "cell_days": 2348,
+         "flagged_share": 0.061754684838160136
+        },
+        "4": {
+         "cell_days": 1610,
+         "flagged_share": 0.040993788819875775
+        },
+        "5": {
+         "cell_days": 2501,
+         "flagged_share": 0.06317473010795682
+        },
+        "7": {
+         "cell_days": 3726,
+         "flagged_share": 0.017713365539452495
+        },
+        "8": {
+         "cell_days": 1993,
+         "flagged_share": 0.027596588058203714
+        }
+       },
+       "season": {
+        "monsoon (Jun-Sep)": {
+         "cell_days": 11142,
+         "flagged_share": 0.03248967869323281
+        },
+        "rest of year": {
+         "cell_days": 3696,
+         "flagged_share": 0.31682900432900435
+        }
+       },
+       "size": {
+        "10-29 cells": {
+         "cell_days": 4259,
+         "flagged_share": 0.07067386710495421
+        },
+        "30+ cells": {
+         "cell_days": 7510,
+         "flagged_share": 0.14633821571238348
+        },
+        "4-9 cells": {
+         "cell_days": 3069,
+         "flagged_share": 0.0433365917236885
+        }
+       }
+      }
+     },
+     "ambiguous_extremes": {
+      "cell_days": 1811,
+      "flagged_share": 0.09221424627277747
+     }
+    }
+   }
+  }
+ },
+ "stnet": {
+  "width": 32,
+  "c_feat": 16,
+  "long_hidden": 64,
+  "use_gru": true,
+  "use_long": true,
+  "use_disc": true,
+  "use_robust": true,
+  "holdout_kinds": [],
+  "epochs": 1,
+  "steps": 5,
+  "batch": 2,
+  "window": 16,
+  "burn": 6,
+  "crop": 48,
+  "long_epochs": 1,
+  "long_steps": 3,
+  "long_cells": 1024,
+  "long_years": 3,
+  "long_skip": true,
+  "probe": true,
+  "lr": 0.001,
+  "pos_weight": 10.0,
+  "protected_weight": 3.0,
+  "ambiguous_weight": 2.0,
+  "p_disc": 0.5,
+  "prefix": "stsmoke"
+ },
+ "seed": 42
+}

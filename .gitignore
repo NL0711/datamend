@@ -65,6 +65,9 @@ data/runtime_settings.json.tmp
 skyguard.db*
 backend/app/skyguard.db*
 
+# Claude Code agent worktrees (never commit these)
+.claude/worktrees/
+
 # IDEs
 .idea/
 .vscode/
