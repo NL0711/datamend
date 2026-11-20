@@ -75,7 +75,7 @@ Applies to notebook E (`ml-service/notebooks/kaggle/stnet_E_longmemory.ipynb`) a
 
 | date | rule frozen | commit | run | result |
 |---|---|---|---|---|
-| 2026-11-20 | as above | | session 1 (main run encoder), session 2 (hold run encoder) | not run |
+| 2026-11-20 | as above | 02fd028 | session 1 (main run encoder, Kaggle, 2 x T4): run 2026-11-20. Session 2 (hold run encoder): not run | **Rule not met for either length; "no gain on this encoder".** Drift PR-AUC 0.011 (baseline) to 0.012 (lmb) and 0.008 (lmc); drift event recall 0.242 to 0.311 (lmb) and 0.250 (lmc). lmb's +0.068 event recall does not count: the control `zeroed` rose by +0.084 event recall, so the cause is not memory alone, and lmb's false alerts rose from 1.60 to 2.09 per 1,000 (limit +0.1). lmc: no drift gain and false alerts 1.90. Validation loss of lmc moved between 0.033 and 0.044 for 30 epochs without a trend. The frozen encoder's linear probe separates drift (AUC 0.895) yet the fault head recalls about 3% of drift cell-days at the budget, so the limit is not the LSTM length. Gains elsewhere were small: `stuck` recall +0.07 to +0.09 in 5 of 5 years, `spike` and `phantom_rain` PR-AUC lower. The final weights of both runs are not used. SYNTHETIC faults, validation years, one seed. |
 
 ## Normalization must not squash protected heavy rain
 
