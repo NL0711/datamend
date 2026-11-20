@@ -31,7 +31,9 @@ from backend.app.validation.records import DailyTotal, Reading
 
 RUN_CAP = 50
 PAGE_SIZE = 50
-STORAGE_LABEL = "demo storage, resets on restart"
+# Said from the real DATABASE_URL, not hard-coded: SQLite (the default, and what a free Render service uses) loses its data on restart; PostgreSQL
+# (for example TimescaleDB on Tiger Cloud) keeps it.
+STORAGE_LABEL = ("demo storage, resets on restart" if app_settings.DATABASE_URL.startswith("sqlite") else "persistent PostgreSQL database")
 
 
 @lru_cache(maxsize=1)

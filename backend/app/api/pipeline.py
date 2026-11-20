@@ -19,6 +19,7 @@ from backend.app.db.database import get_db
 from backend.app.pipeline import audit as audit_svc
 from backend.app.pipeline import aws_trigger as aws_svc
 from backend.app.pipeline import jobs as jobs_svc
+from backend.app.pipeline import store as store_svc
 from backend.app.pipeline import kaggle_trigger as kaggle_svc
 from backend.app.pipeline import lineage as lineage_svc
 from backend.app.pipeline import training as train_svc
@@ -65,6 +66,7 @@ async def pipeline_status(session: AsyncSession = Depends(get_db)) -> Dict[str, 
             "proposals_pending": (await session.execute(select(func.count()).select_from(Proposal).where(Proposal.status == "pending"))).scalar_one(),
             "snapshots": (await session.execute(select(func.count()).select_from(TrainingSnapshot))).scalar_one(),
             "champions": [reg_svc.model_dict(m) for m in (await session.execute(select(ModelVersion).where(ModelVersion.alias == "champion"))).scalars()],
+            "database": await store_svc.describe_database(session),
             "sources": sorted(jobs_svc.SOURCES), "max_upload_mb": jobs_svc.MAX_BYTES // (1024 * 1024), "not_implemented": NOT_IMPLEMENTED}
 
 

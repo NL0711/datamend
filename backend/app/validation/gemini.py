@@ -119,7 +119,7 @@ class GeminiExplainer:
     """Same interface as NarratorExplainer (``explain(evidence, question, kind, context)``), plus ``propose_label``."""
     generator = GENERATOR
 
-    def __init__(self, api_key: str, model: str = "gemini-3.5-flash", base_url: str = "https://generativelanguage.googleapis.com/v1beta",
+    def __init__(self, api_key: str, model: str = "gemini-3.5-flash-lite", base_url: str = "https://generativelanguage.googleapis.com/v1beta",
                  timeout: float = 30.0, per_minute: int = 10, per_day: int = 200, transport: Optional[httpx.AsyncBaseTransport] = None,
                  limits: Optional[Any] = None) -> None:
         if not api_key or not api_key.strip():

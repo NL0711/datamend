@@ -244,6 +244,52 @@ async def test_status_lists_what_is_not_implemented(async_client: AsyncClient):
     assert st["sources"] == ["cwc", "isd"] and any("scoring with the RF25 STNet" in x for x in st["not_implemented"])
 
 
+@pytest.mark.asyncio
+async def test_status_says_which_database_it_runs_on_without_any_connection_detail(async_client: AsyncClient):
+    db = (await async_client.get("/api/pipeline/status")).json()["database"]
+    assert db["engine"] == "sqlite" and db["persistent"] is False and db["timescale_hypertable"] is None and "lost when the server restarts" in db["note"]
+    blob = str(db).lower()
+    assert "://" not in blob and "password" not in blob and "@" not in blob
+
+
+class _Res:
+    def __init__(self, v): self.v = v
+    def scalar_one(self): return self.v
+
+
+class _FakePgSession:
+    """A stand-in session on PostgreSQL: the hypertable count is given, or the query fails (plain PostgreSQL has no timescale views)."""
+    def __init__(self, count=None, fail=False):
+        class D: name = "postgresql"
+        class B: dialect = D()
+        self.bind, self.count, self.fail, self.rolled_back = B(), count, fail, False
+
+    async def execute(self, _q):
+        if self.fail:
+            raise RuntimeError('relation "timescaledb_information.hypertables" does not exist')
+        return _Res(self.count)
+
+    async def rollback(self): self.rolled_back = True
+
+
+@pytest.mark.asyncio
+async def test_describe_database_recognises_timescale_plain_postgres_and_sqlite():
+    from backend.app.pipeline import store
+    tiger = await store.describe_database(_FakePgSession(count=1))
+    assert tiger == {"engine": "postgresql", "persistent": True, "timescale_hypertable": True,
+                     "note": "persistent PostgreSQL with the observation table as a TimescaleDB hypertable"}
+    plain_session = _FakePgSession(fail=True)
+    plain = await store.describe_database(plain_session)
+    assert plain["persistent"] is True and plain["timescale_hypertable"] is None and plain_session.rolled_back          # the failed query is rolled back
+    none = await store.describe_database(_FakePgSession(count=0))
+    assert none["timescale_hypertable"] is False and "plain table" in none["note"]
+
+
+def test_the_storage_label_follows_the_database_url():
+    from backend.app.validation import runs
+    assert runs.STORAGE_LABEL == ("demo storage, resets on restart" if settings.DATABASE_URL.startswith("sqlite") else "persistent PostgreSQL database")
+
+
 # ---------------------------------------------------------------------------------------------- AI proposer (Gemini layer, fake LLM)
 class FakeLLM:
     generator = "gemini"

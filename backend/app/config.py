@@ -61,9 +61,9 @@ class Settings(BaseSettings):
     # Interim LLM layer on Google Gemini (backend/app/validation/gemini.py), used while the AI team's narrator is not connected. A set
     # NARRATOR_URL always wins. The key lives in .env only. Only the evidence payload is sent, never the key or reviewer names.
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-3.5-flash"            # a setting on purpose: models are retired (2.5-flash answers 404 for new keys; the -latest alias hung in a test)
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"       # live test 2026-11-20: lite 5 to 6 s per call; gemini-3.5-flash 22 to 56 s and one MAX_TOKENS failure (it spends tokens thinking). A setting on purpose: models are retired (2.5-flash answers 404 for new keys)
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta"
-    GEMINI_TIMEOUT_SECONDS: float = 90.0              # gemini-3.5-flash thinks first and often needs 20 to 60 s; 30 s timed out about half the time in a live test
+    GEMINI_TIMEOUT_SECONDS: float = 90.0              # headroom for the slower gemini-3.5-flash (20 to 60 s); the lite default answers in about 5 s
     GEMINI_CALLS_PER_MINUTE: int = 10
     GEMINI_DAILY_CALL_BUDGET: int = 200
 

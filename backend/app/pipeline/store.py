@@ -26,6 +26,23 @@ def _insert(session: AsyncSession, model):
     return insert(model)
 
 
+async def describe_database(session: AsyncSession) -> Dict[str, Any]:
+    """What the app is really running on, for the status page: the engine, whether data survives a restart, and (PostgreSQL only) whether the
+    observation table is a TimescaleDB hypertable. Never the host, user, password or connection string."""
+    name = session.bind.dialect.name if session.bind is not None else "sqlite"
+    if name != "postgresql":
+        return {"engine": name, "persistent": False, "timescale_hypertable": None,
+                "note": "demo storage: the data is lost when the server restarts (set DATABASE_URL to a PostgreSQL or Tiger Cloud database to keep it)"}
+    hyper = None
+    try:
+        hyper = bool((await session.execute(text(
+            "SELECT count(*) FROM timescaledb_information.hypertables WHERE hypertable_name = 'pipeline_observations'"))).scalar_one())
+    except Exception:                                               # no TimescaleDB extension: plain PostgreSQL
+        await session.rollback()
+    return {"engine": "postgresql", "persistent": True, "timescale_hypertable": hyper,
+            "note": "persistent PostgreSQL" + (" with the observation table as a TimescaleDB hypertable" if hyper else " (the observation table is a plain table)")}
+
+
 async def insert_observations(session: AsyncSession, rows: Sequence[Dict[str, Any]]) -> None:
     """Insert hourly observations, skipping any (source, station_key, observed_at) already stored."""
     for start in range(0, len(rows), PG_CHUNK):
