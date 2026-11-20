@@ -90,6 +90,27 @@ async def get_db_context() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
+def _add_missing_nullable_columns(sync_conn) -> list:
+    """``create_all`` creates missing tables but never alters one, so an existing database would break on a model that gained a column. Add
+    each missing NULLABLE column with ALTER TABLE ... ADD COLUMN (safe on SQLite and PostgreSQL, no data touched). A non-nullable column, a
+    rename or a type change needs a real migration (``alembic upgrade head``) and is left alone. Returns the 'table.column' names added."""
+    from sqlalchemy import inspect, text
+    insp = inspect(sync_conn)
+    existing = set(insp.get_table_names())
+    added = []
+    for table in Base.metadata.sorted_tables:
+        if table.name not in existing:
+            continue
+        have = {c["name"] for c in insp.get_columns(table.name)}
+        for col in table.columns:
+            if col.name in have or not col.nullable or col.primary_key:
+                continue
+            ddl = col.type.compile(dialect=sync_conn.dialect)
+            sync_conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {ddl}'))
+            added.append(f"{table.name}.{col.name}")
+    return added
+
+
 async def init_db() -> None:
     """Creates the validation platform tables (validation_runs, validation_results, validation_check_hits, explanations) if missing.
     No data is seeded: the platform stores only what a user uploads or the live feed polls."""
@@ -98,6 +119,9 @@ async def init_db() -> None:
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        added = await conn.run_sync(_add_missing_nullable_columns)
+    if added:
+        logger.info("Added missing nullable columns to existing tables: %s (alembic upgrade head is the full migration path)", ", ".join(added))
     if not is_sqlite:
         from backend.app.pipeline.store import ensure_timescale
         done = await ensure_timescale(engine)

@@ -87,11 +87,33 @@ class BaselineExplainer:
             parts.append("Times are when this platform received the reading, so gap and neighbour comparisons are weaker.")
         if "observed" in assumed:
             parts.append("The unit of the observed value is assumed, not confirmed.")
+        if ev.get("not_run"):
+            parts.append("Not run for this station: " + "; ".join(ev["not_run"]) + ".")
+        said = ("The rule score is an uncalibrated", "Times are when this platform", "The unit of the observed")   # already said above
+        parts.extend(l for l in ev.get("limitations", []) if not l.startswith(said))
         parts.append("This text is generated from the evidence by fixed rules.")
         return " ".join(parts)
 
 
 # ------------------------------------------------------------------------------------------------ narrator
+
+def allowed_checks(evidence: Optional[Dict[str, Any]], context: Optional[Dict[str, Any]]) -> Optional[set]:
+    """The check names a reply's contributions may name: the check of the evidence sent, plus the other checks fired on the same row. None when
+    no evidence was sent (a run-level question): then there is nothing to hold the contributions against."""
+    if not evidence:
+        return None
+    return {evidence.get("check")} | set((context or {}).get("other_checks_on_row", []))
+
+
+def check_contributions(contributions: List[Dict[str, Any]], allowed: Optional[set]) -> None:
+    """A contribution must name a check that fired on this row; a reply that points at a check that was not in the evidence is discarded
+    (idea from the rf pull request: 'Unknown evidence contribution')."""
+    if allowed is None:
+        return
+    bad = sorted({c["check"] for c in contributions if c["check"] not in allowed})
+    if bad:
+        raise NarratorUnavailable(f"the reply names a check that did not fire on this row ({', '.join(b or '(empty)' for b in bad[:3])}); it was discarded")
+
 
 class _Limiter:
     def __init__(self, per_minute: int) -> None:
@@ -143,16 +165,21 @@ class NarratorExplainer:
             headers["Authorization"] = f"Bearer {self.token}"
         try:
             async with httpx.AsyncClient(timeout=self.timeout, transport=self._transport, follow_redirects=False) as client:
-                resp = await client.post(self.url, content=raw, headers=headers)
+                async with client.stream("POST", self.url, content=raw, headers=headers) as resp:
+                    if resp.status_code != 200:
+                        raise NarratorUnavailable(f"the narrator answered HTTP {resp.status_code}")
+                    data = bytearray()
+                    async for chunk in resp.aiter_bytes():           # read as a stream and stop at the cap (idea from the rf pull request)
+                        data.extend(chunk)
+                        if len(data) > MAX_REQUEST_BYTES:
+                            raise NarratorUnavailable("the narrator's reply is larger than the 64 KB limit")
         except httpx.HTTPError as e:
             raise NarratorUnavailable(f"the narrator did not answer ({type(e).__name__})")
-        if resp.status_code != 200:
-            raise NarratorUnavailable(f"the narrator answered HTTP {resp.status_code}")
-        return self._parse(resp)
+        return self._parse(bytes(data), allowed_checks(evidence, context))
 
-    def _parse(self, resp: httpx.Response) -> Explanation:
+    def _parse(self, data: bytes, allowed: Optional[set] = None) -> Explanation:
         try:
-            d = resp.json()
+            d = json.loads(data)
         except ValueError:
             raise NarratorUnavailable("the narrator's reply is not JSON")
         text, model_id = d.get("text") if isinstance(d, dict) else None, d.get("model_id") if isinstance(d, dict) else None
@@ -167,4 +194,5 @@ class NarratorExplainer:
         if conf is not None and (isinstance(conf, bool) or not isinstance(conf, (int, float))):
             raise NarratorUnavailable("the narrator's 'confidence' must be a number or null")
         clean = [{"check": str(c.get("check", ""))[:48], "note": str(c.get("note", ""))[:500]} for c in contrib[:20]]
+        check_contributions(clean, allowed)
         return Explanation(text.strip(), clean, model_id.strip()[:96], self.generator, True, float(conf) if conf is not None else None)

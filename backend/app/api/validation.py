@@ -187,7 +187,9 @@ async def get_evidence_v1(run_id: int, result_id: int, check: Optional[str] = No
     """GET-only evidence-v1 payloads (docs/contracts/evidence-v1.schema.json), one per fired check, each at most 64 KB."""
     run = await _run_or_404(session, run_id)
     row = await _row_or_404(session, run_id, result_id)
-    return {"schema": "evidence-v1", "evidence": await narrate.evidence_for_row(session, run, row, check)}
+    evs = await narrate.evidence_for_row(session, run, row, check)
+    # evidence_hash: send it back with the explain request and the server refuses an explanation of evidence that has changed since (409)
+    return {"schema": "evidence-v1", "evidence": evs, "evidence_hash": narrate.evidence_digest(evs)}
 
 
 @router.get("/runs/{run_id}/rows/{result_id}/explanations")
@@ -201,6 +203,7 @@ async def get_explanations(run_id: int, result_id: int, session: AsyncSession = 
 class ExplainRequest(BaseModel):
     generator: Literal["baseline", "narrator"] = "baseline"
     check: Optional[str] = Field(None, max_length=48)
+    evidence_hash: Optional[str] = Field(None, pattern=r"^[a-f0-9]{64}$")      # from GET .../evidence; a changed row is refused with 409
 
 
 @router.post("/runs/{run_id}/rows/{result_id}/explain", status_code=status.HTTP_201_CREATED)
@@ -217,7 +220,9 @@ async def explain(run_id: int, result_id: int, body: ExplainRequest, session: As
     else:
         explainer = narrate.BASELINE
     try:
-        made = await narrate.explain_row(session, run, row, explainer, body.check)
+        made = await narrate.explain_row(session, run, row, explainer, body.check, body.evidence_hash)
+    except narrate.StaleEvidence as e:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(e))
     except NarratorRateLimited as e:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, str(e))
     except NarratorUnavailable as e:

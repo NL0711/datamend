@@ -79,6 +79,15 @@ _OPEN_PATHS = ("/api/auth/login", "/api/auth/me", "/api/auth/logout")
 _DOC_PATHS = ("/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect")      # the API's description is gated too
 
 
+READ_ONLY_PREFIXES = ("/api/validation/", "/api/places/")
+
+
+def _bearer(request: Request) -> Optional[str]:
+    """The token of an `Authorization: Bearer ...` header, or None when there is no such header."""
+    h = request.headers.get("authorization") or ""
+    return h[7:].strip() if h[:7].lower() == "bearer " else None
+
+
 def gated(path: str) -> bool:
     return (path.startswith("/api/") and path not in _OPEN_PATHS) or path in _DOC_PATHS
 
@@ -96,7 +105,11 @@ async def require_login(request: Request, call_next):
             return JSONResponse({"detail": "too many wrong tokens; wait a few minutes"}, status_code=status.HTTP_429_TOO_MANY_REQUESTS)
         if settings.ADMIN_TOKEN and tok and _same(tok, settings.ADMIN_TOKEN):
             return await call_next(request)
-        if tok:                                      # a token was offered and it was wrong: that is a guess
+        bearer = _bearer(request)
+        if bearer is not None and settings.EVIDENCE_API_TOKEN and request.method == "GET" and path.startswith(READ_ONLY_PREFIXES):
+            if _same(bearer, settings.EVIDENCE_API_TOKEN):
+                return await call_next(request)   # read-only: GET under /api/validation/ and /api/places/ only, never a write
+        if tok or bearer is not None:                # a token was offered and it was wrong (or not allowed here): that is a guess
             record_failure(_token_failures, client)
         return JSONResponse({"detail": "sign in to use the dashboard"}, status_code=status.HTTP_401_UNAUTHORIZED)
     return await call_next(request)

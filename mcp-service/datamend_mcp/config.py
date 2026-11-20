@@ -30,7 +30,8 @@ def _float(name: str, default: float) -> float:
 class Settings:
     # --- how the MCP server reaches the DataMend platform (its REST API) ---
     datamend_base_url: str = "http://localhost:8000"
-    datamend_admin_token: str = ""          # ADMIN_TOKEN of the platform, OR the email and password below
+    datamend_read_token: str = ""           # PREFERRED: the platform's EVIDENCE_API_TOKEN, a read-only credential (GET under /api/validation/ and /api/places/ only)
+    datamend_admin_token: str = ""          # ADMIN_TOKEN of the platform, OR the email and password below (wider access than this server needs)
     datamend_admin_email: str = ""
     datamend_admin_password: str = ""
     datamend_timeout_s: float = 15.0
@@ -68,6 +69,7 @@ def load() -> Settings:
     origins = tuple(o.strip() for o in (e("MCP_ALLOWED_ORIGINS", "") or "").split(",") if o.strip())
     return Settings(
         datamend_base_url=(e("DATAMEND_BASE_URL") or "http://localhost:8000").rstrip("/"),
+        datamend_read_token=e("DATAMEND_READ_TOKEN", "") or "",
         datamend_admin_token=e("DATAMEND_ADMIN_TOKEN", "") or "",
         datamend_admin_email=e("DATAMEND_ADMIN_EMAIL", "") or "",
         datamend_admin_password=e("DATAMEND_ADMIN_PASSWORD", "") or "",

@@ -83,6 +83,11 @@ class Settings(BaseSettings):
     # When true (the default) every /api route except the sign-in itself needs a signed-in session: nobody reads any data without signing in.
     REQUIRE_LOGIN: bool = True
 
+    # A READ-ONLY credential for an external reader such as the MCP server (idea from the rf pull request): sent as `Authorization: Bearer <token>`,
+    # accepted only for GET requests under /api/validation/ and /api/places/, never for a write and never for another route. Empty = off.
+    # In .env only. A long random string, different from ADMIN_TOKEN.
+    EVIDENCE_API_TOKEN: str = ""
+
     # Kaggle retraining (pipeline/kaggle_trigger.py): the owner's Kaggle account. Secrets: environment only, never a tracked file.
     KAGGLE_USERNAME: str = ""
     KAGGLE_KEY: str = ""

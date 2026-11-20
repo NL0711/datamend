@@ -47,13 +47,13 @@ export const getRun = (id: number) => get<RunFull>(`${V}/runs/${id}`);
 export const getRows = (id: number, query: string) => get<RowsPage>(`${V}/runs/${id}/rows?${query}`);
 export const getRow = (id: number, rowId: number) => get<RowDetail>(`${V}/runs/${id}/rows/${rowId}`);
 export const getEvidence = (id: number, rowId: number) =>
-  get<{ schema: string; evidence: Evidence[] }>(`${V}/runs/${id}/rows/${rowId}/evidence`);
+  get<{ schema: string; evidence: Evidence[]; evidence_hash?: string }>(`${V}/runs/${id}/rows/${rowId}/evidence`);
 export const getSeries = (id: number, station: string, maxPoints = 1500) =>
   get<Series>(`${V}/runs/${id}/series?station=${encodeURIComponent(station)}&max_points=${maxPoints}`);
 export const getExplanations = (id: number, rowId: number) =>
   get<{ explanations: ExplanationItem[] }>(`${V}/runs/${id}/rows/${rowId}/explanations`);
-export const explain = (id: number, rowId: number, generator: 'baseline' | 'narrator', check?: string) =>
-  post<{ explanations: ExplanationItem[] }>(`${V}/runs/${id}/rows/${rowId}/explain`, { generator, check: check ?? null });
+export const explain = (id: number, rowId: number, generator: 'baseline' | 'narrator', check?: string, evidenceHash?: string) =>
+  post<{ explanations: ExplanationItem[] }>(`${V}/runs/${id}/rows/${rowId}/explain`, { generator, check: check ?? null, ...(evidenceHash ? { evidence_hash: evidenceHash } : {}) });
 export const getNarrator = () => get<NarratorStatus>(`${V}/narrator`);
 export const getChat = (id: number) => get<{ messages: ExplanationItem[] }>(`${V}/runs/${id}/chat`);
 export const sendChat = (id: number, message: string, rowId?: number) =>

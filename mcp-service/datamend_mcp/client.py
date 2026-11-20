@@ -50,11 +50,13 @@ class DataMendClient:
         url = self.cfg.datamend_base_url + path + ("?" + urllib.parse.urlencode(q) if q else "")
         for attempt in (0, 1):
             with self._lock:
-                if not self._token and attempt == 0:
+                if not self.cfg.datamend_read_token and not self._token and attempt == 0:
                     self._login()
                 token = self._token
             headers = {"Accept": "application/json"}
-            if token:
+            if self.cfg.datamend_read_token:                  # the read-only credential wins: this server never needs the admin one
+                headers["Authorization"] = "Bearer " + self.cfg.datamend_read_token
+            elif token:
                 headers["X-Admin-Token"] = token
             try:
                 with urllib.request.urlopen(urllib.request.Request(url, headers=headers, method="GET"), timeout=self.cfg.datamend_timeout_s) as r:

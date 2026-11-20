@@ -116,6 +116,12 @@ describe('pipeline functions', () => {
     await api.makeProposals(3, 'ai');
     expect(bodyOf()).toEqual({ generator: 'ai' });
   });
+  it('explain sends the evidence hash only when it has one', async () => {
+    await api.explain(2, 5, 'baseline');
+    expect(lastCall()[0]).toBe('/api/validation/runs/2/rows/5/explain'); expect(bodyOf()).toEqual({ generator: 'baseline', check: null });
+    await api.explain(2, 5, 'narrator', undefined, 'a'.repeat(64));
+    expect(bodyOf()).toEqual({ generator: 'narrator', check: null, evidence_hash: 'a'.repeat(64) });
+  });
   it('scoring, shadow run and the gated promote call the right URLs', async () => {
     await api.scoreRun(4, 9);
     expect(lastCall()[0]).toBe('/api/pipeline/runs/4/score'); expect(bodyOf()).toEqual({ model_id: 9 });

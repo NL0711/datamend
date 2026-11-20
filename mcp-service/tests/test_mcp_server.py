@@ -209,6 +209,21 @@ class ClientAuthTests(unittest.TestCase):
             DataMendClient(Settings(datamend_base_url=self.url)).get("/api/validation/overview")
         self.assertEqual(cm.exception.status, 401)
 
+    def test_read_only_token_is_sent_as_a_bearer_and_no_admin_credential_is_used(self):
+        fake.State.auth_seen.clear()
+        fake.State.logins = 0
+        # admin credentials are configured too, but the read-only token wins: they are neither sent nor used to sign in
+        c = DataMendClient(Settings(datamend_base_url=self.url, datamend_read_token=fake.READ_TOKEN, datamend_admin_token=fake.ADMIN_TOKEN,
+                                    datamend_admin_email=fake.EMAIL, datamend_admin_password=fake.PASSWORD))
+        self.assertEqual(c.get("/api/validation/overview")["runs"], 1)
+        self.assertEqual(fake.State.auth_seen, ["bearer"])
+        self.assertEqual(fake.State.logins, 0)
+        with self.assertRaises(DataMendError) as cm:                       # the platform accepts it for validation and places only
+            c.get("/api/pipeline/jobs")
+        self.assertEqual(cm.exception.status, 401)
+        with self.assertRaises(DataMendError):
+            DataMendClient(Settings(datamend_base_url=self.url, datamend_read_token="wrong")).get("/api/validation/overview")
+
     def test_only_api_paths_reachable(self):
         with self.assertRaises(ValueError):
             DataMendClient(Settings(datamend_base_url=self.url, datamend_admin_token="x")).get("/docs")

@@ -20,7 +20,7 @@ Python 3.10+, **standard library only**: nothing to install. Full write-up: [`do
 # 1. platform running as usual (python -m uvicorn backend.app.main:app --port 8000), then in another terminal:
 cd mcp-service
 copy .env.example .env                      # or set the variables in your shell
-$env:DATAMEND_ADMIN_TOKEN = "<the platform's ADMIN_TOKEN>"      # or DATAMEND_ADMIN_EMAIL + DATAMEND_ADMIN_PASSWORD
+$env:DATAMEND_READ_TOKEN = "<the platform's EVIDENCE_API_TOKEN>"   # preferred: read-only. Or DATAMEND_ADMIN_TOKEN, or DATAMEND_ADMIN_EMAIL + DATAMEND_ADMIN_PASSWORD (admin: wider than needed)
 python -m datamend_mcp tools                # list the tools
 python examples/demo_session.py             # a client session against the server (needs the platform and a run)
 python -m datamend_mcp narrator             # start the narrator on http://127.0.0.1:8790/narrate

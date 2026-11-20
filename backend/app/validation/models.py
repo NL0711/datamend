@@ -101,6 +101,10 @@ class Explanation(Base):
     model_id: Mapped[str] = mapped_column(String(96))
     confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)   # the narrator's own number, if it sent one
     generated: Mapped[bool] = mapped_column(Boolean, default=True)
+    # What was explained, kept so an explanation can always be audited against the exact evidence it saw (idea from the rf pull request): the
+    # SHA-256 of that evidence payload and a copy of it. None on rows made before this was added.
+    evidence_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    evidence_snapshot: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 

@@ -21,7 +21,8 @@ from typing import Any, Deque, Dict, List, Optional
 
 import httpx
 
-from backend.app.validation.explain import (MAX_REQUEST_BYTES, MAX_TEXT_CHARS, Explanation, NarratorRateLimited, NarratorUnavailable)
+from backend.app.validation.explain import (MAX_REQUEST_BYTES, MAX_TEXT_CHARS, Explanation, NarratorRateLimited, NarratorUnavailable,
+                                            allowed_checks, check_contributions)
 
 GENERATOR = "gemini"
 PROPOSAL_LABELS = ("confirmed_fault", "false_alarm", "genuine_extreme", "needs_followup")
@@ -210,6 +211,7 @@ class GeminiExplainer:
         if not isinstance(contrib, list):
             contrib = []
         clean = [{"check": str(c.get("check", ""))[:48], "note": str(c.get("note", ""))[:500]} for c in contrib[:20] if isinstance(c, dict)]
+        check_contributions(clean, allowed_checks(evidence, context))
         return Explanation(text.strip(), clean, self.model_id[:96], self.generator, True, None)
 
     async def propose_label(self, evidences: List[Dict[str, Any]]) -> Dict[str, str]:

@@ -67,6 +67,8 @@ export interface Evidence {
   history?: { n_wet_days: number; basis: 'derived' };
   tail_probability?: { value: number; basis: 'derived' };
   issue?: string; truncated?: boolean; next?: string;
+  /** What not to over-read in this evidence, and the checks of the run that did not run for this station (fixed sentences, never a model's). */
+  limitations?: string[]; not_run?: string[];
   /** Present only when a trained model scored the row (a stored score or an exported file); never invented. */
   provider?: { model_id?: string; model_kind?: 'label_fusion' | 'stnet'; score?: number; flagged?: boolean; fault_scores?: Record<string, number>;
                ensemble_disagreement?: number; calibrated: boolean; label_tier: 'synthetic' | 'reviewer_labels' };

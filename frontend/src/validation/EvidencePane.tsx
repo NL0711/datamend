@@ -1,7 +1,7 @@
 // Decision pane of layout D. Evidence is loaded only when a row opens (one GET). Always on screen: the original row untouched, evidence
 // with measured/assumed/derived tags, generated explanations marked as generated, and the narrator slot with its real state.
 import { useCallback, useEffect, useState } from 'react';
-import { explain, getEvidence, getExplanations, getRow } from './api';
+import { ApiError, explain, getEvidence, getExplanations, getRow } from './api';
 import { ContextTable } from './ContextTable';
 import { ReviewBox } from './ReviewBox';
 import { asPlainText } from './lib';
@@ -59,6 +59,12 @@ function EvidenceCard({ ev }: { ev: Evidence }) {
           {ev.provider.fault_scores && <div className="font-mono">{Object.entries(ev.provider.fault_scores).map(([k, v]) => `${k} ${v.toFixed(2)}`).join(' · ')}</div>}
           <div className="text-slate-500">{ev.provider.calibrated ? 'calibrated against a clean-period false-alarm budget' : 'uncalibrated: not a probability, not ground truth'}. It never changes the verdict or the rule score.</div>
         </div>)}
+      {((ev.limitations?.length ?? 0) > 0 || (ev.not_run?.length ?? 0) > 0) && (
+        <details className="text-[11px] text-slate-600" data-testid="limits">
+          <summary className="cursor-pointer font-bold">Limits of this evidence{ev.not_run?.length ? ` · ${ev.not_run.length} check(s) did not run` : ''}</summary>
+          {ev.not_run && ev.not_run.length > 0 && <ul className="list-disc ml-5 mt-1"><li className="font-bold list-none -ml-5">Not run for this station</li>{ev.not_run.map((n) => <li key={n}>{n}</li>)}</ul>}
+          {ev.limitations && ev.limitations.length > 0 && <ul className="list-disc ml-5 mt-1">{ev.limitations.map((l) => <li key={l}>{l}</li>)}</ul>}
+        </details>)}
       {ev.truncated && <Notice tone="warn">This payload was cut to stay under 64 KB; the full record is at <span className="font-mono">{ev.next}</span>.</Notice>}
     </div>
   );
@@ -87,24 +93,31 @@ export function EvidencePane({ runId, rowId, narrator, onSelectRow, onReviewed }
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const [evidenceHash, setEvidenceHash] = useState<string | undefined>(undefined);
+  const [reloadTick, setReloadTick] = useState(0);
+
   useEffect(() => {
-    setRow(null); setEvidence([]); setExplanations([]); setError(null);
+    setRow(null); setEvidence([]); setExplanations([]); setError(null); setEvidenceHash(undefined);
     if (rowId === null) return;
     let live = true;
     Promise.all([getRow(runId, rowId), getEvidence(runId, rowId), getExplanations(runId, rowId)])
-      .then(([r, e, x]) => { if (live) { setRow(r); setEvidence(e.evidence); setExplanations(x.explanations); } })
+      .then(([r, e, x]) => { if (live) { setRow(r); setEvidence(e.evidence); setEvidenceHash(e.evidence_hash); setExplanations(x.explanations); } })
       .catch((err) => live && setError(formatError(err)));
     return () => { live = false; };
-  }, [runId, rowId]);
+  }, [runId, rowId, reloadTick]);
 
   const run = useCallback(async (generator: 'baseline' | 'narrator') => {
     if (rowId === null) return;
     setBusy(true); setError(null);
     try {
-      const res = await explain(runId, rowId, generator);
+      // the hash of the evidence on screen goes with the request: if the row changed since, the server refuses (409) and the evidence reloads
+      const res = await explain(runId, rowId, generator, undefined, evidenceHash);
       setExplanations((prev) => [...prev, ...res.explanations]);
-    } catch (err) { setError(formatError(err)); } finally { setBusy(false); }
-  }, [runId, rowId]);
+    } catch (err) {
+      setError(formatError(err));
+      if (err instanceof ApiError && err.status === 409) setReloadTick((t) => t + 1);
+    } finally { setBusy(false); }
+  }, [runId, rowId, evidenceHash]);
 
   if (rowId === null) return <Panel className="p-4 min-h-[300px]"><p className="text-xs text-slate-500">Select a marker, a tick or a worklist item.</p></Panel>;
 

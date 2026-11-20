@@ -76,6 +76,8 @@
       "properties": {"value": {"type": "number", "minimum": 0, "maximum": 1}, "basis": {"enum": ["derived"]}}
     },
     "issue": {"type": "string", "description": "input-integrity issue code (duplicate rows)"},
+    "limitations": {"type": "array", "items": {"type": "string"}, "description": "additive in v1 (2026-11-20): fixed sentences on what must not be over-read in this evidence; chosen by facts of the run, never by a model"},
+    "not_run": {"type": "array", "items": {"type": "string"}, "description": "additive in v1 (2026-11-20): checks of the run that did not run for this station, each as 'check: reason'"},
     "provider": {
       "type": "object",
       "description": "ONLY present when a trained model scored the row; never produced by the rule-based baseline and never invented. Additive in v1 (2026-11-20): a label-fusion model scored on the server (label_tier reviewer_labels, with score and flagged), or an exported STNet score file (label_tier synthetic, with fault_scores).",

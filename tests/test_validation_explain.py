@@ -157,12 +157,12 @@ async def test_narrator_timeout_oversize_request_and_rate_limit():
     with pytest.raises(NarratorUnavailable, match="did not answer"):
         await narrator_with(boom).explain({"check": "c"})
     with pytest.raises(NarratorUnavailable, match="64 KB"):
-        await narrator_with(lambda r: httpx.Response(200, json=GOOD)).explain({"blob": "x" * 70000})
+        await narrator_with(lambda r: httpx.Response(200, json=GOOD)).explain({"check": "counter_jump", "blob": "x" * 70000})
     limited = NarratorExplainer("https://narrator.test/x", "", 5.0, httpx.MockTransport(lambda r: httpx.Response(200, json=GOOD)), _Limiter(2))
-    await limited.explain({"a": 1})
-    await limited.explain({"a": 1})
+    await limited.explain({"check": "counter_jump"})
+    await limited.explain({"check": "counter_jump"})
     with pytest.raises(NarratorUnavailable, match="limited"):
-        await limited.explain({"a": 1})
+        await limited.explain({"check": "counter_jump"})
 
 
 def test_narrator_url_must_be_http_or_https():
@@ -207,8 +207,10 @@ async def test_chat_with_a_narrator_is_grounded_stored_and_badged(async_client: 
     seen = []
 
     def handler(req: httpx.Request):
-        seen.append(json.loads(req.content))
-        return httpx.Response(200, json=GOOD)
+        body = json.loads(req.content)
+        seen.append(body)
+        # name the check of the evidence that was sent: a reply that names a check that did not fire is discarded
+        return httpx.Response(200, json={**GOOD, "contributions": [{"check": body["evidence"]["check"], "note": "step of 120"}]})
 
     app.dependency_overrides[narrate.get_narrator] = lambda: narrator_with(handler)
     run, rows = await make_run(async_client)
