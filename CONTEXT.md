@@ -31,6 +31,10 @@ An untrained score comparing a cell's trailing 30- and 90-day totals with its ow
 **Rules**:
 Fixed physical and statistical checks that need no training.
 
+**Paired comparison**:
+Two stored runs scored on the same validation years and the same false-alarm thresholds, compared per fault kind. The years are resampled together for both runs (whole years, regions fixed), never the events. With only 5 validation years the interval undercovers and is a rough guide. Synthetic faults only.
+_Avoid_: significance test, event-level bootstrap
+
 **Offline comparison**:
 The earlier models that read a whole window in both directions and see the target value. They are reported for comparison only and are not a component.
 _Avoid_: baseline (reserved for the simple untrained or minimal references)

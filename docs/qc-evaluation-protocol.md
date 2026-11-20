@@ -62,6 +62,21 @@ Applies to `qc/bridge.py` and the `bridge:` block of `ml-service/qc/configs/base
 |---|---|---|---|---|
 | 2026-11-18 | as above | | | not run |
 
+## STNet long-memory test (exploratory, rule written 2026-11-20 before any run)
+
+Applies to notebook E (`ml-service/notebooks/kaggle/stnet_E_longmemory.ipynb`) and `python -m qc paired`. SYNTHETIC faults, validation years 2013 to 2017 only; no test or stress year is read. One seed.
+
+- **What is varied.** Only the long-memory LSTM (stage 2) is retrained, from a finished stage-1 encoder (`--init-from`), at two lengths with the same width: 8 epochs x 300 steps and 30 x 600. The baseline is the stage-1 run itself, which had 3 x 30 (17 s). Session 2 repeats this from the hold run, whose encoder never saw zeroed, scale and drift.
+- **Hypothesis.** Drift only: a 21 to 60 day ramp, longer than the 16-day window of the encoder. Scale and zeroed last 1 to 7 days, inside that window, so they are controls and should not move.
+- **Rule.** Long memory helped if drift gains at least 0.05 PR-AUC (mean over the validation years) and 0.05 event recall at the 1-per-1,000 false-alarm budget, with false alerts per 1,000 clean cell-days no more than 0.1 above the baseline. The 0.05 is a decision, not a measured noise level. If a control moves by 0.05 or more the cause is not memory alone. If the rule is not met the wording is "no gain on this encoder", never "long memory is useless": the LSTM only sees the features of a frozen 16-day encoder.
+- **Intervals.** Paired resample of whole years with regions fixed (all resamples enumerated with 5 years), per `docs/research/bootstrap-unit-check.md`. With 5 years it undercovers; it is a rough guide. The per-year differences and the number of years each side wins are reported next to it.
+- **Overfitting.** Stage 2 sees only 3 years of weather. A validation-year loss is logged per long-memory epoch and the best epoch is kept as `_best.pt`; the final (last) epoch is the one scored.
+- **Limits.** The faults come from the generator the LSTM trains on, so a gain shows in-distribution detection of synthetic faults only; unseen-kind behaviour is checked only by session 2. Nothing here says anything about real faults.
+
+| date | rule frozen | commit | run | result |
+|---|---|---|---|---|
+| 2026-11-20 | as above | | session 1 (main run encoder), session 2 (hold run encoder) | not run |
+
 ## Normalization must not squash protected heavy rain
 
 - The existing transform (`ml-service/training/transform.py`) is `log1p(mm) / scale`, with `scale` taken from the 99.9th percentile of training wet days. It rescales but does **not** truncate, so values above that percentile keep their order and size.

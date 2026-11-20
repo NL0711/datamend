@@ -16,7 +16,7 @@ Rainfall anomaly-detection training and evaluation on RF25 gridded daily rainfal
 | `evaluation/` | rainfall metrics (point-wise, event, affiliation, breakdowns) |
 | `validation/` | cross-scale consistency rules (daily against monthly or pentad totals) |
 | `scripts/` | `kaggle_train.sh`, `download_midas.py` |
-| `notebooks/` | `datamend_training.ipynb` for Kaggle |
+| `notebooks/` | `datamend_training.ipynb` for Kaggle; `kaggle/` holds the STNet session notebooks (A main, B hold, C no memory, D seed 43, E long-memory test). E needs a CUDA GPU and a finished `stnet_s42_final.pt` as a Kaggle input (set `RESUME_LINK`); a TPU notebook cannot run it. It compares runs with `python -m qc paired` |
 | `data/` | data folder skeleton; the data itself is not in git |
 
 Models are trained from scratch on rainfall in mm; nothing is downloaded or run zero-shot at inference time.
