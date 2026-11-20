@@ -232,22 +232,6 @@ def cmd_ceiling(cfg, args) -> int:
     return 0
 
 
-def cmd_paired(cfg, args) -> int:
-    """Paired comparison of STNet runs on the validation years with whole-year resampling, and the decision rule for the long-memory test."""
-    from qc import paths
-    from qc.paired import run_paired
-    from qc.prepare import load_prepared
-
-    seed = args.seed if args.seed is not None else int(cfg.train.seeds[0])
-    p = load_prepared(cfg)
-    results = run_paired(p, args.base, args.others, seed, args.budget, args.suffix, args.hypothesis, args.controls)
-    out = paths.out_dir(cfg) / str(cfg.name) / "paired"
-    for o in args.others:
-        print((out / f"paired_{args.base}_vs_{o}_s{seed}.md").read_text(encoding="utf-8"))
-    print(f"wrote {out}. SYNTHETIC faults, validation years only.")
-    return 0
-
-
 def cmd_offline_score(cfg, args) -> int:
     """Score the offline reference models (offline.artifacts in the config) on the VALIDATION years only."""
     from qc.offline import run_offline_validation
@@ -634,7 +618,7 @@ def cmd_paper(cfg, args) -> int:
 COMMANDS = {"uk-grid": cmd_uk_grid, "uk-labels": cmd_uk_labels, "test-score": cmd_test_score, "federated": cmd_federated, "fusion": cmd_fusion, "ablate": cmd_ablate, "calibrate": cmd_calibrate, "set-budgets": cmd_set_budgets, "client-map": cmd_client_map, "prepare": cmd_prepare, "benchmark": cmd_benchmark, "untrained": cmd_untrained,
             "train": cmd_train, "paper": cmd_paper,
             "period-benchmark": cmd_period_benchmark, "scale-select": cmd_scale_select, "cross-scale": cmd_cross_scale, "choose-architecture": cmd_choose_architecture,
-            "cross-scale-test": cmd_cross_scale_test, "regions-report": cmd_regions_report, "offline-score": cmd_offline_score, "ceiling": cmd_ceiling, "paired": cmd_paired, "stnet": cmd_stnet,
+            "cross-scale-test": cmd_cross_scale_test, "regions-report": cmd_regions_report, "offline-score": cmd_offline_score, "ceiling": cmd_ceiling, "stnet": cmd_stnet,
             "stnet-fuse": cmd_stnet_fuse, "choose-stnet": cmd_choose_stnet, "stnet-test": cmd_stnet_test}
 
 
@@ -711,14 +695,6 @@ def main(argv=None) -> int:
                     "starts 90 days before the year is full")
     ce.add_argument("--tag", default="", help="write ceiling_<tag>.md instead of ceiling.md, so an earlier result is not overwritten")
     ce.add_argument("--seed", type=int, default=None, help=SEED_HELP)
-    pd_ = sub.choices["paired"]
-    pd_.add_argument("--base", required=True, help="prefix of the run to compare against, e.g. stnet (its scores are <prefix>_<suffix>_s<seed>)")
-    pd_.add_argument("--others", nargs="+", required=True, help="prefixes of the runs to compare with the base, e.g. stnet_lmb stnet_lmc")
-    pd_.add_argument("--suffix", default="fault", help="which score of each run: fault is the overall flag")
-    pd_.add_argument("--budget", type=float, default=1.0, help="false alerts per 1,000 clean cell-days")
-    pd_.add_argument("--hypothesis", default="drift", help="the fault kind the decision rule is about")
-    pd_.add_argument("--controls", nargs="+", default=["scale", "zeroed"], help="kinds that should not move")
-    pd_.add_argument("--seed", type=int, default=None, help=SEED_HELP)
     o = sub.choices["offline-score"]
     o.add_argument("--overwrite", action="store_true")
     o.add_argument("--show-budgets", nargs="+", type=float, default=[1.0])

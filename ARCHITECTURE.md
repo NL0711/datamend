@@ -59,7 +59,6 @@ CWC hourly CSV -> ingest job (chunked, idempotent)   -> raw observations, immuta
 | Label-fusion retraining on the server CPU | IMPLEMENTED; it only re-weights the checks from one reviewer's labels, it is not a deep model |
 | Kaggle notebook retraining (`KAGGLE_USERNAME`, `KAGGLE_KEY`, `pip install kaggle`) | IMPLEMENTED against a mocked command line; UNTESTED against live Kaggle |
 | Gate metrics from a model trained elsewhere | recorded as DECLARED; the platform cannot verify them |
-| STNet long-memory test (stage 2 only, Kaggle notebook E) and the paired whole-year comparison (`python -m qc paired`) | BUILT and unit-tested on generated data; NOT RUN on RF25 |
 | RF25 STNet retraining, scoring with a registered model on the server, shadow run, LLM proposer | NOT IMPLEMENTED |
 
 ### Deployment

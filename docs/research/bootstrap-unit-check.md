@@ -30,10 +30,6 @@ Intervals from the crossed bootstrap were about twice as wide as the year-only o
 4. **Crossed years x regions is the safer choice for claims about unseen regions** (held-out clients 3 and 6), near but below nominal (about 90%) because there are only 8 regions.
 5. Not in the simulation: correlation of the local noise between neighbouring regions, trends over years, and fault-placement variance from the frozen benchmark. These push real coverage lower than shown.
 
-## Where it is used (2026-11-20)
-
-`qc/paired.py` (`python -m qc paired`) follows this recommendation for comparing two stored runs: whole years resampled together, regions fixed, every resample enumerated with 5 years, no interval below 5 years. The event-level `recall_ci` and `event_recall_ci` in `qc/metrics.py` are NOT yet replaced.
-
 ## Recommendation (opinion)
 
 Report per-region results as the primary table; interval for the overall number by whole-year resampling with regions fixed, with the stated undercoverage; crossed years x regions only for unseen-region claims. Replace the event-level recall interval in `qc/metrics.py`. Do not report any interval from fewer than 5 resampled years.
