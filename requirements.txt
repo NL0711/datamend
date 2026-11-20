@@ -13,6 +13,7 @@ httpx>=0.27.0,<0.29.0         # the Weather Union client and the narrator client
 # Database and async ORM (SQLite now, PostgreSQL later)
 sqlalchemy>=2.0.28,<2.1.0
 aiosqlite>=0.20.0,<0.21.0
+alembic>=1.13,<2.0                  # schema migrations: `alembic upgrade head` (alembic.ini, backend/migrations)
 asyncpg>=0.29.0,<0.31.0       # only used with a postgresql+asyncpg:// DATABASE_URL (the persistence decision is open)
 
 # Numerics (the climatology check fits a gamma upper tail)

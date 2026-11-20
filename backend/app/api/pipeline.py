@@ -25,6 +25,7 @@ from backend.app.pipeline import training as train_svc
 from backend.app.pipeline import proposals as prop_svc
 from backend.app.pipeline import qc as qc_svc
 from backend.app.pipeline import registry as reg_svc
+from backend.app.pipeline import scoring as scoring_svc
 from backend.app.pipeline import snapshot as snap_svc
 from backend.app.pipeline.models import AuditItem, IngestJob, ModelVersion, Observation, PipelineStation, Proposal, TrainingJob, TrainingSnapshot
 from backend.app.validation import narrate
@@ -34,8 +35,7 @@ router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
 
 NOT_IMPLEMENTED = [
     "retraining the RF25 STNet from labels (only the small label-fusion model is retrained, on the server's CPU or as a Kaggle notebook)",
-    "scoring with a registered model on the server (needs RF25 grid neighbours; see the map ticket on station-to-cell mapping)",
-    "the shadow run of a candidate beside the champion",
+    "scoring with the RF25 STNet on the server (needs RF25 grid neighbours; see the map ticket on station-to-cell mapping); only the label-fusion model scores here",
     "the AI team's MCP narrator (the interim Gemini layer works when GEMINI_API_KEY is set; the rule-based baseline works without either)",
 ]
 
@@ -281,14 +281,54 @@ async def list_models(session: AsyncSession = Depends(get_db)) -> Dict[str, Any]
 
 
 @router.post("/models/{model_id}/promote", dependencies=[Depends(require_admin)])
-async def promote_model(model_id: int, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+async def promote_model(model_id: int, require_shadow: bool = Query(False), session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """Run the promotion gate. With require_shadow=true the challenger's newest shadow run must also pass (none yet: it stays a challenger)."""
     try:
-        m = await reg_svc.promote(session, model_id)
+        m = await reg_svc.promote(session, model_id, require_shadow)
     except LookupError as e:
         raise _bad(e, status.HTTP_404_NOT_FOUND)
     except ValueError as e:
         raise _bad(e, status.HTTP_409_CONFLICT)
     return reg_svc.model_dict(m)
+
+
+# ------------------------------------------------------------------------------------------------ scoring with a registered model, shadow run
+class ScoreBody(BaseModel):
+    model_id: int
+
+
+@router.post("/runs/{run_id}/score", dependencies=[Depends(require_admin)])
+async def score_run(run_id: int, body: ScoreBody, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """Score a pipeline run with a registered label-fusion model. Stores the scores apart; verdicts and rule scores are unchanged."""
+    try:
+        return await scoring_svc.score_run(session, run_id, body.model_id)
+    except LookupError as e:
+        raise _bad(e, status.HTTP_404_NOT_FOUND)
+    except scoring_svc.CannotScore as e:
+        raise _bad(e, status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+
+@router.get("/runs/{run_id}/scores")
+async def run_scores(run_id: int, model_id: Optional[int] = None, flagged_only: bool = False, limit: int = 500, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    return {"scores": await scoring_svc.scores_for_run(session, run_id, model_id, flagged_only, limit),
+            "note": "a model's own numbers, stored apart from the verdict; never a probability of a fault and never ground truth"}
+
+
+@router.post("/runs/{run_id}/shadow", dependencies=[Depends(require_admin)])
+async def shadow_run(run_id: int, body: ScoreBody, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """Score a run with the champion and a challenger side by side and report both on the rows a reviewer labelled. model_id is the challenger."""
+    try:
+        return scoring_svc.shadow_dict(await scoring_svc.shadow(session, run_id, body.model_id))
+    except LookupError as e:
+        raise _bad(e, status.HTTP_404_NOT_FOUND)
+    except scoring_svc.CannotScore as e:
+        raise _bad(e, status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+
+@router.get("/models/{model_id}/shadow")
+async def model_shadow(model_id: int, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    sh = await scoring_svc.latest_shadow(session, model_id)
+    return {"shadow": scoring_svc.shadow_dict(sh) if sh else None}
 
 
 # ------------------------------------------------------------------------------------------------ retraining and lineage

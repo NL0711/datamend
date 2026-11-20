@@ -5,6 +5,7 @@ chat raise NarratorUnavailable (the API answers 503 "AI narrator not connected")
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional, Union
 
 from sqlalchemy import select
@@ -17,6 +18,7 @@ from backend.app.validation.gemini import GeminiExplainer
 from backend.app.validation.models import Explanation, ValidationCheckHit, ValidationResult, ValidationRun
 
 MAX_QUESTION_CHARS = 2000
+log = logging.getLogger(__name__)
 
 
 def get_narrator() -> Optional[Union[NarratorExplainer, GeminiExplainer]]:
@@ -56,8 +58,32 @@ async def row_hits(session: AsyncSession, row: ValidationResult) -> List[Validat
                                        .order_by(ValidationCheckHit.weight.desc(), ValidationCheckHit.id))).scalars())
 
 
+async def _exported_provider(session: AsyncSession, row: ValidationResult) -> Optional[Dict[str, Any]]:
+    """The provider block from the exported score file (SCORE_EXPORT_PATH) for the row's station and day; None when anything is missing."""
+    from backend.app.pipeline.models import PipelineStation
+    from backend.app.validation import score_provider
+    try:
+        prov = score_provider.get_provider(settings.SCORE_EXPORT_PATH)
+    except score_provider.ScoreFileError as e:
+        log.warning("score export file not used: %s", e)
+        return None
+    st = await session.get(PipelineStation, row.station_id)
+    if prov is None or st is None:
+        return None
+    return prov.lookup(st.latitude, st.longitude, row.time_key)
+
+
 async def evidence_for_row(session: AsyncSession, run: ValidationRun, row: ValidationResult, check: Optional[str] = None) -> List[Dict[str, Any]]:
-    return [evidence_v1(run, row, h) for h in await row_hits(session, row) if check is None or h.check == check]
+    evs = [evidence_v1(run, row, h) for h in await row_hits(session, row) if check is None or h.check == check]
+    if run.source == "pipeline" and evs:
+        from backend.app.pipeline import scoring           # a stored model score for this row, or nothing: the block is never invented
+        prov = await scoring.provider_block(session, run.id, row.row_ref)
+        if prov is None and settings.SCORE_EXPORT_PATH.strip():
+            prov = await _exported_provider(session, row)
+        if prov is not None:
+            for ev in evs:
+                ev["provider"] = prov
+    return evs
 
 
 async def explain_row(session: AsyncSession, run: ValidationRun, row: ValidationResult, explainer: Explainer, check: Optional[str] = None) -> List[Explanation]:

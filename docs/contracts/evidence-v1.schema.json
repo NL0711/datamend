@@ -78,15 +78,18 @@
     "issue": {"type": "string", "description": "input-integrity issue code (duplicate rows)"},
     "provider": {
       "type": "object",
-      "description": "ONLY present when a trained score provider ran. NOT IMPLEMENTED in v1: never produced by the rule-based baseline and never invented.",
+      "description": "ONLY present when a trained model scored the row; never produced by the rule-based baseline and never invented. Additive in v1 (2026-11-20): a label-fusion model scored on the server (label_tier reviewer_labels, with score and flagged), or an exported STNet score file (label_tier synthetic, with fault_scores).",
       "required": ["calibrated", "label_tier"],
       "additionalProperties": false,
       "properties": {
         "model_id": {"type": "string"},
+        "model_kind": {"enum": ["label_fusion", "stnet"]},
+        "score": {"type": "number", "description": "the model's own number, uncalibrated; never a probability of a fault"},
+        "flagged": {"type": "boolean", "description": "score reached the threshold fixed on the training data's clean days"},
         "fault_scores": {"type": "object", "additionalProperties": {"type": "number"}, "description": "per fault kind: spike, stuck, scale, phantom_rain, zeroed, drift"},
         "ensemble_disagreement": {"type": "number", "description": "only when the provider has one; STNet does not"},
         "calibrated": {"type": "boolean"},
-        "label_tier": {"enum": ["synthetic"]}
+        "label_tier": {"enum": ["synthetic", "reviewer_labels"]}
       }
     },
     "truncated": {"type": "boolean", "description": "true when the payload was cut to stay under 64 KB"},

@@ -61,7 +61,11 @@ CWC hourly CSV -> ingest job (chunked, idempotent)   -> raw observations, immuta
 | Gate metrics from a model trained elsewhere | recorded as DECLARED; the platform cannot verify them |
 | STNet long-memory test (stage 2 only, Kaggle notebook E) and the paired whole-year comparison (`python -m qc paired`) | BUILT and unit-tested on generated data; NOT RUN on RF25 |
 | Interim LLM layer on Gemini (`validation/gemini.py`): Explain (AI), chat, and AI-proposed reviewer labels; needs `GEMINI_API_KEY`; the AI team's MCP narrator (`NARRATOR_URL`) takes precedence when set | BUILT and tested on a mocked transport; one live call made 2026-11-20; generated text only, never changes a verdict |
-| RF25 STNet retraining, scoring with a registered model on the server, shadow run, the AI team's MCP narrator | NOT IMPLEMENTED |
+| Scoring a pipeline run with a registered label-fusion model (`pipeline/scoring.py`), the `provider` block in the evidence, the shadow run beside the champion and the gate option `require_shadow` | BUILT, tested on generated data; the shadow report is measured on reviewer-labelled rows only (one person's judgements) |
+| Score export schema 1 (`ml-service/qc/score_export.py`, `docs/contracts/score-export-v1.schema.json`) and the platform's reader (`validation/score_provider.py`, `SCORE_EXPORT_PATH`) | BUILT and tested on hand-made arrays; NO real exported file exists yet (needs a finished STNet test or validation scoring run); station to cell is an ASSUMED nearest-cell stand-in |
+| Run exports (JSON and CSV) carry model scores, proposals (marked generated) and corrections beside the original rows | BUILT |
+| Schema migrations (Alembic, `alembic upgrade head`; baseline `0001`); a test fails when a model changes without a migration | BUILT; the app still runs `create_all` at start-up |
+| RF25 STNet retraining from labels, scoring with the RF25 STNet on the server, the AI team's MCP narrator | NOT IMPLEMENTED |
 
 ### Deployment
 

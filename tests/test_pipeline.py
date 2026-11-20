@@ -12,8 +12,8 @@ from sqlalchemy import delete, func, select
 from backend.app.config import settings
 from backend.app.db.database import async_session_factory
 from backend.app.pipeline import cwc, registry
-from backend.app.pipeline.models import (AuditItem, Correction, IngestJob, ModelVersion, Observation, PipelineStation, Proposal, TrainingJob,
-                                          TrainingSnapshot)
+from backend.app.pipeline.models import (AuditItem, Correction, IngestJob, ModelScore, ModelVersion, Observation, PipelineStation, Proposal, ShadowRun,
+                                          TrainingJob, TrainingSnapshot)
 from backend.app.validation.models import Review, ValidationResult, ValidationRun
 
 TOKEN = "p" * 32
@@ -43,7 +43,7 @@ def wet_days(station, start, days, mm=4.0, hour=14, **kw):
 async def _clean(monkeypatch):
     monkeypatch.setattr(settings, "ADMIN_TOKEN", TOKEN)
     async with async_session_factory() as s:
-        for model in (Correction, Proposal, AuditItem, TrainingJob, ModelVersion, TrainingSnapshot, Review, Observation, PipelineStation, IngestJob):
+        for model in (Correction, Proposal, AuditItem, TrainingJob, ShadowRun, ModelScore, ModelVersion, TrainingSnapshot, Review, Observation, PipelineStation, IngestJob):
             await s.execute(delete(model))
         await s.execute(delete(ValidationRun).where(ValidationRun.source == "pipeline"))
         await s.commit()
@@ -241,7 +241,7 @@ async def test_register_promote_reject_and_roll_back(async_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_status_lists_what_is_not_implemented(async_client: AsyncClient):
     st = (await async_client.get("/api/pipeline/status")).json()
-    assert st["sources"] == ["cwc"] and any("scoring with a registered model" in x for x in st["not_implemented"])
+    assert st["sources"] == ["cwc"] and any("scoring with the RF25 STNet" in x for x in st["not_implemented"])
 
 
 # ---------------------------------------------------------------------------------------------- AI proposer (Gemini layer, fake LLM)
@@ -310,4 +310,147 @@ async def test_ai_proposals_stop_on_quota_and_keep_what_was_made(async_client: A
             assert (await s.execute(select(func.count()).select_from(Proposal))).scalar_one() == 0
     finally:
         app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------------------------- scoring with a registered model, shadow run
+def fusion_metrics(w_impossible: float, bias: float, threshold: float = 0.5):
+    from backend.app.pipeline import fusion
+    weights = [w_impossible if c == "impossible_value" else 0.1 for c in fusion.CHECKS]
+    return {"kind": "label_fusion", "artifact": {"kind": "label_fusion", "checks": list(fusion.CHECKS), "weights": weights, "bias": bias, "threshold": threshold}}
+
+
+async def register_model(metrics, name="label-fusion", version="t1", alias="challenger"):
+    async with async_session_factory() as s:
+        m = await registry.register(s, name, version, metrics)
+        m.alias = alias
+        await s.commit()
+        return m.id
+
+
+async def flagged_rows(run_id):
+    async with async_session_factory() as s:
+        return (await s.execute(select(ValidationResult).where(ValidationResult.run_id == run_id, ValidationResult.verdict.in_(("SUSPECT", "UNCERTAIN"))))).scalars().all()
+
+
+@pytest.mark.asyncio
+async def test_scoring_stores_scores_apart_and_puts_a_provider_block_in_the_evidence(async_client: AsyncClient):
+    import json
+    from pathlib import Path
+    import jsonschema
+    run_id = await flagged_run(async_client)
+    row = (await flagged_rows(run_id))[0]
+    ev_url = f"/api/validation/runs/{run_id}/rows/{row.id}/evidence"
+    assert all("provider" not in e for e in (await async_client.get(ev_url)).json()["evidence"])      # nothing scored yet: no block, never invented
+    mid = await register_model(fusion_metrics(6.0, -3.0))
+    out = await async_client.post(f"/api/pipeline/runs/{run_id}/score", headers=H, json={"model_id": mid})
+    assert out.status_code == 200 and out.json()["flagged"] >= 1 and out.json()["rows"] >= 1
+    evs = (await async_client.get(ev_url)).json()["evidence"]
+    prov = evs[0]["provider"]
+    assert prov["label_tier"] == "reviewer_labels" and prov["calibrated"] is False and prov["flagged"] is True and 0.5 <= prov["score"] <= 1
+    schema = json.loads((Path(__file__).resolve().parents[1] / "docs/contracts/evidence-v1.schema.json").read_text(encoding="utf8"))
+    jsonschema.validate(evs[0], schema)                                                              # the block matches the contract
+    again = (await async_client.post(f"/api/pipeline/runs/{run_id}/score", headers=H, json={"model_id": mid})).json()
+    async with async_session_factory() as s:
+        assert (await s.execute(select(func.count()).select_from(ModelScore))).scalar_one() == again["rows"]   # re-scoring replaces, never duplicates
+        after = (await s.execute(select(ValidationResult).where(ValidationResult.id == row.id))).scalar_one()
+        assert (after.verdict, after.rule_score) == (row.verdict, row.rule_score)                    # the verdict and rule score are untouched
+    listed = (await async_client.get(f"/api/pipeline/runs/{run_id}/scores?model_id={mid}&flagged_only=true")).json()["scores"]
+    assert listed and all(x["flagged"] for x in listed)
+
+
+@pytest.mark.asyncio
+async def test_a_model_that_cannot_score_on_the_server_says_so(async_client: AsyncClient):
+    run_id = await flagged_run(async_client)
+    stnet = await register_model({"kind": "stnet", "recall_at_budget": 0.6})
+    r = await async_client.post(f"/api/pipeline/runs/{run_id}/score", headers=H, json={"model_id": stnet})
+    assert r.status_code == 422 and "NOT IMPLEMENTED" in r.json()["detail"]
+    assert (await async_client.post(f"/api/pipeline/runs/{run_id}/score", headers=H, json={"model_id": 9999})).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_shadow_run_compares_champion_and_challenger_on_reviewed_rows(async_client: AsyncClient):
+    run_id = await flagged_run(async_client)
+    row = (await flagged_rows(run_id))[0]
+    async with async_session_factory() as s:
+        s.add(Review(run_id=run_id, row_ref=row.row_ref, station_id=row.station_id, decision="confirmed_fault", reviewer="asha", verdict_at_review=row.verdict))
+        await s.commit()
+    champ = await register_model(fusion_metrics(6.0, -3.0), version="champ", alias="champion")
+    weak = await register_model(fusion_metrics(0.5, -3.0), version="weak")
+    r = await async_client.post(f"/api/pipeline/runs/{run_id}/shadow", headers=H, json={"model_id": weak})
+    assert r.status_code == 200
+    rep = r.json()["report"]
+    assert rep["reviewed_rows_used"] == 1 and rep["champion"]["model_id"] == champ and "not ground truth" in rep["note"]
+    assert rep["champion"]["recall_on_reviewed"] == 1.0 and rep["challenger"]["recall_on_reviewed"] == 0.0 and rep["disagreements"] >= 1
+    assert (await async_client.get(f"/api/pipeline/models/{weak}/shadow")).json()["shadow"]["id"] == r.json()["id"]
+    assert (await async_client.post(f"/api/pipeline/runs/{run_id}/shadow", headers=H, json={"model_id": champ})).status_code == 422   # not a challenger
+
+
+def test_shadow_rules_never_pass_by_default():
+    from backend.app.pipeline import scoring
+    assert scoring.evaluate_shadow(None)["passed"] is False
+    base = {"rows": 10, "reviewed_rows_used": 4, "note": "n"}
+    good = {**base, "challenger": {"recall_on_reviewed": 1.0, "false_alarms_flagged": 0, "genuine_extremes_flagged": 0},
+            "champion": {"recall_on_reviewed": 0.5, "false_alarms_flagged": 1, "genuine_extremes_flagged": 1}}
+    assert scoring.evaluate_shadow(good)["passed"] is True
+    worse = {**good, "challenger": {"recall_on_reviewed": 0.2, "false_alarms_flagged": 0, "genuine_extremes_flagged": 0}}
+    assert scoring.evaluate_shadow(worse)["passed"] is False
+    no_faults = {**good, "challenger": {"recall_on_reviewed": None, "false_alarms_flagged": 0, "genuine_extremes_flagged": 0}}
+    assert scoring.evaluate_shadow(no_faults)["passed"] is False          # no reviewed fault: cannot show the challenger is better
+
+
+@pytest.mark.asyncio
+async def test_promote_with_require_shadow_keeps_a_challenger_without_a_shadow_run(async_client: AsyncClient):
+    mid = await register_model(fusion_metrics(6.0, -3.0))
+    r = await async_client.post(f"/api/pipeline/models/{mid}/promote?require_shadow=true", headers=H)
+    assert r.status_code == 200 and r.json()["alias"] == "challenger"
+    assert any(c["rule"] == "shadow_run_done" and not c["passed"] for c in r.json()["gate"]["checks"])
+
+
+@pytest.mark.asyncio
+async def test_run_export_lays_scores_proposals_and_corrections_beside_the_data(async_client: AsyncClient):
+    from backend.app.main import app
+    from backend.app.validation import narrate
+    run_id = await flagged_run(async_client)
+    plain_csv = (await async_client.get(f"/api/validation/runs/{run_id}/export.csv")).text.splitlines()[0]
+    assert "model_score" not in plain_csv and "ai_proposal" not in plain_csv          # no model columns until a model has scored the run
+    mid = await register_model(fusion_metrics(6.0, -3.0))
+    await async_client.post(f"/api/pipeline/runs/{run_id}/score", headers=H, json={"model_id": mid})
+    props = (await async_client.post(f"/api/pipeline/runs/{run_id}/proposals", headers=H, json={})).json()["proposals"]
+    app.dependency_overrides[narrate.get_narrator] = lambda: FakeLLM("needs_followup")
+    try:
+        await async_client.post(f"/api/pipeline/runs/{run_id}/proposals", headers=H, json={"generator": "ai"})
+    finally:
+        app.dependency_overrides.clear()
+    pid = next(p["id"] for p in props if p["kind"] == "exclude_value")
+    await async_client.post(f"/api/pipeline/proposals/{pid}/decide", headers=H, json={"accept": True, "reviewer": "asha"})
+    ex = (await async_client.get(f"/api/validation/runs/{run_id}/export.json")).json()
+    assert "none of them changes a verdict" in ex["pipeline_note"]
+    flagged = [r for r in ex["rows"] if r["model_scores"]]
+    assert flagged and all(set(r) >= {"model_scores", "proposals", "corrections"} for r in ex["rows"])
+    row = next(r for r in ex["rows"] if r["corrections"])
+    assert row["corrections"][0]["corrected_mm"] is None and row["original_row"]                     # the original stays, the exclusion is beside it
+    assert any(p["generator"] == "gemini" and p["generated"] for r in ex["rows"] for p in r["proposals"])
+    head, *lines = (await async_client.get(f"/api/validation/runs/{run_id}/export.csv")).text.splitlines()
+    assert "model_score" in head and "model_flagged" in head and "ai_proposal" in head
+    assert any("[AI-generated, pending] llm_needs_followup" in ln for ln in lines)
+
+
+@pytest.mark.asyncio
+async def test_exported_score_file_gives_a_provider_block_only_where_it_covers_the_station_and_day(async_client: AsyncClient, tmp_path, monkeypatch):
+    import numpy as np
+    from tests.test_score_provider import write
+    run_id = await flagged_run(async_client)
+    row = (await flagged_rows(run_id))[0]
+    ev_url = f"/api/validation/runs/{run_id}/rows/{row.id}/evidence"
+    day = row.time_key[:10]
+    f = write(tmp_path / "s.npz", scores=np.array([[3.2]], dtype=np.float32), periods=(day,), lat=(23.5,), lon=(91.6,), threshold=1.0, budget=5.0,
+              faults={"drift": np.array([[0.7]], dtype=np.float32)})
+    monkeypatch.setattr(settings, "SCORE_EXPORT_PATH", f)
+    prov = (await async_client.get(ev_url)).json()["evidence"][0]["provider"]
+    assert prov["model_kind"] == "stnet" and prov["flagged"] is True and prov["fault_scores"]["drift"] == pytest.approx(0.7) and prov["label_tier"] == "synthetic"
+    other = write(tmp_path / "o.npz", scores=np.array([[3.2]], dtype=np.float32), periods=("1999-01-01",), lat=(23.5,), lon=(91.6,))
+    monkeypatch.setattr(settings, "SCORE_EXPORT_PATH", other)
+    assert "provider" not in (await async_client.get(ev_url)).json()["evidence"][0]            # the file does not cover that day: no block
+    monkeypatch.setattr(settings, "SCORE_EXPORT_PATH", str(tmp_path / "missing.npz"))
+    assert (await async_client.get(ev_url)).status_code == 200                                  # a bad file is logged, never a crash
 

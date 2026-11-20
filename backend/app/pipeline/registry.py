@@ -9,7 +9,8 @@ the gate passes against the current champion (docs/mlops-feedback-loop-spec.md s
 - protected (genuine) extremes flagged are not higher than the champion's;
 - the training job declares that it used the frozen protocol and never touched the locked test years.
 
-NOT IMPLEMENTED: scoring with a registered model on the server (a model needs RF25 grid neighbours), the shadow run, and training itself.
+Scoring a pipeline run with a label-fusion model and the shadow run live in ``scoring.py`` (the gate can require a passing shadow run).
+NOT IMPLEMENTED: scoring with the RF25 STNet on the server (it needs RF25 grid neighbours), and training itself (offline).
 """
 from __future__ import annotations
 
@@ -127,8 +128,10 @@ async def register(session: AsyncSession, name: str, version: str, metrics: Dict
     return m
 
 
-async def promote(session: AsyncSession, model_id: int) -> ModelVersion:
-    """Run the gate on a challenger. Passed: it becomes champion and the old champion is archived. Failed: it is marked rejected with the gate result."""
+async def promote(session: AsyncSession, model_id: int, require_shadow: bool = False) -> ModelVersion:
+    """Run the gate on a challenger. Passed: it becomes champion and the old champion is archived. Failed: it is marked rejected with the gate result.
+    With ``require_shadow`` the newest shadow run of the challenger (pipeline/scoring.py) must also pass its rules; with no shadow run at all the
+    challenger stays a challenger (a missing run is not a verdict)."""
     m = await session.get(ModelVersion, model_id)
     if m is None:
         raise LookupError("no such model")
@@ -137,6 +140,15 @@ async def promote(session: AsyncSession, model_id: int) -> ModelVersion:
     champs = await _champions(session, m.name)
     cur = champs[0] if champs else None
     result = evaluate_gate(m.metrics, cur.metrics if cur else None)
+    if require_shadow:
+        from backend.app.pipeline import scoring           # imported here: scoring imports this module
+        sh = await scoring.latest_shadow(session, m.id)
+        extra = scoring.evaluate_shadow(sh.report if sh else None)
+        result = {**result, "checks": result["checks"] + extra["checks"], "passed": bool(result["passed"] and extra["passed"]), "shadow_run_id": sh.id if sh else None}
+        if sh is None:
+            m.gate = result
+            await session.commit()
+            return m
     if result["passed"]:
         for old in champs:                                   # demote ALL existing champions of this name
             old.alias = "archived"

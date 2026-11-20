@@ -72,6 +72,10 @@ class Settings(BaseSettings):
     GEMINI_CALLS_PER_MINUTE: int = 10
     GEMINI_DAILY_CALL_BUDGET: int = 200
 
+    # An exported score file (docs/contracts/score-export-v1.schema.json, written by ml-service/qc/score_export.py). Empty = no trained STNet scores
+    # in the evidence. The file is read-only data; a station is mapped to its nearest cell within half a grid cell (ASSUMED stand-in mapping).
+    SCORE_EXPORT_PATH: str = ""
+
     # A long random string for SCRIPTS (sent as X-Admin-Token); the dashboard signs in with ADMIN_EMAIL and ADMIN_PASSWORD below instead.
     # In .env only. Anyone who has this token can change the feed key and the narrator.
     ADMIN_TOKEN: str = ""

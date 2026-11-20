@@ -408,16 +408,38 @@ async def _latest_reviews(session: AsyncSession, run_id: int) -> Dict[str, Revie
     return out
 
 
+async def _pipeline_extras(session: AsyncSession, run: ValidationRun) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+    """Per row_ref of a pipeline run: stored model scores, proposals (rule or AI, always generated) and accepted corrections. Empty for other
+    runs. Each piece is stored apart from the data; the export only lays them beside it, labelled."""
+    out: Dict[str, Dict[str, List[Dict[str, Any]]]] = defaultdict(lambda: {"model_scores": [], "proposals": [], "corrections": []})
+    if run.source != "pipeline":
+        return out
+    from backend.app.pipeline.models import Correction, ModelScore, Proposal         # imported here: the pipeline package imports this one
+    for s in (await session.execute(select(ModelScore).where(ModelScore.run_id == run.id).order_by(ModelScore.id))).scalars():
+        out[s.row_ref]["model_scores"].append({"model_id": s.model_id, "score": s.score, "flagged": s.flagged})
+    for p in (await session.execute(select(Proposal).where(Proposal.run_id == run.id).order_by(Proposal.id))).scalars():
+        out[p.row_ref]["proposals"].append({"kind": p.kind, "generator": p.generator, "generated": True, "status": p.status, "text": p.text,
+                                            "decided_by": p.decided_by})
+    for c in (await session.execute(select(Correction).where(Correction.run_id == run.id).order_by(Correction.id))).scalars():
+        out[c.row_ref]["corrections"].append({"original_mm": c.original_mm, "corrected_mm": c.corrected_mm, "reviewer": c.reviewer, "note": c.note})
+    return out
+
+
 async def export_json(session: AsyncSession, run: ValidationRun) -> Dict[str, Any]:
     rows = (await session.execute(select(ValidationResult).where(ValidationResult.run_id == run.id).order_by(ValidationResult.position))).scalars().all()
     hits: Dict[int, List[ValidationCheckHit]] = defaultdict(list)
     for h in (await session.execute(select(ValidationCheckHit).where(ValidationCheckHit.run_id == run.id))).scalars():
         hits[h.result_id].append(h)
     reviews = await _latest_reviews(session, run.id)
+    extras = await _pipeline_extras(session, run)
+    note = ("model_scores are a registered model's own numbers, proposals are generated text (rule-based or AI) and never decisions, corrections are "
+            "reviewer-accepted values kept beside the original; none of them changes a verdict, rule score or the original row" if run.source == "pipeline" else None)
     return {"run": run_dict(run, full=True), "export_note": "full run record; the durable copy (server storage resets on restart)",
             "review_note": "reviewer decisions are one person's judgement on the rows they reviewed; not ground truth",
+            **({"pipeline_note": note} if note else {}),
             "rows": [{"row_ref": r.row_ref, "station_id": r.station_id, "time": r.time_key, "original_row": r.original_row,
                       "input_issues": r.issues, "verdict": r.verdict, "rule_score": r.rule_score, "severity": r.severity,
+                      **(extras[r.row_ref] if run.source == "pipeline" else {}),
                       "review": ({"decision": reviews[r.row_ref].decision, "note": reviews[r.row_ref].note, "reviewer": reviews[r.row_ref].reviewer,
                                   "at": reviews[r.row_ref].created_at.isoformat() if reviews[r.row_ref].created_at else None}
                                  if r.row_ref in reviews else None),
@@ -451,13 +473,27 @@ async def export_csv(session: AsyncSession, run: ValidationRun) -> str:
             if k not in cols:
                 cols.append(k)
     extra = ["verdict", "rule_score", "severity", "fired_checks", "input_issues", "review_decision"]
+    extras = await _pipeline_extras(session, run)
+    with_scores = any(v["model_scores"] for v in extras.values())          # the model columns exist only when a model scored this run
+    with_ai = any(p["generator"] not in ("baseline-rules",) for v in extras.values() for p in v["proposals"])
+    if with_scores:
+        extra += ["model_score", "model_flagged"]
+    if with_ai:
+        extra += ["ai_proposal"]
     extra = [e if e not in cols else f"validation_{e}" for e in extra]
     reviews = await _latest_reviews(session, run.id)
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\n")
     w.writerow(cols + extra)
     for r in rows:
-        w.writerow([_csv_cell(r.original_row.get(c, "")) for c in cols] + [r.verdict, r.rule_score, r.severity or "", ";".join(names.get(r.id, [])),
-                                                                 ";".join(i["code"] for i in r.issues),
-                                                                 reviews[r.row_ref].decision if r.row_ref in reviews else ""])
+        line = [_csv_cell(r.original_row.get(c, "")) for c in cols] + [r.verdict, r.rule_score, r.severity or "", ";".join(names.get(r.id, [])),
+                                                                       ";".join(i["code"] for i in r.issues),
+                                                                       reviews[r.row_ref].decision if r.row_ref in reviews else ""]
+        if with_scores:
+            ms = extras[r.row_ref]["model_scores"] if r.row_ref in extras else []
+            line += [ms[-1]["score"], ms[-1]["flagged"]] if ms else ["", ""]               # the newest scoring of the row
+        if with_ai:
+            ai = [p for p in (extras[r.row_ref]["proposals"] if r.row_ref in extras else []) if p["generator"] != "baseline-rules"]
+            line += [_csv_cell(f"[AI-generated, {ai[-1]['status']}] {ai[-1]['kind']}: {ai[-1]['text']}") if ai else ""]
+        w.writerow(line)
     return buf.getvalue()

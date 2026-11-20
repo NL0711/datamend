@@ -164,3 +164,30 @@ class ModelVersion(Base):
     gate: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     alias: Mapped[str] = mapped_column(String(12), default="challenger", index=True)   # champion | challenger | archived | rejected
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+
+class ModelScore(Base):
+    """What a registered model scored on one row of a pipeline run. Stored apart from the verdict and the rule score, which it never changes.
+    ``score`` is the model's own number (a logistic output for label_fusion), ``flagged`` is score >= the threshold fixed at training time."""
+    __tablename__ = "pipeline_model_scores"
+    __table_args__ = (Index("ix_pms_run_row", "run_id", "row_ref"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(Integer, ForeignKey("validation_runs.id", ondelete="CASCADE"), index=True)
+    model_id: Mapped[int] = mapped_column(Integer, ForeignKey("pipeline_models.id", ondelete="CASCADE"), index=True)
+    row_ref: Mapped[str] = mapped_column(String(64))
+    score: Mapped[float] = mapped_column(Float)
+    flagged: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class ShadowRun(Base):
+    """A challenger scored beside the champion on the same run. The report is measured on rows a reviewer labelled; it changes nothing by itself."""
+    __tablename__ = "pipeline_shadow_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(Integer, ForeignKey("validation_runs.id", ondelete="CASCADE"), index=True)
+    champion_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    challenger_id: Mapped[int] = mapped_column(Integer, ForeignKey("pipeline_models.id", ondelete="CASCADE"), index=True)
+    report: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
