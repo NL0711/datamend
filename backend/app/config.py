@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-3.5-flash"            # a setting on purpose: models are retired (2.5-flash answers 404 for new keys; the -latest alias hung in a test)
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta"
-    GEMINI_TIMEOUT_SECONDS: float = 30.0
+    GEMINI_TIMEOUT_SECONDS: float = 90.0              # gemini-3.5-flash thinks first and often needs 20 to 60 s; 30 s timed out about half the time in a live test
     GEMINI_CALLS_PER_MINUTE: int = 10
     GEMINI_DAILY_CALL_BUDGET: int = 200
 

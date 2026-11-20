@@ -91,11 +91,11 @@ describe('explore', () => {
 });
 
 describe('cleaning', () => {
-  it('plans with the source, the policy and the override reason', async () => {
-    const policy = { steps: [{ id: 'fill_gaps', enabled: true, params: { method: 'linear' } }] };
+  it('plans with the source and the policy in the SERVER form, the override reason riding on the locked fill step', async () => {
+    const policy = { steps: [{ id: 'fill_gaps', enabled: true, locked: true, params: { method: 'linear', max_gap_steps: 3 } }] };
     await api.planCleaning({ source: 'cwc', policy, override_reason: 'checked with the source' });
     expect(last()[0]).toBe('/api/pipeline/clean/plan'); expect(last()[1].method).toBe('POST');
-    expect(body()).toEqual({ source: 'cwc', policy, override_reason: 'checked with the source' });
+    expect(body()).toEqual({ source: 'cwc', policy: { steps: [{ step: 'fill_gaps', method: 'linear', max_gap_steps: 3, override_reason: 'checked with the source' }] } });
     await api.planCleaning({ source: 'cwc' });
     expect(body()).toEqual({ source: 'cwc' });
   });

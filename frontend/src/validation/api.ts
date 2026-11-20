@@ -6,6 +6,7 @@ import type {
   ImportedJob, ImportFormat, ImportProvider, ImportSources, ModelCard, QueryResult, QuerySpec,
   Profile, QueuePage, ReviewItem, ReviewSummary, RowContext, RowDetail, RowsPage, RunFull, RunSummary, Series, ScoreSummary, ShadowRun,
 } from './types';
+import { hintFromServer, policyFromServer, policyToServer } from './cleaningWire';
 
 const V = '/api/validation';
 
@@ -119,10 +120,21 @@ export const getExploreTables = () => get<{ tables: ExploreTable[] }>(`${P}/expl
 export const runQuery = (spec: QuerySpec) => post<QueryResult>(`${P}/explore/query`, spec);
 export const getExploreStations = () => get<ExploreStations>(`${P}/explore/stations`);
 export const getExploreProfile = (source: string) => get<DatasetProfile>(`${P}/explore/profile?source=${encodeURIComponent(source)}`);
-export const askAssistant = (message: string, history: ChatTurn[] = [], runId?: number | null) =>
-  post<AssistantReply>(`${P}/assistant`, { message, history: history.map((t) => ({ role: t.role, text: t.text })), run_id: runId ?? null });
-export const getDefaultPolicy = (source: string) => get<CleanPolicy>(`${P}/clean/policy/default?source=${encodeURIComponent(source)}`);
-export const planCleaning = (body: CleanPlanBody) => post<CleanPlanResult>(`${P}/clean/plan`, body);
+export const askAssistant = async (message: string, history: ChatTurn[] = [], runId?: number | null): Promise<AssistantReply> => {
+  const r = await post<AssistantReply>(`${P}/assistant`, { message, history: history.map((t) => ({ role: t.role, text: t.text })), run_id: runId ?? null });
+  const hint = r?.cleaning?.plan_hint;
+  return r && r.cleaning && hint ? { ...r, cleaning: { ...r.cleaning, plan_hint: hintFromServer(hint) as typeof hint } } : r;     // add the editor's form of the advised policy
+};
+/** The server wraps the default policy ({source, policy, profile}) and writes steps as {step, ...}; the editor wants {id, enabled, params}. */
+export const getDefaultPolicy = async (source: string): Promise<CleanPolicy> => {
+  const r = await get<{ policy?: unknown; profile?: Partial<DatasetProfile> }>(`${P}/clean/policy/default?source=${encodeURIComponent(source)}`);
+  return policyFromServer(r?.policy, r?.profile);
+};
+export const planCleaning = async (body: CleanPlanBody): Promise<CleanPlanResult> => {
+  const { policy, override_reason, ...rest } = body;
+  const res = await post<CleanPlanResult & { profile?: Partial<DatasetProfile> }>(`${P}/clean/plan`, { ...rest, ...(policy ? { policy: policyToServer(policy, override_reason) } : {}) });
+  return res && res.policy ? { ...res, policy: policyFromServer(res.policy, res.profile) } : res;
+};
 export const listCleanProposals = (o: { status?: string; station?: string; limit?: number } = {}) => {
   const q = new URLSearchParams();
   if (o.status) q.set('status', o.status);
@@ -132,7 +144,11 @@ export const listCleanProposals = (o: { status?: string; station?: string; limit
   return get<{ proposals: CleanProposal[] }>(`${P}/clean/proposals${s ? `?${s}` : ''}`);
 };
 export const decideCleanProposal = (id: number, accept: boolean) => post<CleanProposal>(`${P}/clean/proposals/${id}/decide`, { accept });
-export const applyCleaning = () => post<CleanApplyResult>(`${P}/clean/apply`, {});
+/** The server counts accepted proposals as accepted, imputed_values and excluded_values; the page reads accepted, interpolated and excluded. */
+export const applyCleaning = async (): Promise<CleanApplyResult> => {
+  const r = await post<{ accepted?: number; imputed_values?: number; excluded_values?: number }>(`${P}/clean/apply`, {});
+  return { accepted: r?.accepted ?? 0, interpolated: r?.imputed_values ?? 0, excluded: r?.excluded_values ?? 0 };
+};
 
 /** Step 6, Anomalies: how a flag is made. */
 export const getModelCard = () => get<ModelCard>(`${P}/model-card`);

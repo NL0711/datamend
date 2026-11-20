@@ -71,7 +71,7 @@ function PolicyEditor({ policy, onPolicy, override, onOverride }: { policy: Clea
             <span>I understand, override <span className="font-normal">(lets you switch on {lockedSteps.map((s) => stepTitle(s.id).toLowerCase()).join(', ')}; your reason is stored with the plan)</span></span></label>
           <input value={override.reason} disabled={!override.ack} onChange={(e) => onOverride({ ...override, reason: e.target.value })} className={`${field} w-full`} aria-label="override reason"
                  placeholder="Why is this safe? For example: the supplier confirmed that missing hours are not dry hours." />
-          {override.ack && !overrideValid(override) && <p className="text-[11px] text-amber-900">Type a reason (at least 5 characters) to unlock the switch.</p>}
+          {override.ack && !overrideValid(override) && <p className="text-[11px] text-amber-900">Type a reason (at least 10 characters) to unlock the switch.</p>}
         </div>)}
     </div>);
 }

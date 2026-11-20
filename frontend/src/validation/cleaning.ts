@@ -5,7 +5,7 @@
 import type { AssistantReply, CleanPlanBody, CleanPolicy, DatasetProfile, PolicyStep } from './types';
 
 export const LOCK_REASON_NO_ZEROS = 'this dataset lists only non-zero values, so a missing value may be a dry value; interpolating would invent rain';
-export const MIN_REASON_CHARS = 5;
+export const MIN_REASON_CHARS = 10;      // the server refuses a shorter override reason (pipeline/cleaning.py fill_decision)
 
 export interface Override { ack: boolean; reason: string }
 export const NO_OVERRIDE: Override = { ack: false, reason: '' };

@@ -9,6 +9,7 @@ import { ExploreView } from './ExploreView';
 import { ImportView } from './ImportView';
 import { AdminChip } from './Login';
 import { ModelsView } from './ModelsView';
+import { PageBoundary } from './PageBoundary';
 import { ReviewView } from './ReviewView';
 import { StationsView } from './StationsView';
 import { ValidateView } from './ValidateView';
@@ -92,13 +93,15 @@ export function ValidationApp() {
       </nav>
       <main className="flex-1 px-4 py-6 md:px-10 md:py-8 min-w-0 max-w-[1400px] space-y-6">
         <PageHead n={stepIndex + 1} title={step.label} line={step.line} />
-        {tab === 'import' && <ImportView onNext={() => next('import')} onJobs={onJobs} />}
-        {tab === 'explore' && <ExploreView jobs={jobs} onExplored={explored} onNext={() => next('explore')} />}
-        {tab === 'stations' && <StationsView onNext={() => next('stations')} />}
-        {tab === 'validate' && <ValidateView jobs={jobs} runId={runId} onRun={pickRun} onNext={() => next('validate')} />}
-        {tab === 'review' && <ReviewView runId={runId} onNext={() => next('review')} />}
-        {tab === 'anomalies' && <AnomaliesView jobs={jobs} runId={runId} onRun={pickRun} onOpened={anomaliesOpened} onNext={() => next('anomalies')} />}
-        {tab === 'models' && <ModelsView onOpenRun={(id) => { pickRun(id); go('anomalies'); }} />}
+        <PageBoundary resetKey={tab}>
+          {tab === 'import' && <ImportView onNext={() => next('import')} onJobs={onJobs} />}
+          {tab === 'explore' && <ExploreView jobs={jobs} onExplored={explored} onNext={() => next('explore')} />}
+          {tab === 'stations' && <StationsView onNext={() => next('stations')} />}
+          {tab === 'validate' && <ValidateView jobs={jobs} runId={runId} onRun={pickRun} onNext={() => next('validate')} />}
+          {tab === 'review' && <ReviewView runId={runId} onNext={() => next('review')} />}
+          {tab === 'anomalies' && <AnomaliesView jobs={jobs} runId={runId} onRun={pickRun} onOpened={anomaliesOpened} onNext={() => next('anomalies')} />}
+          {tab === 'models' && <ModelsView onOpenRun={(id) => { pickRun(id); go('anomalies'); }} />}
+        </PageBoundary>
       </main>
     </div>
   );
