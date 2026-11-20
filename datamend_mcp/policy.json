@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "default": "deny",
+  "tools": {
+    "datamend_list_workspace":  {"allow": true, "mode": "read"},
+    "datamend_score":           {"allow": true, "mode": "read"},
+    "datamend_validate":        {"allow": true, "mode": "read"},
+    "datamend_drift":           {"allow": true, "mode": "read"},
+    "datamend_repair":          {"allow": true, "mode": "write"},
+    "datamend_create_contract": {"allow": true, "mode": "write"}
+  },
+  "limits": {
+    "max_file_mb": 50,
+    "max_rows": 1000000,
+    "max_columns": 500,
+    "allowed_extensions": [".csv", ".json", ".parquet", ".xlsx"]
+  }
+}

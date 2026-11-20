@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "datamend": {
+      "command": "/ABSOLUTE/PATH/TO/venv/bin/python",
+      "args": ["-m", "datamend_mcp"],
+      "env": {
+        "PYTHONPATH": "/ABSOLUTE/PATH/TO/datamend-repo",
+        "DATAMEND_MCP_WORKSPACE": "/ABSOLUTE/PATH/TO/datamend-repo/mcp_workspace",
+        "DATAMEND_MCP_READ_ONLY": "0",
+        "DATAMEND_MCP_REQUIRE_LOCK": "1"
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+# Extra dependencies for the MCP integration (datamend_mcp)
+mcp>=1.2.0
+
+# datamend itself: install it first. Either
+#   pip install -e .            (from the repo root, if the repo is the datamend library)
+#   pip install datamend>=1.1.0 (from PyPI)
+pandas>=1.5
+numpy>=1.23
+scipy>=1.9
+
+# Optional, only if you use these file types:
+# pyarrow    (.parquet)
+# openpyxl   (.xlsx)

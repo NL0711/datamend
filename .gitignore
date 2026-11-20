@@ -55,3 +55,6 @@ Thumbs.db
 
 # Uploaded datasets (ml-service)
 ml-service/data/
+
+# MCP runtime files
+mcp_workspace/
