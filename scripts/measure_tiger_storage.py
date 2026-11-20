@@ -80,6 +80,7 @@ async def connect(url: str, search_path: str | None = None):
 
 
 def sa_url(url: str) -> str:
+    url = url.replace("sslmode=", "ssl=")                  # asyncpg through SQLAlchemy takes ssl=, the Tiger CLI prints sslmode=
     for old in ("postgres://", "postgresql://"):
         if url.startswith(old):
             return "postgresql+asyncpg://" + url[len(old):]
