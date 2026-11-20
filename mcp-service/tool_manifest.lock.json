@@ -1,0 +1,18 @@
+{
+  "schema": "datamend-mcp-manifest-v1",
+  "algorithm": "sha256 of canonical JSON of name+description+inputSchema+annotations",
+  "tools": {
+    "get_evidence_v1": "b1ed61b3d02e3de0c38fa1f0b52f74999962fb700e8e6e6e52af89559427f2fe",
+    "get_overview": "6dd374e0fda0680a665fe44f72e203d897b0a61deaf05bfa1a992a3d0120347b",
+    "get_review_summary": "097b059280d9f455187aa701076376931e3468154c0369722213520fa522679e",
+    "get_row_context": "9738e0feabbbb1c397a35c9969ceb0cf73c25f573cbbf592f57b83956e86fcc2",
+    "get_row_evidence": "8787f6dc684e7dc5e6657d308ab57c17587eb65be99a6bec3f97faa83a60da0e",
+    "get_row_reviews": "357d57810b24ed0502871d1026fbebc329c1129ba85be92ade05288b9f2ecb93",
+    "get_run_summary": "33e5d9c48c6dd1111b1dfeaae200d2d062531746e925027ec5062b7428927b5c",
+    "get_station_cycle": "19541262d064e751a7349a8f5e204188bd168c76ffc986cd5e3bd97de737cb5a",
+    "list_flagged_rows": "37a850968cc3786d734753b58ba56648067fd8187fa0135e8dc5867fdefa8cab",
+    "list_runs": "5ea7ce4ce9b1c4d1f873af0b50b3fbb9129bd94950af194affb653c248ecc5aa",
+    "locate_place": "cca7bdf8eae90efed00b00e6ebf0a6a673c80130c3dd6e3053eba6e2623e52f0",
+    "summarize_flag_patterns": "b86d369b427cde2634388b64fe468b713d950b77ccc1cf2349a3df7c49d53c67"
+  }
+}
