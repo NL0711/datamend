@@ -77,6 +77,23 @@ Applies to notebook E (`ml-service/notebooks/kaggle/stnet_E_longmemory.ipynb`) a
 |---|---|---|---|---|
 | 2026-11-20 | as above | 02fd028 | session 1 (main run encoder, Kaggle, 2 x T4): run 2026-11-20. Session 2 (hold run encoder): not run | **Rule not met for either length; "no gain on this encoder".** Drift PR-AUC 0.011 (baseline) to 0.012 (lmb) and 0.008 (lmc); drift event recall 0.242 to 0.311 (lmb) and 0.250 (lmc). lmb's +0.068 event recall does not count: the control `zeroed` rose by +0.084 event recall, so the cause is not memory alone, and lmb's false alerts rose from 1.60 to 2.09 per 1,000 (limit +0.1). lmc: no drift gain and false alerts 1.90. Validation loss of lmc moved between 0.033 and 0.044 for 30 epochs without a trend. The frozen encoder's linear probe separates drift (AUC 0.895) yet the fault head recalls about 3% of drift cell-days at the budget, so the limit is not the LSTM length. Gains elsewhere were small: `stuck` recall +0.07 to +0.09 in 5 of 5 years, `spike` and `phantom_rain` PR-AUC lower. The final weights of both runs are not used. SYNTHETIC faults, validation years, one seed. |
 
+## Drift check (CUSUM): rule written 2026-11-20 before any run
+
+Applies to `python -m qc drift-check` and the component `drift_cusum` (`qc/drift.py`). SYNTHETIC faults, validation years 2013 to 2017 only; thresholds from the clean threshold years 2016 and 2017 as for every component; no test or stress year is read. One seed (the check itself has no training).
+
+- **Why.** The long-memory test showed the STNet fault head recalls about 3% of drift cell-days (event recall 0.24) at the 1-per-1,000 budget, and the untrained `slow` component 1.5% of drift events. 77% of the synthetic drift cell-days change the rain value by under 1 mm, so a per-day check cannot see most of them; an accumulating check might.
+- **What it is.** Untrained and causal. Per cell and day, the residual of log1p(rain) from the median of the neighbours outside the hidden disc, divided by a robust spread of the block's wet-day residuals, clipped to plus or minus 3; a two-sided leaky CUSUM over the 90 history days and the scored year, updated only on days when the cell or its neighbours are wet. Score = the larger of the two sums. The clip limits one day's weight inside this score only; no input of any other component is clipped.
+- **Parameters, fixed now and not tuned on validation data:** clip 3, reference k = 0.5 (in units of the spread), leak 0.97 per wet day, wet = above 0.3 mm, spread floor 0.1. Changing any of them after seeing the result is a new rule row with a new run, not a retune.
+- **Comparison.** `drift_cusum` against the STNet fault head of the main run (`stnet_fault_s42`) on the drift kind, at the 1-per-1,000 budget, with the paired whole-year interval (`qc/paired.py`), per `docs/research/bootstrap-unit-check.md`.
+- **Rule.** The check helps with drift if all four hold: drift event recall is at least **0.40** and at least **0.10** above the STNet fault head; drift PR-AUC (mean over the validation years) is at least **0.05** above it; false alerts per 1,000 clean cell-days are not above **2.0**; and the share of protected extremes flagged is not above **2%**. The numbers are decisions, not measured noise levels. Median detection delay of drift events is reported and does not decide.
+- **Controls reported, not decisive.** The other kinds are listed. If the check flags many non-drift faults, the wording is "it flags changes, not drift in particular".
+- **If met:** drift becomes a candidate evidence channel. Adding it to a fused score needs a new fusion and a new selection rule frozen before any test year. **If not met:** "no gain from this check", recorded here, and drift stays a documented gap.
+- **Limits.** The drift generator is ours (a ramp that scales the value by 1.3 to 2.5 or adds 1 to 10 mm on wet days), so a pass shows detection of synthetic ramps only. Nothing here says anything about real sensor drift or gradual network changes.
+
+| date | rule frozen | commit | run | result |
+|---|---|---|---|---|
+| 2026-11-20 | as above | | not run | |
+
 ## Normalization must not squash protected heavy rain
 
 - The existing transform (`ml-service/training/transform.py`) is `log1p(mm) / scale`, with `scale` taken from the 99.9th percentile of training wet days. It rescales but does **not** truncate, so values above that percentile keep their order and size.
