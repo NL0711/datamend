@@ -24,6 +24,7 @@ ASSUMPTIONS = {
     "units": "mm per hour as the column name says (not otherwise confirmed)",
     "licence": "portal says 'Other (Open)' with no licence name; storing derived flags is unconfirmed",
 }
+omits_zero_values = True       # the file lists only non-zero hours: the cleaning step must not interpolate across the gaps
 COLUMNS = {"station": "Station", "state": "State", "district": "District", "lat": "Latitude", "lon": "Longitude",
            "time": "Data Acquisition Time", "mm": "Telemetry Hourly Rainfall (mm)"}
 TIME_FORMATS = ("%d-%m-%Y %H:%M", "%d-%m-%Y %H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M")

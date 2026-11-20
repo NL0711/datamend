@@ -52,7 +52,7 @@ async def test_email_is_case_insensitive_and_attempts_are_limited(async_client: 
 @pytest.mark.asyncio
 async def test_with_require_login_nothing_can_be_read_without_a_session(async_client: AsyncClient, monkeypatch):
     monkeypatch.setattr(settings, "REQUIRE_LOGIN", True)
-    for url in ("/api/validation/runs", "/api/validation/overview", "/api/places/stations", "/api/settings", "/api/validation/replay/isd"):
+    for url in ("/api/validation/runs", "/api/validation/overview", "/api/places/stations", "/api/settings", "/api/pipeline/import/sources"):
         r = await async_client.get(url)
         assert r.status_code == 401, url
     assert (await async_client.get("/api/auth/me")).status_code == 200          # the sign-in itself stays reachable

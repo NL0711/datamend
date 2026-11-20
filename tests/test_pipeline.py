@@ -241,7 +241,7 @@ async def test_register_promote_reject_and_roll_back(async_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_status_lists_what_is_not_implemented(async_client: AsyncClient):
     st = (await async_client.get("/api/pipeline/status")).json()
-    assert st["sources"] == ["cwc"] and any("scoring with the RF25 STNet" in x for x in st["not_implemented"])
+    assert st["sources"] == ["cwc", "isd"] and any("scoring with the RF25 STNet" in x for x in st["not_implemented"])
 
 
 # ---------------------------------------------------------------------------------------------- AI proposer (Gemini layer, fake LLM)

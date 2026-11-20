@@ -51,11 +51,6 @@ class Settings(BaseSettings):
     WEATHER_UNION_ACCUMULATION_MODE: str = "cumulative"   # cumulative | per_reading; the provider does not document it
     WEATHER_UNION_RAW_LOG_PATH: str = "data/weather_union_raw.jsonl"
 
-    # NOAA ISD India replay (backend/app/rainfall/isd_replay.py): real station rainfall to Aug 2025, labelled REPLAY. Off unless set.
-    # Non-US ISD data is subject to WMO Resolution 40 (no redistribution): turn it on only for a demonstration you are entitled to run.
-    ISD_REPLAY_ON_START: bool = False                 # fetch and store the replay at launch when none is stored yet
-    ISD_REPLAY_STATIONS: str = ""                     # comma-separated ISD ids (USAF-WBAN); empty = the built-in list of 14 city stations
-
     # AI narrator (built by the AI implementation team). NOT IMPLEMENTED on our side until they deliver: with NARRATOR_URL unset the
     # platform says "AI narrator not connected" and shows the rule-based baseline. The request and response shape is a proposal
     # (docs/contracts/narrator-request-v1.md) awaiting the team's confirmation. The token lives in .env only.
