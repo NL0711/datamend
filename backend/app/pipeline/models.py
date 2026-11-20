@@ -164,3 +164,48 @@ class ModelVersion(Base):
     gate: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     alias: Mapped[str] = mapped_column(String(12), default="challenger", index=True)   # champion | challenger | archived | rejected
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+
+class CleaningPlan(Base):
+    """One run of the cleaning planner: the policy it was given and the profile it was judged against, stored so the result is reproducible."""
+    __tablename__ = "pipeline_cleaning_plans"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    source: Mapped[str] = mapped_column(String(16), index=True)
+    policy: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    profile: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    summary: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+
+
+class PipelineCleaning(Base):
+    """A cleaning proposal (fill a missing step, or exclude an impossible value). Raw observations are never changed: an accepted proposal is
+    applied only when a check run is asked to ``use_clean``. Values filled in are derived (imputed), never measured."""
+    __tablename__ = "pipeline_cleaning"
+    __table_args__ = (Index("ix_pclean_src_station", "source", "station_key", "at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    plan_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)
+    source: Mapped[str] = mapped_column(String(16))
+    station_key: Mapped[str] = mapped_column(String(64))
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    kind: Mapped[str] = mapped_column(String(12))                            # interpolate | exclude
+    original: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    proposed: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # None with exclude = treat as no data
+    method: Mapped[str] = mapped_column(String(16))                          # linear | previous | range | missing_code
+    why: Mapped[str] = mapped_column(Text)
+    neighbours: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, default=list)
+    basis: Mapped[str] = mapped_column(String(8), default="derived")
+    status: Mapped[str] = mapped_column(String(10), default="pending", index=True)   # pending | accepted | rejected
+    decided_by: Mapped[Optional[str]] = mapped_column(String(60), nullable=True)
+    decided_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class PipelineProfile(Base):
+    """The user's edits to a dataset's variable profile (parameter, kind, units, valid range, missing codes). Detection never writes here."""
+    __tablename__ = "pipeline_profiles"
+
+    source: Mapped[str] = mapped_column(String(16), primary_key=True)
+    overrides: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

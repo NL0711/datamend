@@ -34,8 +34,13 @@ def _utc(t: datetime) -> datetime:
     return t if t.tzinfo is not None else t.replace(tzinfo=timezone.utc)      # SQLite hands back naive datetimes; they are stored as UTC
 
 
-async def daily_totals(session: AsyncSession, source: str, start: Optional[date] = None, end: Optional[date] = None) -> List[DailyTotal]:
-    """Roll the hourly observations of a source up to rain-day totals, one record per station and day, ordered by station and day."""
+async def daily_totals(session: AsyncSession, source: str, start: Optional[date] = None, end: Optional[date] = None, use_clean: bool = False) -> List[DailyTotal]:
+    """Roll the hourly observations of a source up to rain-day totals, one record per station and day, ordered by station and day.
+
+    With ``use_clean`` the ACCEPTED cleaning proposals are applied to the series before the roll-up (excluded hours dropped, imputed hours added,
+    both counted in the row's original data as ``excluded_hours`` and ``imputed_hours``). The raw observations are never changed."""
+    from backend.app.pipeline import cleaning
+    accepted = await cleaning.load_accepted(session, source) if use_clean else {}
     stations = (await session.execute(select(PipelineStation).where(PipelineStation.source == source).order_by(PipelineStation.station_key))).scalars().all()
     out: List[DailyTotal] = []
     for st in stations:
@@ -46,24 +51,43 @@ async def daily_totals(session: AsyncSession, source: str, start: Optional[date]
             q = q.where(Observation.observed_at < rain_day_bounds(end)[1])
         rows = (await session.execute(q.order_by(Observation.observed_at))).all()
         days: Dict[date, List[float]] = defaultdict(list)
-        for t, v in rows:
-            d = rain_day(_utc(t))
+        imputed: Dict[date, int] = defaultdict(int)
+        excluded: Dict[date, int] = defaultdict(int)
+        acc = accepted.get(st.station_key)
+        items = [(_utc(t), float(v), False) for t, v in rows]
+        if acc:
+            kept = []
+            for t, v, f in items:
+                if t in acc["exclude"]:
+                    excluded[rain_day(t)] += 1
+                else:
+                    kept.append((t, v, f))
+            have = {x[0] for x in kept}
+            items = sorted(kept + [(t, v, True) for t, v in acc["fill"].items() if t not in have])
+        for t, v, was_filled in items:
+            d = rain_day(t)
             if (start is None or d >= start) and (end is None or d <= end):
-                days[d].append(float(v))
+                days[d].append(v)
+                if was_filled:
+                    imputed[d] += 1
         for d in sorted(days):
             vs = days[d]
+            raw = {"hours_reported": len(vs) - imputed[d], "max_hour_mm": max(vs), "source": source, "name": st.name, "state": st.state,
+                   "note": "sum of the non-zero hours the source listed"}
+            if use_clean:
+                raw.update(imputed_hours=imputed[d], excluded_hours=excluded[d], basis="imputed hours are derived, not measured")
             out.append(DailyTotal(
                 source="pipeline", station_id=st.station_key, day=d, mm=round(sum(vs), 3), complete=None, units_confirmed=False,
-                row_ref=str(len(out) + 1), latitude=st.latitude, longitude=st.longitude,
-                raw={"hours_reported": len(vs), "max_hour_mm": max(vs), "source": source, "name": st.name, "state": st.state,
-                     "note": "sum of the non-zero hours the source listed"}))
+                row_ref=str(len(out) + 1), latitude=st.latitude, longitude=st.longitude, raw=raw))
     return out
 
 
-async def run_qc(session: AsyncSession, source: str, job: Optional[IngestJob] = None, start: Optional[date] = None, end: Optional[date] = None) -> ValidationRun:
-    """Check the stored observations of a source as ONE daily-profile run (source 'pipeline'). Raises ValueError when there is nothing to check."""
+async def run_qc(session: AsyncSession, source: str, job: Optional[IngestJob] = None, start: Optional[date] = None, end: Optional[date] = None,
+                 use_clean: bool = False) -> ValidationRun:
+    """Check the stored observations of a source as ONE daily-profile run (source 'pipeline'). Raises ValueError when there is nothing to check.
+    With ``use_clean`` accepted cleaning proposals are included (see daily_totals); the run settings record it and the counts."""
     t0 = time.perf_counter()
-    records = await daily_totals(session, source, start, end)
+    records = await daily_totals(session, source, start, end, use_clean)
     if not records:
         raise ValueError("no stored observations to check for this source and period")
     cat = checks.run_checks(records, "daily", None)
@@ -74,6 +98,15 @@ async def run_qc(session: AsyncSession, source: str, job: Optional[IngestJob] = 
     st["pipeline"] = {"source": source, "assumptions": dict(cwc.ASSUMPTIONS) if source == "cwc" else {}, "start": start.isoformat() if start else None,
                       "end": end.isoformat() if end else None, "job_id": job.id if job else None,
                       "roll_up": "rain day 03 UTC to 03 UTC, sum of the reported hours, completeness unknown"}
+    if use_clean:
+        from backend.app.pipeline import cleaning
+        meta = await cleaning.accepted_meta(session, source)
+        meta.update(use_clean=True, imputed_hours=sum(int(r.raw.get("imputed_hours", 0)) for r in records),
+                    excluded_hours=sum(int(r.raw.get("excluded_hours", 0)) for r in records),
+                    note="accepted cleaning proposals are included; imputed hours are derived, not measured; raw observations are unchanged")
+        st["pipeline"]["use_clean"] = meta
+    else:
+        st["pipeline"]["use_clean"] = {"use_clean": False}
     if source == "cwc":                                    # a source that omits zero hours
         st["pipeline"]["neighbour_checks"] = NEIGHBOUR_NOT_TRUSTED
     days = sorted({r.day for r in records})
