@@ -27,7 +27,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import parse_qsl, unquote, urljoin, urlsplit
+from urllib.parse import parse_qsl, quote, unquote, urljoin, urlsplit
 
 import httpx
 
@@ -54,6 +54,10 @@ BAD_AWS_LINK = ("this is not a supported Amazon S3 link: use s3://bucket/key, ht
 BAD_KAGGLE_LINK = "this is not a supported Kaggle reference: use owner/dataset-slug or kernel:owner/notebook-slug (or a kaggle.com dataset or code URL)"
 UNKNOWN_FORMAT = ("the file is not a recognised format: expected a CWC hourly rainfall CSV (Station, Latitude, Longitude, Data Acquisition Time, "
                   "Telemetry Hourly Rainfall (mm)) or an NOAA ISD fixed-width file (gz)")
+
+
+class Boto3Missing(Exception):
+    """boto3 is not installed. A public bucket then falls back to a plain HTTPS download; a private one (credentials) cannot."""
 
 
 class ImportRefused(Exception):
@@ -241,8 +245,10 @@ class _Sink:
 HTTP_TRANSPORT: Optional[httpx.AsyncBaseTransport] = None          # tests set a mock transport here; production leaves it None
 
 
-async def download_https(url: str, name: str, transport: Optional[httpx.AsyncBaseTransport] = None) -> Fetched:
-    """GET a presigned S3 URL, streamed to disk. Redirects are followed by hand and every hop is checked."""
+async def download_https(url: str, name: str, transport: Optional[httpx.AsyncBaseTransport] = None,
+                         refusals: Optional[Dict[int, Tuple[str, int]]] = None) -> Fetched:
+    """GET a presigned S3 URL, streamed to disk. Redirects are followed by hand and every hop is checked. ``refusals`` maps an HTTP status to a
+    (safe message, our status) so a caller can turn 403 or 404 into a plain answer."""
     sink: Optional[_Sink] = None
     try:
         async with httpx.AsyncClient(transport=transport or HTTP_TRANSPORT, follow_redirects=False, timeout=httpx.Timeout(30.0, read=60.0), trust_env=False) as client:
@@ -256,6 +262,9 @@ async def download_https(url: str, name: str, transport: Optional[httpx.AsyncBas
                             raise ImportRefused("the host answered with a redirect that has no target", 502)
                         current = urljoin(current, loc)
                         continue
+                    if r.status_code in (refusals or {}):
+                        msg, code = (refusals or {})[r.status_code]
+                        raise ImportRefused(msg, code)
                     if r.status_code != 200:
                         raise ImportRefused(f"the host refused the download (HTTP {r.status_code}); an expired or wrong link, or no permission", 502)
                     cl = r.headers.get("content-length")
@@ -289,7 +298,7 @@ def make_s3_client(req: Optional[aws_svc.Request], region: str) -> Any:
         from botocore import UNSIGNED
         from botocore.config import Config
     except ImportError:
-        raise ImportRefused("boto3 is not installed on the server (pip install boto3)", 503) from None
+        raise Boto3Missing() from None
     kw: Dict[str, Any] = {}
     cfg_kw: Dict[str, Any] = {"region_name": region, "retries": {"max_attempts": 3, "mode": "standard"}, "connect_timeout": 10, "read_timeout": 60}
     if req is not None and req.key_id:
@@ -347,7 +356,32 @@ async def fetch_aws(link: AwsLink, req: Optional[aws_svc.Request], transport: Op
     if link.presigned:
         return [await download_https(link.presigned, _safe_name(link.key or ""), transport)]
     region = (req.region if req and req.region else None) or link.region or "us-east-1"
-    return [await asyncio.to_thread(_download_s3_sync, link, req, region)]
+    try:
+        return [await asyncio.to_thread(_download_s3_sync, link, req, region)]
+    except Boto3Missing:
+        if req is not None and req.key_id:        # the caller's own keys need boto3 to sign the request
+            raise ImportRefused("boto3 is not installed on the server, and a private bucket needs it (pip install boto3)", 503) from None
+        return [await download_s3_public(link, region, transport)]
+
+
+def public_s3_url(link: AwsLink, region: str) -> str:
+    """The plain HTTPS address of a public S3 object, built from the already validated bucket, region and key (never from the pasted host)."""
+    key = quote(link.key, safe="/")
+    if "." in link.bucket:                         # a dotted bucket name does not match the wildcard certificate: path style
+        host = "s3.amazonaws.com" if region == "us-east-1" else f"s3.{region}.amazonaws.com"
+        return f"https://{host}/{link.bucket}/{key}"
+    host = f"{link.bucket}.s3.amazonaws.com" if region == "us-east-1" else f"{link.bucket}.s3.{region}.amazonaws.com"
+    return f"https://{host}/{key}"
+
+
+async def download_s3_public(link: AwsLink, region: str, transport: Optional[httpx.AsyncBaseTransport] = None) -> Fetched:
+    """Fetch a PUBLIC S3 object over HTTPS with no AWS library and no credentials (used when boto3 is not installed). A private or missing object
+    answers 403 or 404, which becomes the same plain message the boto3 path gives."""
+    refusals = {403: ("S3 refused access (403): the bucket is private or the object is not public; send your AWS credentials", 403),
+                404: ("the object was not found in that bucket", 404),
+                301: ("the bucket is in another region: use a link with the region (s3.<region>.amazonaws.com)", 400),
+                400: ("the bucket is in another region: use a link with the region (s3.<region>.amazonaws.com)", 400)}
+    return await download_https(public_s3_url(link, region), _safe_name(link.key or ""), transport, refusals)
 
 
 # ------------------------------------------------------------------------------------------------ Kaggle

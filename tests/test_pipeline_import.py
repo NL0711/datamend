@@ -537,6 +537,69 @@ def test_clean_kaggle_token_accepts_a_token_and_refuses_junk_without_echo():
         assert bad not in str(e.value)
 
 
+# ---------------------------------------------------------------------------------------------- public S3 without boto3
+@pytest.fixture
+def no_boto3(monkeypatch):
+    """boto3 is not installed (as on a fresh machine) and S3 answers over plain HTTPS from a mock transport. ``seen`` records (host, path, authorization)."""
+    seen, objects = [], {}
+
+    def missing(req, region):
+        raise importers.Boto3Missing()
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        seen.append((req.url.host, req.url.path, req.headers.get("authorization")))
+        key = (req.url.host, req.url.path)
+        if key in objects:
+            return httpx.Response(objects[key]) if isinstance(objects[key], int) else httpx.Response(200, content=objects[key])
+        return httpx.Response(404)
+    monkeypatch.setattr(importers, "make_s3_client", missing)
+    monkeypatch.setattr(importers, "HTTP_TRANSPORT", httpx.MockTransport(handler))
+    return {"seen": seen, "objects": objects}
+
+
+@pytest.mark.asyncio
+async def test_a_public_s3_object_imports_over_https_when_boto3_is_missing(async_client: AsyncClient, no_boto3, tmp_path):
+    no_boto3["objects"][("bucket-one.s3.amazonaws.com", "/rain/tr.csv")] = cwc_csv()
+    r = await post_import(async_client, "aws", "s3://bucket-one/rain/tr.csv")
+    assert r.status_code == 202, r.text
+    assert (await get_job(async_client, r.json()["id"]))["status"] == "done"
+    assert no_boto3["seen"] == [("bucket-one.s3.amazonaws.com", "/rain/tr.csv", None)]            # anonymous: no credentials were sent
+    assert no_temp_left(tmp_path)
+
+
+@pytest.mark.asyncio
+async def test_a_regional_link_uses_the_regional_host_and_a_dotted_bucket_uses_path_style(async_client: AsyncClient, no_boto3):
+    no_boto3["objects"][("bucket-one.s3.ap-south-1.amazonaws.com", "/tr.csv")] = cwc_csv()
+    r = await post_import(async_client, "aws", "https://bucket-one.s3.ap-south-1.amazonaws.com/tr.csv")
+    assert r.status_code == 202, r.text
+    link = importers.parse_aws_link("s3://my.dotted.bucket/dir/a%20b.csv")
+    assert importers.public_s3_url(link, "us-east-1") == "https://s3.amazonaws.com/my.dotted.bucket/dir/a%20b.csv"
+    assert importers.public_s3_url(link, "eu-west-1") == "https://s3.eu-west-1.amazonaws.com/my.dotted.bucket/dir/a%20b.csv"
+    plain = importers.parse_aws_link("s3://bucket-one/dir/a.csv")
+    assert importers.public_s3_url(plain, "us-east-1") == "https://bucket-one.s3.amazonaws.com/dir/a.csv"
+
+
+@pytest.mark.asyncio
+async def test_private_or_missing_public_s3_objects_get_the_same_plain_answers(async_client: AsyncClient, no_boto3):
+    no_boto3["objects"][("bucket-one.s3.amazonaws.com", "/secret.csv")] = 403
+    r = await post_import(async_client, "aws", "s3://bucket-one/secret.csv")
+    assert r.status_code == 403 and "private" in r.json()["detail"] and "send your AWS credentials" in r.json()["detail"]
+    r = await post_import(async_client, "aws", "s3://bucket-one/none.csv")
+    assert r.status_code == 404 and "not found" in r.json()["detail"]
+    no_boto3["objects"][("bucket-one.s3.amazonaws.com", "/moved.csv")] = 301
+    r = await post_import(async_client, "aws", "s3://bucket-one/moved.csv")
+    assert r.status_code in (400, 502) and "region" in r.json()["detail"] or r.status_code == 502
+
+
+@pytest.mark.asyncio
+async def test_a_private_bucket_with_credentials_still_needs_boto3_and_says_so_without_echo(async_client: AsyncClient, no_boto3):
+    hdr = {"X-Aws-Access-Key-Id": AWS_KEY, "X-Aws-Secret-Access-Key": AWS_SECRET, "X-Aws-Region": "ap-south-1"}
+    r = await post_import(async_client, "aws", "s3://bucket-one/tr.csv", headers=hdr)
+    assert r.status_code == 503 and "pip install boto3" in r.json()["detail"]
+    assert AWS_KEY not in r.text and AWS_SECRET not in r.text
+    assert no_boto3["seen"] == []                                                                   # nothing was requested without signing
+
+
 # ---------------------------------------------------------------------------------------------- the ISD adapter
 def read(tmp_path, lines, gz=True):
     p = tmp_path / "x.dat"
