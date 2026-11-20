@@ -47,7 +47,7 @@ Do not claim that basic ML anomaly detection, spatial or temporal QC, persistenc
 - Two kinds of score are never mixed: the uncalibrated rule score and a calibrated flag (only with a score provider and a clean-period false-alarm budget).
 - The narrator never changes a verdict, score or evidence; explanations are stored separately and always marked generated.
 - SQLite now, written so it can move to PostgreSQL.
-- Do not extend the legacy temperature/pressure/humidity code; it is scheduled for removal (`TODO.md`, slices 8 to 10). The generic variable-profile and cleaning layer is new code, written parameter-agnostic, not an extension of that legacy code.
+- The legacy temperature/pressure/humidity app was removed (`TODO.md`, slice 9; owner confirmed the removal stands, 2026-11-20): do not bring it back or extend it. The generic variable-profile and cleaning layer is new code, written parameter-agnostic, not a revival of that legacy code.
 
 ## 8. Testing
 

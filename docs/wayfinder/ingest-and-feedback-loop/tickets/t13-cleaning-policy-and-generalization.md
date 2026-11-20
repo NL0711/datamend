@@ -33,8 +33,11 @@ The Explore step auto-cleans imported data (interpolation and exclusion, each wi
 
 The owner approved the amendment of `AGENTS.md` sections 1, 6 and 7: "a complete weather variable-profile also suited for rainfall and cleaning layer for other parameters; verdicts only where checks exist". `AGENTS.md` was edited accordingly. The generic layer is new, parameter-agnostic code and does not extend the legacy temperature, pressure and humidity code.
 
+## Answered by the owner (2026-11-20)
+
+1. Which other parameters first, and sample files: test on GENERATED data only for now, no real sample files. The generated test cases cover the two kinds and these parameters: rainfall (with zeros, and with zeros omitted), temperature, relative humidity (bounded 0 to 100), pressure, and wind speed (non-negative with calm zeros), plus an unknown case. Real files of each parameter are still needed before any claim that the profile detection works on real data; until then it is stated as tested on generated data only.
+2. The old temperature, pressure and humidity code: remove, as planned. It is already removed (slice 9, commit 1b67f6d: backend modules, old frontend, hardware code and data). What remains is only comments, the tests that guard against bringing it back (`tests/test_rainfall_isolation.py`, `tests/test_app.py`), the Weather Union response field list, and historical docs. `AGENTS.md` now says the legacy app was removed.
+
 ## Still needs the owner
 
-1. Which other parameters first (temperature, humidity, pressure, wind), and a sample file of each to profile (the profile detection is tested on generated data only).
-2. The default maximum gap for continuous variables (the build starts with a small number of steps; confirm or change).
-3. Whether the old temperature, pressure and humidity code should still be removed as planned now that a generic layer exists.
+1. The default maximum gap for continuous variables (the build starts with a small number of steps; confirm or change).
