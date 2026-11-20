@@ -50,6 +50,8 @@ class BaselineProposer:
 
 
 PROPOSERS: Dict[str, Proposer] = {BASELINE: BaselineProposer()}
+LLM_PREFIX = "llm_"                  # kind of an AI-proposed label: llm_confirmed_fault, llm_false_alarm, llm_genuine_extreme, llm_needs_followup
+MAX_LLM_ROWS = 20                    # flagged rows sent to the LLM per request (protects the quota)
 
 
 def proposal_dict(p: Proposal) -> Dict[str, Any]:
@@ -82,6 +84,43 @@ async def generate(session: AsyncSession, run_id: int, generator: str = BASELINE
     return made
 
 
+async def generate_llm(session: AsyncSession, run_id: int, llm: Any) -> Dict[str, Any]:
+    """AI-proposed reviewer labels (an ``llm_<label>`` proposal) for flagged rows of a pipeline run, from each row's evidence. At most MAX_LLM_ROWS
+    rows per call, rows that already have an AI proposal are skipped, and a quota or transport failure stops the loop (what was made is kept).
+    Returns {'made': [Proposal], 'skipped': n, 'stopped': reason or None}. A proposal is generated text: it changes nothing until a reviewer
+    accepts it, and accepting stores the reviewer's decision, never a change to a verdict, score or evidence."""
+    from backend.app.validation import narrate
+    from backend.app.validation.explain import NarratorUnavailable
+    run = await session.get(ValidationRun, run_id)
+    if run is None or run.source != "pipeline":
+        raise ValueError("proposals are made for pipeline runs only")
+    if llm is None or not hasattr(llm, "propose_label"):
+        raise ValueError("no AI proposer is connected: set GEMINI_API_KEY in .env (the LLM proposer is the Gemini layer until the AI team's service is set)")
+    done = {p.row_ref for p in (await session.execute(select(Proposal).where(Proposal.run_id == run_id))).scalars() if p.kind.startswith(LLM_PREFIX)}
+    rows = (await session.execute(select(ValidationResult).where(ValidationResult.run_id == run_id, ValidationResult.verdict.in_(FLAGGED))
+                                  .order_by(ValidationResult.rule_score.desc(), ValidationResult.id))).scalars().all()
+    todo = [r for r in rows if r.row_ref not in done]
+    made: List[Proposal] = []
+    stopped: Optional[str] = None
+    for r in todo[:MAX_LLM_ROWS]:
+        evs = await narrate.evidence_for_row(session, run, r)
+        if not evs:
+            continue
+        try:
+            out = await llm.propose_label(evs)
+        except NarratorUnavailable as e:
+            stopped = str(e)
+            break
+        p = Proposal(run_id=run_id, row_ref=r.row_ref, station_id=r.station_id, kind=LLM_PREFIX + out["label"], original_mm=r.mm, proposed_mm=None,
+                     text=out["reason"], generator=llm.generator)
+        session.add(p)
+        made.append(p)
+    await session.commit()
+    if not made and stopped:
+        raise ValueError(stopped)
+    return {"made": made, "skipped": max(0, len(todo) - MAX_LLM_ROWS), "stopped": stopped}
+
+
 async def decide(session: AsyncSession, proposal_id: int, accept: bool, reviewer: Optional[str], note: Optional[str] = None,
                  corrected_mm: Optional[float] = None) -> Proposal:
     """Accept or reject a pending proposal. Accepting an ``exclude_value`` stores a correction (corrected value None = excluded) and a
@@ -101,10 +140,16 @@ async def decide(session: AsyncSession, proposal_id: int, accept: bool, reviewer
             session.add(Correction(run_id=p.run_id, row_ref=p.row_ref, station_id=p.station_id, original_mm=p.original_mm,
                                    corrected_mm=corrected_mm, proposal_id=p.id, reviewer=p.decided_by, note=(note or "")[:1000] or None))
         # only a proposal that removes or replaces the value confirms a fault; 'review_peak' and 'review_repeat' only say "check this"
-        confirms_fault = p.kind == "exclude_value" or corrected_mm is not None
+        is_llm = p.kind.startswith(LLM_PREFIX)
+        confirms_fault = (p.kind == "exclude_value" or corrected_mm is not None) and not is_llm
         if confirms_fault and result is not None and result.verdict in FLAGGED:
             session.add(Review(run_id=p.run_id, row_ref=p.row_ref, station_id=p.station_id, decision="confirmed_fault",
                                note=f"accepted proposal {p.id} ({p.kind})", reviewer=p.decided_by, verdict_at_review=result.verdict))
+        if is_llm and result is not None and result.verdict in FLAGGED:
+            # an AI-proposed label the reviewer accepted is the reviewer's decision; a corrected value means the reviewer calls it a fault
+            label = "confirmed_fault" if corrected_mm is not None else p.kind[len(LLM_PREFIX):]
+            session.add(Review(run_id=p.run_id, row_ref=p.row_ref, station_id=p.station_id, decision=label,
+                               note=f"accepted AI proposal {p.id} ({p.generator})", reviewer=p.decided_by, verdict_at_review=result.verdict))
     await session.commit()
     return p
 

@@ -85,7 +85,7 @@ export function OverviewView({ onOpenRun, go }: { onOpenRun: (id: number) => voi
         </Panel>
         <Panel className="p-3 space-y-1">
           <h2 className="text-sm font-bold text-slate-900">AI narrator</h2>
-          <p className="text-[11px] text-slate-600">{nar?.connected ? `URL set (${nar.host}).` : 'Not connected.'} <button className="text-sky-700 font-bold" onClick={() => go('settings')}>Settings</button></p>
+          <p className="text-[11px] text-slate-600">{nar?.connected ? (nar.provider === 'gemini' ? `Gemini connected (${nar.model}), interim.` : `URL set (${nar.host}).`) : 'Not connected.'} <button className="text-sky-700 font-bold" onClick={() => go('settings')}>Settings</button></p>
         </Panel>
       </div>
 

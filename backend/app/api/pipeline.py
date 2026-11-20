@@ -27,6 +27,7 @@ from backend.app.pipeline import qc as qc_svc
 from backend.app.pipeline import registry as reg_svc
 from backend.app.pipeline import snapshot as snap_svc
 from backend.app.pipeline.models import AuditItem, IngestJob, ModelVersion, Observation, PipelineStation, Proposal, TrainingJob, TrainingSnapshot
+from backend.app.validation import narrate
 from backend.app.validation.runs import run_dict
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
@@ -35,7 +36,7 @@ NOT_IMPLEMENTED = [
     "retraining the RF25 STNet from labels (only the small label-fusion model is retrained, on the server's CPU or as a Kaggle notebook)",
     "scoring with a registered model on the server (needs RF25 grid neighbours; see the map ticket on station-to-cell mapping)",
     "the shadow run of a candidate beside the champion",
-    "the LLM proposer and explainer (the narrator team's service; the rule-based baseline works without it)",
+    "the AI team's MCP narrator (the interim Gemini layer works when GEMINI_API_KEY is set; the rule-based baseline works without either)",
 ]
 
 
@@ -139,7 +140,16 @@ class GenerateBody(BaseModel):
 
 
 @router.post("/runs/{run_id}/proposals", dependencies=[Depends(require_admin)])
-async def generate_proposals(run_id: int, body: GenerateBody = GenerateBody(), session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+async def generate_proposals(run_id: int, body: GenerateBody = GenerateBody(), session: AsyncSession = Depends(get_db),
+                             llm=Depends(narrate.get_narrator)) -> Dict[str, Any]:
+    """generator 'baseline-rules' (default) or 'ai' (the connected LLM proposes a reviewer label per flagged row)."""
+    if body.generator == "ai":
+        try:
+            res = await prop_svc.generate_llm(session, run_id, llm)
+        except ValueError as e:
+            raise _bad(e, status.HTTP_503_SERVICE_UNAVAILABLE if llm is None else status.HTTP_502_BAD_GATEWAY)
+        return {"created": len(res["made"]), "skipped_over_limit": res["skipped"], "stopped": res["stopped"],
+                "proposals": [prop_svc.proposal_dict(p) for p in res["made"]]}
     try:
         made = await prop_svc.generate(session, run_id, body.generator)
     except ValueError as e:

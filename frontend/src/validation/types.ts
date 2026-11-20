@@ -81,7 +81,7 @@ export interface ExplanationItem {
   confidence: number | null; confidence_note: string | null; generated: true; label: string; created_at: string | null;
 }
 
-export interface NarratorStatus { connected: boolean; message: string; implemented: boolean; host?: string; note?: string }
+export interface NarratorStatus { connected: boolean; message: string; implemented: boolean; host?: string; note?: string; provider?: 'gemini' | 'mcp-narrator' | null; model?: string }
 
 export type Decision = 'confirmed_fault' | 'false_alarm' | 'genuine_extreme' | 'needs_followup';
 
@@ -227,6 +227,7 @@ export interface SettingsState {
     poll_interval_seconds: number; poll_interval_source: string; accumulation_mode: string; accumulation_mode_source: string; enabled: boolean;
   };
   narrator: { url: string; url_source: string; token_set: boolean; token_source: string; connected: boolean };
+  gemini?: { key_set: boolean; model: string; active: boolean };
   feed_running: boolean;
   feed?: { stations: number; poll_interval_seconds: number; calls_used_today: number; calls_remaining_today: number; last_poll_at: string | null; last_error: string | null };
   saved?: string[]; feed_error?: string;

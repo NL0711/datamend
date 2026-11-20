@@ -63,6 +63,15 @@ class Settings(BaseSettings):
     NARRATOR_TOKEN: str = ""
     NARRATOR_TIMEOUT_SECONDS: float = 20.0
 
+    # Interim LLM layer on Google Gemini (backend/app/validation/gemini.py), used while the AI team's narrator is not connected. A set
+    # NARRATOR_URL always wins. The key lives in .env only. Only the evidence payload is sent, never the key or reviewer names.
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-3.5-flash"            # a setting on purpose: models are retired (2.5-flash answers 404 for new keys; the -latest alias hung in a test)
+    GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta"
+    GEMINI_TIMEOUT_SECONDS: float = 30.0
+    GEMINI_CALLS_PER_MINUTE: int = 10
+    GEMINI_DAILY_CALL_BUDGET: int = 200
+
     # A long random string for SCRIPTS (sent as X-Admin-Token); the dashboard signs in with ADMIN_EMAIL and ADMIN_PASSWORD below instead.
     # In .env only. Anyone who has this token can change the feed key and the narrator.
     ADMIN_TOKEN: str = ""

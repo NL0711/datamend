@@ -188,10 +188,13 @@ async def test_baseline_explain_is_stored_separately_and_changes_no_verdict(asyn
 
 
 @pytest.mark.asyncio
-async def test_narrator_unset_says_not_connected_and_invents_nothing(async_client: AsyncClient):
+async def test_narrator_unset_says_not_connected_and_invents_nothing(async_client: AsyncClient, monkeypatch):
+    from backend.app.config import settings
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")      # a developer's local .env may hold a real key; this test is about "nothing set"
+    monkeypatch.setattr(settings, "NARRATOR_URL", "")
     run, rows = await make_run(async_client)
     st = (await async_client.get("/api/validation/narrator")).json()
-    assert st["connected"] is False and st["message"] == "AI narrator not connected" and "NOT IMPLEMENTED" in st["note"]
+    assert st["connected"] is False and st["message"] == "AI narrator not connected" and st["provider"] is None and "GEMINI_API_KEY" in st["note"]
     r = await async_client.post(f"/api/validation/runs/{run['id']}/rows/{rows[0]['id']}/explain", json={"generator": "narrator"})
     assert r.status_code == 503 and "not connected" in r.text
     c = await async_client.post(f"/api/validation/runs/{run['id']}/chat", json={"message": "why was this flagged?", "row_id": rows[0]["id"]})
@@ -209,7 +212,7 @@ async def test_chat_with_a_narrator_is_grounded_stored_and_badged(async_client: 
 
     app.dependency_overrides[narrate.get_narrator] = lambda: narrator_with(handler)
     run, rows = await make_run(async_client)
-    assert (await async_client.get("/api/validation/narrator")).json() == {"connected": True, "host": "narrator.test",
+    assert (await async_client.get("/api/validation/narrator")).json() == {"connected": True, "host": "narrator.test", "provider": "mcp-narrator",
                                                                           "message": "narrator configured (reachability is checked per request)", "implemented": True}
     r = await async_client.post(f"/api/validation/runs/{run['id']}/chat", json={"message": "  why was this flagged?  ", "row_id": rows[0]["id"]})
     assert r.status_code == 201, r.text

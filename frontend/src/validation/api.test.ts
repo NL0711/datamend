@@ -112,7 +112,9 @@ describe('pipeline functions', () => {
     expect(lastCall()[0]).toBe('/api/pipeline/jobs/7/check');
     expect(lastCall()[1].method).toBe('POST'); expect(bodyOf()).toEqual({});
     await api.makeProposals(3);
-    expect(lastCall()[0]).toBe('/api/pipeline/runs/3/proposals'); expect(bodyOf()).toEqual({});
+    expect(lastCall()[0]).toBe('/api/pipeline/runs/3/proposals'); expect(bodyOf()).toEqual({ generator: 'baseline-rules' });
+    await api.makeProposals(3, 'ai');
+    expect(bodyOf()).toEqual({ generator: 'ai' });
   });
   it('decideProposal sends accept and a null reviewer when none is given', async () => {
     await api.decideProposal(5, true);

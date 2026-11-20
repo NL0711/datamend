@@ -243,3 +243,71 @@ async def test_status_lists_what_is_not_implemented(async_client: AsyncClient):
     st = (await async_client.get("/api/pipeline/status")).json()
     assert st["sources"] == ["cwc"] and any("scoring with a registered model" in x for x in st["not_implemented"])
 
+
+# ---------------------------------------------------------------------------------------------- AI proposer (Gemini layer, fake LLM)
+class FakeLLM:
+    generator = "gemini"
+
+    def __init__(self, label="false_alarm", fail_after=None):
+        self.label, self.fail_after, self.calls = label, fail_after, 0
+
+    async def propose_label(self, evidences):
+        from backend.app.validation.explain import NarratorRateLimited
+        if self.fail_after is not None and self.calls >= self.fail_after:
+            raise NarratorRateLimited("quota used up")
+        self.calls += 1
+        return {"label": self.label, "reason": f"Evidence of {len(evidences)} check(s) reviewed."}
+
+
+@pytest.mark.asyncio
+async def test_ai_proposals_need_a_connected_llm(async_client: AsyncClient, monkeypatch):
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")      # never reach the real API from a test, whatever the local .env holds
+    monkeypatch.setattr(settings, "NARRATOR_URL", "")
+    run_id = await flagged_run(async_client)
+    r = await async_client.post(f"/api/pipeline/runs/{run_id}/proposals", headers=H, json={"generator": "ai"})
+    assert r.status_code == 503 and "no AI proposer" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_ai_proposals_are_generated_idempotent_and_accepting_records_the_reviewers_label(async_client: AsyncClient):
+    from backend.app.main import app
+    from backend.app.validation import narrate
+    llm = FakeLLM("genuine_extreme")
+    app.dependency_overrides[narrate.get_narrator] = lambda: llm
+    try:
+        run_id = await flagged_run(async_client)
+        made = (await async_client.post(f"/api/pipeline/runs/{run_id}/proposals", headers=H, json={"generator": "ai"})).json()
+        assert made["created"] >= 1 and made["stopped"] is None
+        assert all(p["kind"] == "llm_genuine_extreme" and p["generator"] == "gemini" and p["generated"] and p["status"] == "pending" for p in made["proposals"])
+        again = (await async_client.post(f"/api/pipeline/runs/{run_id}/proposals", headers=H, json={"generator": "ai"})).json()
+        assert again["created"] == 0 and llm.calls == made["created"]            # a second press asks the LLM nothing new
+        async with async_session_factory() as s:
+            assert (await s.execute(select(func.count()).select_from(Review))).scalar_one() == 0     # generating changed no decision
+        pid = made["proposals"][0]["id"]
+        ok = (await async_client.post(f"/api/pipeline/proposals/{pid}/decide", headers=H, json={"accept": True, "reviewer": "asha"})).json()
+        assert ok["status"] == "accepted"
+        async with async_session_factory() as s:
+            rv = (await s.execute(select(Review))).scalars().all()
+            assert [r.decision for r in rv] == ["genuine_extreme"]
+            assert (await s.execute(select(func.count()).select_from(Correction))).scalar_one() == 0   # a label is not a correction
+            for res in (await s.execute(select(ValidationResult).where(ValidationResult.run_id == run_id))).scalars():
+                assert res.verdict in ("OK", "SUSPECT", "UNCERTAIN", "NO_DATA")                          # verdicts untouched
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_ai_proposals_stop_on_quota_and_keep_what_was_made(async_client: AsyncClient):
+    from backend.app.main import app
+    from backend.app.validation import narrate
+    llm = FakeLLM(fail_after=0)
+    app.dependency_overrides[narrate.get_narrator] = lambda: llm
+    try:
+        run_id = await flagged_run(async_client)
+        r = await async_client.post(f"/api/pipeline/runs/{run_id}/proposals", headers=H, json={"generator": "ai"})
+        assert r.status_code == 502 and "quota" in r.json()["detail"]      # nothing made, so the reason is the answer
+        async with async_session_factory() as s:
+            assert (await s.execute(select(func.count()).select_from(Proposal))).scalar_one() == 0
+    finally:
+        app.dependency_overrides.clear()
+

@@ -98,6 +98,9 @@ def public_view(eff: Optional[Effective] = None) -> Dict[str, Any]:
             "token_set": bool(e.narrator_token), "token_source": e.sources["narrator_token"],
             "connected": bool(e.narrator_url),
         },
+        # the interim LLM layer: environment only, so only whether a key is set and which model, never the key
+        "gemini": {"key_set": bool(settings.GEMINI_API_KEY.strip()), "model": settings.GEMINI_MODEL,
+                   "active": bool(settings.GEMINI_API_KEY.strip()) and not e.narrator_url.strip()},
     }
 
 

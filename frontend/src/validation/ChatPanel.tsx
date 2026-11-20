@@ -38,7 +38,7 @@ export function ChatPanel({ runId, rowId, narrator }: { runId: number; rowId: nu
         <h3 className="text-sm font-bold text-slate-900">Ask the AI</h3>
         <span className="text-[10px] font-mono text-slate-500">{rowId === null ? 'about this run' : `about the selected row #${rowId}`}</span>
       </div>
-      {!connected && <Notice tone="warn">AI narrator not connected: set its URL in Settings. The chat sends nothing and invents no answer.</Notice>}
+      {!connected && <Notice tone="warn">AI narrator not connected: set GEMINI_API_KEY in .env or a narrator URL in Settings. The chat sends nothing and invents no answer.</Notice>}
       {error && <Notice tone="error">{error}</Notice>}
       <div className="max-h-64 overflow-y-auto space-y-2">
         {messages.map((m) => (

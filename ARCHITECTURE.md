@@ -60,7 +60,8 @@ CWC hourly CSV -> ingest job (chunked, idempotent)   -> raw observations, immuta
 | Kaggle notebook retraining (`KAGGLE_USERNAME`, `KAGGLE_KEY`, `pip install kaggle`) | IMPLEMENTED against a mocked command line; UNTESTED against live Kaggle |
 | Gate metrics from a model trained elsewhere | recorded as DECLARED; the platform cannot verify them |
 | STNet long-memory test (stage 2 only, Kaggle notebook E) and the paired whole-year comparison (`python -m qc paired`) | BUILT and unit-tested on generated data; NOT RUN on RF25 |
-| RF25 STNet retraining, scoring with a registered model on the server, shadow run, LLM proposer | NOT IMPLEMENTED |
+| Interim LLM layer on Gemini (`validation/gemini.py`): Explain (AI), chat, and AI-proposed reviewer labels; needs `GEMINI_API_KEY`; the AI team's MCP narrator (`NARRATOR_URL`) takes precedence when set | BUILT and tested on a mocked transport; one live call made 2026-11-20; generated text only, never changes a verdict |
+| RF25 STNet retraining, scoring with a registered model on the server, shadow run, the AI team's MCP narrator | NOT IMPLEMENTED |
 
 ### Deployment
 

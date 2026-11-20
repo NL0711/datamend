@@ -102,8 +102,12 @@ export function SettingsView() {
           <h2 className="text-sm font-bold text-slate-900">AI narrator</h2>
           <span className={`px-2 py-0.5 rounded border text-[10px] font-mono font-bold ${state.narrator.connected ? 'border-teal-300 bg-teal-50 text-teal-800' : 'border-slate-300 bg-slate-100 text-slate-600'}`}>
             {state.narrator.connected ? 'URL SET' : 'NOT CONNECTED'}</span>
+          {state.gemini && (
+            <span className={`px-2 py-0.5 rounded border text-[10px] font-mono font-bold ${state.gemini.active ? 'border-teal-300 bg-teal-50 text-teal-800' : 'border-slate-300 bg-slate-100 text-slate-600'}`}>
+              {state.gemini.active ? `GEMINI ACTIVE · ${state.gemini.model}` : state.gemini.key_set ? 'GEMINI KEY SET (narrator URL takes precedence)' : 'GEMINI KEY NOT SET'}</span>)}
         </div>
-        <p className="text-[11px] text-slate-600">The narrator is built by the AI team and is NOT IMPLEMENTED here; the chat and "Explain (AI)" use whatever service you point this at. The platform sends it the evidence of a row and a question, nothing else. A narrator on localhost or a private network is refused unless the server has <span className="font-mono">NARRATOR_ALLOW_PRIVATE=true</span>.</p>
+        <p className="text-[11px] text-slate-600">Interim LLM layer: with <span className="font-mono">GEMINI_API_KEY</span> set in the server's .env (never in this page) the chat, "Explain (AI)" and "Propose with AI" use Gemini; a narrator URL below takes precedence. Only the evidence of a row and your question are sent.</p>
+        <p className="text-[11px] text-slate-600">The AI team's narrator is NOT IMPLEMENTED here yet; the chat and "Explain (AI)" use whatever service you point this at. The platform sends it the evidence of a row and a question, nothing else. A narrator on localhost or a private network is refused unless the server has <span className="font-mono">NARRATOR_ALLOW_PRIVATE=true</span>.</p>
         <div className="grid md:grid-cols-2 gap-3">
           <div><Label>Narrator URL</Label>
             <input value={form.narratorUrl} onChange={set('narratorUrl')} disabled={!state.editing_enabled} placeholder="https://…" className={field} aria-label="narrator URL" /></div>

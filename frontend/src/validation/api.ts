@@ -93,7 +93,8 @@ export async function ingestFile(file: File, source: string): Promise<IngestJob>
   return json<IngestJob>(await call(`${P}/ingest`, { method: 'POST', body: fd }));
 }
 export const checkJob = (id: number) => post<RunSummary>(`${P}/jobs/${id}/check`, {});
-export const makeProposals = (runId: number) => post<{ created: number; proposals: PipelineProposal[] }>(`${P}/runs/${runId}/proposals`, {});
+export const makeProposals = (runId: number, generator: 'baseline-rules' | 'ai' = 'baseline-rules') =>
+  post<{ created: number; proposals: PipelineProposal[]; skipped_over_limit?: number; stopped?: string | null }>(`${P}/runs/${runId}/proposals`, { generator });
 export const listProposals = (runId: number, status = 'pending') => get<{ proposals: PipelineProposal[]; note: string }>(`${P}/proposals?run_id=${runId}&status=${status}`);
 export const decideProposal = (id: number, accept: boolean, reviewer?: string) => post<PipelineProposal>(`${P}/proposals/${id}/decide`, { accept, reviewer: reviewer || null });
 export const drawAudit = (runId: number, n: number) => post<{ drawn: number; items: AuditItem[] }>(`${P}/runs/${runId}/audit`, { n });

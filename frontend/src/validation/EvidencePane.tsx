@@ -57,7 +57,7 @@ function EvidenceCard({ ev }: { ev: Evidence }) {
 }
 
 function ExplanationCard({ e }: { e: ExplanationItem }) {
-  const ai = e.generator === 'mcp-narrator';
+  const ai = e.generator !== 'baseline-rules';
   return (
     <div className={`rounded border p-2 text-xs ${ai ? 'border-dashed border-slate-400 bg-slate-50' : 'border-sky-200 bg-sky-50'}`}>
       <div className="text-[10px] uppercase font-mono font-bold flex items-center gap-2 flex-wrap">
@@ -128,7 +128,8 @@ export function EvidencePane({ runId, rowId, narrator, onSelectRow, onReviewed }
               <button disabled={busy || evidence.length === 0} onClick={() => run('narrator')}
                       className="px-2 py-1 rounded border border-dashed border-slate-400 text-slate-800 text-[11px] font-bold disabled:opacity-50">Explain (AI)</button>)}
           </div>
-          {!narrator?.connected && <p className="text-[11px] text-slate-500">AI narrator not connected (NOT IMPLEMENTED until it is set up in Settings).</p>}
+          {narrator?.connected && narrator.provider === 'gemini' && <p className="text-[11px] text-slate-500">AI explanations come from Gemini ({narrator.model}), an interim layer; they are generated text and never change a verdict.</p>}
+          {!narrator?.connected && <p className="text-[11px] text-slate-500">AI narrator not connected: set GEMINI_API_KEY in .env, or a narrator URL in Settings.</p>}
         </>)}
     </Panel>
   );
