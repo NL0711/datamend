@@ -60,6 +60,16 @@ body { background: var(--ground); color: var(--ink); }
 .rain-nav-item:hover { background: var(--soft); color: var(--ink); }
 .rain-nav-item[aria-current='page'] { background: #ECFEFF; color: var(--accent-ink); font-weight: 600; }
 .rain-nav-item svg { flex: none; }
+.rain-nav-item[aria-current='step'] { background: #ECFEFF; color: var(--accent-ink); font-weight: 600; }
+/* numbered steps: a small round number that becomes a teal check once the step has data; they scroll sideways on narrow screens */
+.rain-step { width: auto; }
+@media (min-width: 768px) { .rain-step { width: 100%; padding: 0.6rem 0.75rem; font-size: 0.875rem; } }
+.rain-step-dot {
+  flex: none; width: 1.35rem; height: 1.35rem; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.6875rem; font-weight: 700; background: #E2E8F0; color: var(--ink-2);
+}
+.rain-step-dot.is-done { background: var(--accent); color: #fff; }
+.rain-nav-item[aria-current='step'] .rain-step-dot:not(.is-done) { background: var(--accent-ink); color: #fff; }
 
 /* ---- the page header: a big title, one plain line, and a faint rain touch on the right ---------------------------- */
 .rain-head { position: relative; overflow: hidden; padding-bottom: 1.25rem; border-bottom: 1px solid var(--line); }

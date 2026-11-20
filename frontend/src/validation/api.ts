@@ -1,10 +1,10 @@
 // Typed client of /api/validation and /api/rainfall. Errors carry the server's plain-language reason.
 import type {
-  Decision, Evidence, ExplanationItem, ExplorerPage, FeedStation, FeedStatus, FeedTestResult, ImdStationsResponse, LabOptions, LabResult,
-  MapLayers, NarratorStatus, ReplayStatus, StationCycleResponse,
+  Decision, Evidence, ExplanationItem, ImdStationsResponse, LabOptions, LabResult, MapLayers, NarratorStatus,
   AuditEstimate, AuditItem, IngestJob, Lineage, PipelineModel, PipelineProposal, PipelineSnapshot, PipelineStatus, TrainingJob,
-  Overview, PlaceInfo, GaugeStation, Profile, QueuePage, ReviewItem, ReviewSummary, RowContext, RowDetail, RowsPage, RunFull, RunSummary,
-  Series, SettingsState, SettingsUpdate,
+  AssistantReply, ChatTurn, CleanApplyResult, CleanPlanBody, CleanPlanResult, CleanPolicy, CleanProposal, DatasetProfile, ExploreStations, ExploreTable,
+  ImportedJob, ImportFormat, ImportProvider, ImportSources, ModelCard, QueryResult, QuerySpec,
+  Profile, QueuePage, ReviewItem, ReviewSummary, RowContext, RowDetail, RowsPage, RunFull, RunSummary, Series,
 } from './types';
 
 const V = '/api/validation';
@@ -43,7 +43,6 @@ const get = <T>(url: string) => call(url).then((r) => json<T>(r));
 const post = <T>(url: string, body: unknown, extra: Record<string, string> = {}) =>
   call(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...extra }, body: JSON.stringify(body) }).then((r) => json<T>(r));
 
-export const listRuns = () => get<{ storage: string; cap: number; runs: RunSummary[] }>(`${V}/runs`);
 export const getRun = (id: number) => get<RunFull>(`${V}/runs/${id}`);
 export const getRows = (id: number, query: string) => get<RowsPage>(`${V}/runs/${id}/rows?${query}`);
 export const getRow = (id: number, rowId: number) => get<RowDetail>(`${V}/runs/${id}/rows/${rowId}`);
@@ -60,39 +59,76 @@ export const getChat = (id: number) => get<{ messages: ExplanationItem[] }>(`${V
 export const sendChat = (id: number, message: string, rowId?: number) =>
   post<ExplanationItem>(`${V}/runs/${id}/chat`, { message, row_id: rowId ?? null });
 
-export const getOverview = () => get<Overview>(`${V}/overview`);
-export const getExplorer = (id: number, query: string) => get<ExplorerPage>(`${V}/runs/${id}/rows?${query}`);
 export const getContext = (id: number, rowId: number) => get<RowContext>(`${V}/runs/${id}/rows/${rowId}/context?before=6&after=6`);
 export const getQueue = (query: string) => get<QueuePage>(`${V}/review/queue?${query}`);
 export const getReviewSummary = () => get<ReviewSummary>(`${V}/review/summary`);
 export const getReviews = (id: number, rowId: number) => get<{ reviews: ReviewItem[]; decisions: Decision[] }>(`${V}/runs/${id}/rows/${rowId}/reviews`);
 export const getLabOptions = () => get<LabOptions>(`${V}/lab/options`);
-export const locate = (lat: number, lon: number) => get<PlaceInfo>(`/api/places/locate?lat=${lat}&lon=${lon}`);
-export const getGauges = (city?: string) =>
-  get<{ cities: string[]; count: number; shown: number; stations: GaugeStation[] }>(`/api/places/stations${city ? `?city=${encodeURIComponent(city)}` : ''}`);
-
-/** The whole gauge catalogue (the map draws every station). */
-export const getAllGauges = () =>
-  get<{ cities: string[]; count: number; shown: number; stations: GaugeStation[] }>('/api/places/stations?limit=600');
 export const getImdStations = () => get<ImdStationsResponse>('/api/places/imd-stations');
 export const getMapLayers = () => get<MapLayers>('/api/places/map');
-export const getStationCycle = () => get<StationCycleResponse>(`${V}/stations`);
-
-/** The NOAA ISD India replay (real station rainfall, labelled REPLAY). Reading is open; loading it needs the admin token. */
-export const getReplayStatus = () => get<ReplayStatus>(`${V}/replay/isd`);
-export const startReplay = (token: string) =>
-  fetch(`${V}/replay/isd`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token } }).then((r) => json<ReplayStatus>(r));
 
 /** The ingest and feedback loop (/api/pipeline). */
 const P = '/api/pipeline';
 export const getPipelineStatus = () => get<PipelineStatus>(`${P}/status`);
-export const listJobs = () => get<{ jobs: IngestJob[] }>(`${P}/jobs`);
+export const listJobs = () => get<{ jobs: ImportedJob[] }>(`${P}/jobs`);
 export async function ingestFile(file: File, source: string): Promise<IngestJob> {
   const fd = new FormData();
   fd.append('file', file); fd.append('source', source);
   return json<IngestJob>(await call(`${P}/ingest`, { method: 'POST', body: fd }));
 }
-export const checkJob = (id: number) => post<RunSummary>(`${P}/jobs/${id}/check`, {});
+export interface CheckOptions { start?: string; end?: string; use_clean?: boolean }
+export const checkJob = (id: number, o: CheckOptions = {}) => post<RunSummary>(`${P}/jobs/${id}/check`, o);
+
+/** Step 1, Import: a remote link (an Amazon S3 object or a Kaggle dataset), never a hand upload. The visitor's own credentials, when set, go as
+ *  headers (never in the URL or the body) and only for the provider chosen. The server uses them for that request and does not store them. */
+export const IMPORT_AWS_KEY = 'datamend-import-aws';
+export interface ImportAwsAccount { accessKeyId: string; secret: string; sessionToken: string; region: string }
+export const storedImportAws = (): ImportAwsAccount | null => {
+  if (typeof sessionStorage === 'undefined') return null;
+  try {
+    const a = JSON.parse(sessionStorage.getItem(IMPORT_AWS_KEY) ?? 'null');
+    return a && a.accessKeyId && a.secret && a.region ? { accessKeyId: a.accessKeyId, secret: a.secret, sessionToken: a.sessionToken ?? '', region: a.region } : null;
+  } catch { return null; }
+};
+export const rememberImportAws = (a: ImportAwsAccount | null) => {
+  if (typeof sessionStorage === 'undefined') return;
+  if (a) sessionStorage.setItem(IMPORT_AWS_KEY, JSON.stringify(a)); else sessionStorage.removeItem(IMPORT_AWS_KEY);
+};
+export const importHeaders = (provider: ImportProvider): Record<string, string> => {
+  if (provider === 'kaggle') {
+    const k = storedKaggle();
+    return k ? { 'X-Kaggle-Username': k.username, 'X-Kaggle-Key': k.key } : {};
+  }
+  const a = storedImportAws();
+  if (!a) return {};
+  return { 'X-Aws-Access-Key-Id': a.accessKeyId, 'X-Aws-Secret-Access-Key': a.secret, ...(a.sessionToken ? { 'X-Aws-Session-Token': a.sessionToken } : {}), 'X-Aws-Region': a.region };
+};
+export const getImportSources = () => get<ImportSources>(`${P}/import/sources`);
+export const startImport = (provider: ImportProvider, url: string, format: ImportFormat) =>
+  post<ImportedJob>(`${P}/import`, { provider, url, format }, importHeaders(provider));
+
+/** Step 2, Explore and clean. */
+export const getExploreTables = () => get<{ tables: ExploreTable[] }>(`${P}/explore/tables`);
+export const runQuery = (spec: QuerySpec) => post<QueryResult>(`${P}/explore/query`, spec);
+export const getExploreStations = () => get<ExploreStations>(`${P}/explore/stations`);
+export const getExploreProfile = (source: string) => get<DatasetProfile>(`${P}/explore/profile?source=${encodeURIComponent(source)}`);
+export const askAssistant = (message: string, history: ChatTurn[] = [], runId?: number | null) =>
+  post<AssistantReply>(`${P}/assistant`, { message, history: history.map((t) => ({ role: t.role, text: t.text })), run_id: runId ?? null });
+export const getDefaultPolicy = (source: string) => get<CleanPolicy>(`${P}/clean/policy/default?source=${encodeURIComponent(source)}`);
+export const planCleaning = (body: CleanPlanBody) => post<CleanPlanResult>(`${P}/clean/plan`, body);
+export const listCleanProposals = (o: { status?: string; station?: string; limit?: number } = {}) => {
+  const q = new URLSearchParams();
+  if (o.status) q.set('status', o.status);
+  if (o.station) q.set('station', o.station);
+  if (o.limit) q.set('limit', String(o.limit));
+  const s = q.toString();
+  return get<{ proposals: CleanProposal[] }>(`${P}/clean/proposals${s ? `?${s}` : ''}`);
+};
+export const decideCleanProposal = (id: number, accept: boolean) => post<CleanProposal>(`${P}/clean/proposals/${id}/decide`, { accept });
+export const applyCleaning = () => post<CleanApplyResult>(`${P}/clean/apply`, {});
+
+/** Step 6, Anomalies: how a flag is made. */
+export const getModelCard = () => get<ModelCard>(`${P}/model-card`);
 export const makeProposals = (runId: number) => post<{ created: number; proposals: PipelineProposal[] }>(`${P}/runs/${runId}/proposals`, {});
 export const listProposals = (runId: number, status = 'pending') => get<{ proposals: PipelineProposal[]; note: string }>(`${P}/proposals?run_id=${runId}&status=${status}`);
 export const decideProposal = (id: number, accept: boolean, reviewer?: string) => post<PipelineProposal>(`${P}/proposals/${id}/decide`, { accept, reviewer: reviewer || null });
@@ -169,7 +205,7 @@ export const registerModel = (body: { name: string; version: string; metrics: Re
 export const promoteModel = (id: number) => post<PipelineModel>(`${P}/models/${id}/promote`, {});
 export const rollbackModel = (name: string) => post<PipelineModel>(`${P}/models/${encodeURIComponent(name)}/rollback`, {});
 
-/** The admin token is kept for this browser tab only (sessionStorage). Reviews and Settings need it; reading never does. */
+/** The admin token is kept for this browser tab only (sessionStorage). Imports, cleaning and reviews need it; reading never does. */
 export const ADMIN_TOKEN_KEY = 'datamend-admin-token';
 export const storedToken = () => (typeof sessionStorage === 'undefined' ? '' : sessionStorage.getItem(ADMIN_TOKEN_KEY) ?? '');
 export const rememberToken = (v: string) => { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(ADMIN_TOKEN_KEY, v); };
@@ -186,16 +222,6 @@ export const postReview = (id: number, rowId: number, body: { decision: Decision
 
 export const generateLab = (body: { profile: Profile; n_stations: number; length: number; faults: string[]; seed: number }) => post<LabResult>(`${V}/lab/generate`, body);
 
-export const getSettings = () => get<SettingsState>('/api/settings');
-
-const admin = (token: string) => ({ 'Content-Type': 'application/json', 'X-Admin-Token': token });
-
-export const saveSettings = (body: SettingsUpdate, token: string) =>
-  fetch('/api/settings', { method: 'PUT', headers: admin(token), body: JSON.stringify(body) }).then((r) => json<SettingsState>(r));
-
-export const testFeed = (token: string) =>
-  fetch('/api/settings/feed/test', { method: 'POST', headers: admin(token) }).then((r) => json<FeedTestResult>(r));
-
 export const exportUrl = (id: number, kind: 'json' | 'csv') => `${V}/runs/${id}/export.${kind}`;
 
 /** Downloads an export with the session attached (a plain link cannot send the header). */
@@ -207,27 +233,4 @@ export async function downloadExport(id: number, kind: 'json' | 'csv'): Promise<
   a.href = url; a.download = `run-${id}.${kind}`;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
-}
-
-export interface UploadForm {
-  file: File; profile: 'reading' | 'daily'; accumulationMode?: string; timezone?: string; intervalMinutes?: string; synthetic: boolean;
-}
-
-export async function uploadRun(f: UploadForm): Promise<RunFull> {
-  const fd = new FormData();
-  fd.append('file', f.file);
-  fd.append('profile', f.profile);
-  if (f.accumulationMode) fd.append('accumulation_mode', f.accumulationMode);
-  if (f.timezone) fd.append('timezone', f.timezone);
-  if (f.intervalMinutes) fd.append('interval_minutes', f.intervalMinutes);
-  fd.append('synthetic', String(f.synthetic));
-  return json<RunFull>(await call(`${V}/runs`, { method: 'POST', body: fd }));
-}
-
-/** The live feed answers 503 when it is not enabled; that is a state, not an error. */
-export async function getFeed(): Promise<{ enabled: false; reason: string } | { enabled: true; status: FeedStatus; stations: FeedStation[] }> {
-  const res = await call('/api/rainfall/stations');
-  if (res.status === 503) return { enabled: false, reason: await readError(res) };
-  const body = await json<{ status: FeedStatus; stations: FeedStation[] }>(res);
-  return { enabled: true, status: body.status, stations: body.stations };
 }

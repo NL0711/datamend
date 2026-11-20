@@ -128,7 +128,7 @@ export function EvidencePane({ runId, rowId, narrator, onSelectRow, onReviewed }
               <button disabled={busy || evidence.length === 0} onClick={() => run('narrator')}
                       className="px-2 py-1 rounded border border-dashed border-slate-400 text-slate-800 text-[11px] font-bold disabled:opacity-50">Explain (AI)</button>)}
           </div>
-          {!narrator?.connected && <p className="text-[11px] text-slate-500">AI narrator not connected (NOT IMPLEMENTED until it is set up in Settings).</p>}
+          {!narrator?.connected && <p className="text-[11px] text-slate-500">AI narrator not connected (NOT IMPLEMENTED until the server has a narrator URL); the rule-based explanation above is what is available.</p>}
         </>)}
     </Panel>
   );

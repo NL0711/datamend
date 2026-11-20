@@ -1,17 +1,16 @@
 // A flat map of India drawn on a canvas from the RF25 land mask (no map tiles, no extra dependency, nothing fetched from a third party).
-// Layers: RF25 client regions, Weather Union gauges coloured by where they are in the check -> flag -> audit cycle, and IMD stations
-// (NOAA's list of Indian synoptic stations). Drag to pan, wheel to zoom, click a marker to select it.
+// Layers: RF25 client regions, the stations the imported data identified (teal circles), and optionally IMD stations (NOAA's list of
+// Indian synoptic stations, off by default). Drag to pan, wheel to zoom, click a marker to select it.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Minus, Plus, Maximize2 } from 'lucide-react';
-import { CYCLE_COLOR, MapView, fitView, nearestPoint, panBy, project, regionColor, zoomAt } from './lib';
-import type { CycleState } from './lib';
+import { MapView, fitView, nearestPoint, panBy, project, regionColor, zoomAt } from './lib';
 import type { MapLayers } from './types';
 
 export interface MapPoint {
-  key: string; kind: 'gauge' | 'imd' | 'upload'; id: string; label: string; lat: number; lon: number; state: CycleState;
-  synthetic?: boolean;                       // every checked row of this station is synthetic: drawn with a dashed slate ring
+  key: string; kind: 'station' | 'imd'; id: string; label: string; lat: number; lon: number;
+  synthetic?: boolean;                       // drawn with a dashed slate ring (not a measurement)
 }
-export interface MapShow { regions: boolean; gauges: boolean; imd: boolean; dataOnly: boolean }
+export interface MapShow { regions: boolean; imd: boolean }
 
 interface Props {
   layers: MapLayers | null;
@@ -35,8 +34,7 @@ export function IndiaMap({ layers, points, show, selected, onSelect, height = 56
 
   const visible = useMemo(() => points.filter((p) => {
     if (p.kind === 'imd') return show.imd;
-    if (p.kind === 'gauge') return show.gauges && (!show.dataOnly || p.state !== 'unchecked');
-    return true;                                                   // stations from uploaded files are always drawn
+    return true;                                                   // the stations the data identified are always drawn
   }), [points, show]);
 
   useEffect(() => {
@@ -110,28 +108,21 @@ export function IndiaMap({ layers, points, show, selected, onSelect, height = 56
       if (x < -10 || y < -10 || x > size.w + 10 || y > size.h + 10) return;
       ctx.lineWidth = 1.2; ctx.strokeStyle = '#FFFFFF';
       if (p.kind === 'imd') {
-        // an IMD station is a triangle: dark navy until it has rows, then coloured by its state and drawn larger
-        const hasData = p.state !== 'unchecked';
-        const s = hasData ? 6.5 : 4.5;
-        ctx.fillStyle = hasData ? CYCLE_COLOR[p.state] : '#1E3A52';
+        // an optional IMD station (NOAA list) is a small dark triangle
+        const s = 4.5;
+        ctx.fillStyle = '#1E3A52';
         ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s * 0.9, y + s * 0.7); ctx.lineTo(x - s * 0.9, y + s * 0.7); ctx.closePath(); ctx.fill(); ctx.stroke();
-      } else if (p.kind === 'upload') {
-        ctx.fillStyle = CYCLE_COLOR[p.state];
-        ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 6); ctx.lineTo(x - 6, y); ctx.closePath(); ctx.fill(); ctx.stroke();
       } else {
-        const hasData = p.state !== 'unchecked';
-        ctx.fillStyle = hasData ? CYCLE_COLOR[p.state] : 'rgba(100,116,139,0.55)';
-        ctx.beginPath(); ctx.arc(x, y, hasData ? 5.5 : 3, 0, Math.PI * 2); ctx.fill(); if (hasData) ctx.stroke();
+        ctx.fillStyle = '#0E7490';                                   // a station the data identified: the one accent colour
+        ctx.beginPath(); ctx.arc(x, y, 5.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       }
     };
-    const quiet = (p: MapPoint) => p.state === 'unchecked' && p.kind !== 'upload';        // stations with no rows yet sit underneath
-    visible.filter((p) => p.kind === 'imd' && quiet(p)).forEach(draw);
-    visible.filter((p) => p.kind === 'gauge' && quiet(p)).forEach(draw);
-    visible.filter((p) => !quiet(p)).forEach(draw);
-    // a dashed slate ring marks a station whose checked rows are all synthetic (dashed = not a measurement), so it is never read as a real status
+    visible.filter((p) => p.kind === 'imd').forEach(draw);               // IMD triangles sit underneath
+    visible.filter((p) => p.kind === 'station').forEach(draw);
+    // a dashed slate ring marks a synthetic station (dashed = not a measurement)
     ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.6; ctx.setLineDash([3, 2]);
     for (const p of visible) {
-      if (!p.synthetic || p.state === 'unchecked') continue;
+      if (!p.synthetic) continue;
       const { x, y } = at(p);
       if (x < -10 || y < -10 || x > size.w + 10 || y > size.h + 10) continue;
       ctx.beginPath(); ctx.arc(x, y, 8.5, 0, Math.PI * 2); ctx.stroke();
@@ -152,15 +143,15 @@ export function IndiaMap({ layers, points, show, selected, onSelect, height = 56
   const hit = (x: number, y: number): MapPoint | null => {
     if (!view) return null;
     const screen = visible.map((p) => ({ ...project(p.lat, p.lon, view, size.w, size.h), p }));
-    // markers with data win over the small grey gauges and the IMD triangles when they overlap
-    const withData = screen.filter((s) => s.p.kind === 'upload' || s.p.state !== 'unchecked');
-    return (nearestPoint(withData, x, y, HIT_PX) ?? nearestPoint(screen, x, y, HIT_PX))?.p ?? null;
+    // a station of the data wins over an IMD triangle when they overlap
+    const own = screen.filter((s) => s.p.kind === 'station');
+    return (nearestPoint(own, x, y, HIT_PX) ?? nearestPoint(screen, x, y, HIT_PX))?.p ?? null;
   };
 
   return (
     <div ref={wrap} className="relative rounded-lg border border-[#D3DCE7] overflow-hidden bg-slate-100" style={{ height }}>
       <canvas
-        ref={canvas} role="img" aria-label="Map of India with gauges and IMD stations" style={{ width: size.w, height: size.h, cursor: drag.current ? 'grabbing' : hover ? 'pointer' : 'grab' }}
+        ref={canvas} role="img" aria-label="Map of India with the stations found in the data" style={{ width: size.w, height: size.h, cursor: drag.current ? 'grabbing' : hover ? 'pointer' : 'grab' }}
         onMouseDown={(e) => { const p = pointer(e); drag.current = { x: p.x, y: p.y, moved: 0 }; }}
         onMouseMove={(e) => {
           const p = pointer(e);

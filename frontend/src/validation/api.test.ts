@@ -47,7 +47,7 @@ describe('call(): the admin token', () => {
     await api.checkJob(1);
     expect(headersOf()).toEqual({ 'X-Admin-Token': 'stored', 'Content-Type': 'application/json' });
     // no public function passes its own X-Admin-Token through call(); the ones that take a token bypass it, so the explicit one is what is sent
-    await api.startReplay('explicit');
+    await api.postReview(1, 2, { decision: 'false_alarm' }, 'explicit');
     expect(headersOf()['X-Admin-Token']).toBe('explicit');
   });
 });

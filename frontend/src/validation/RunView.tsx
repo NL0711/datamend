@@ -1,36 +1,15 @@
-// Run view, layout D (spec section 7): headline numbers and exports, a live strip, the full-width timeline with check lanes, then the
+// Run view, layout D (spec section 7): headline numbers and exports, the full-width timeline with check lanes, then the
 // worklist (server-side pages of 50, highest rule score first), the decision pane and the AI chat. A chart marker, a lane tick and a
 // worklist item select the same row.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Download, Radio } from 'lucide-react';
-import { downloadExport, getFeed, getNarrator, getRows, getRun, getSeries } from './api';
+import { Download } from 'lucide-react';
+import { downloadExport, getNarrator, getRows, getRun, getSeries } from './api';
 import { ChatPanel } from './ChatPanel';
 import { EvidencePane } from './EvidencePane';
 import { Timeline } from './Timeline';
 import { PAGE_SIZE, completenessText, pct, rowsQuery } from './lib';
 import type { NarratorStatus, RowsPage, RunFull, Series, Verdict } from './types';
 import { Notice, Panel, SeverityPill, SyntheticBadge, VerdictBadge, formatError } from './ui';
-
-type Feed = Awaited<ReturnType<typeof getFeed>>;
-
-function LiveStrip() {
-  const [feed, setFeed] = useState<Feed | null>(null);
-  useEffect(() => { getFeed().then(setFeed).catch(() => setFeed(null)); }, []);
-  return (
-    <Panel className="px-4 py-2 flex items-center gap-4 flex-wrap text-[11px] font-mono">
-      <span className={`flex items-center gap-1.5 font-bold ${feed?.enabled ? 'text-emerald-700' : 'text-slate-500'}`}><Radio className="w-3.5 h-3.5" />LIVE · Weather Union</span>
-      {feed === null && <span className="text-slate-500">live feed status unavailable</span>}
-      {feed && !feed.enabled && <span className="text-slate-500">feed not enabled (add a key and a city in Settings)</span>}
-      {feed?.enabled && (
-        <>
-          <span>{feed.status.calls_used_today}/{feed.status.calls_used_today + feed.status.calls_remaining_today} calls today</span>
-          <span>poll {Math.round(feed.status.poll_interval_seconds / 60)} min</span>
-          <span>time basis: received</span>
-          <span>{feed.stations.filter((s) => s.quality?.assessment === 'OK').length} of {feed.stations.length} gauges OK</span>
-        </>)}
-    </Panel>
-  );
-}
 
 function Headline({ run }: { run: RunFull }) {
   const h = run.report.headline;
@@ -108,7 +87,6 @@ export function RunView({ runId }: { runId: number }) {
   return (
     <div className="space-y-3">
       {error && <Notice tone="error">{error}</Notice>}
-      <LiveStrip />
       <Headline run={run} />
       <Panel className="p-3">
         <div className="flex items-center gap-2 flex-wrap mb-2">
