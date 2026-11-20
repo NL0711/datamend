@@ -248,7 +248,7 @@ async def main(args) -> None:
         logging.getLogger("backend.app.pipeline.store").addHandler(_H())
         t = time.perf_counter()
         done = await store.ensure_timescale(engine)
-        R["ensure_timescale"] = {"steps_succeeded": done, "of": ["extension", "hypertable", "compression", "compression_policy"], "warnings": cap,
+        R["ensure_timescale"] = {"steps_succeeded": done, "of": ["extension", "hypertable", "chunk_interval", "compression", "compression_policy"], "warnings": cap,
                                  "seconds": round(time.perf_counter() - t, 1)}
         print("ensure_timescale:", R["ensure_timescale"], flush=True)
 
@@ -359,7 +359,11 @@ async def main(args) -> None:
 
         # 7. other value pattern and chunk length (1,000,000 rows each, throwaway tables)
         R["variants"] = {}
-        for name, profile, days in (() if args.qc_only else (("v_wet7", "wet_only", 7), ("v_wet365", "wet_only", 365), ("v_hourly365", "hourly", 365))):
+        if args.variants:                                   # e.g. "wet_only:30,wet_only:90"
+            plan = [(f"v_{p.split(':')[0]}{p.split(':')[1]}", p.split(":")[0], int(p.split(":")[1])) for p in args.variants.split(",")]
+        else:
+            plan = [] if args.qc_only else [("v_wet7", "wet_only", 7), ("v_wet365", "wet_only", 365), ("v_hourly365", "hourly", 365)]
+        for name, profile, days in plan:
             R["variants"][name] = await variant(conn, name, profile, 1_000_000, days, 11)
             print(name, R["variants"][name], flush=True)
     finally:
@@ -389,6 +393,7 @@ if __name__ == "__main__":
     ap.add_argument("--max-existing-mb", type=int, default=150)
     ap.add_argument("--force-size", action="store_true")
     ap.add_argument("--precheck-only", action="store_true")
+    ap.add_argument("--variants", help="profile:chunk_days list of 1M-row variants to measure instead of the default three")
     ap.add_argument("--qc-only", action="store_true", help="skip the 100k ingest comparison and the 1M-row variants (use with a small --rows)")
     a = ap.parse_args()
     try:

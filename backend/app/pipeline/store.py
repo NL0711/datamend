@@ -52,6 +52,9 @@ async def ensure_timescale(engine: AsyncEngine) -> List[str]:
     steps = [
         ("extension", "CREATE EXTENSION IF NOT EXISTS timescaledb"),
         ("hypertable", "SELECT create_hypertable('pipeline_observations', 'observed_at', if_not_exists => TRUE, migrate_data => TRUE)"),
+        # 30-day chunks: measured on Tiger (ticket t02) at 22 bytes a row for sparse data against 47 with 7-day chunks, while the part
+        # that stays uncompressed (the newest chunk plus the 7-day policy delay) stays near 37 days of data. Applies to new chunks only.
+        ("chunk_interval", "SELECT set_chunk_time_interval('pipeline_observations', INTERVAL '30 days')"),
         ("compression", "ALTER TABLE pipeline_observations SET (timescaledb.compress, timescaledb.compress_segmentby = 'source, station_key')"),
         ("compression_policy", "SELECT add_compression_policy('pipeline_observations', INTERVAL '7 days', if_not_exists => TRUE)"),
     ]
