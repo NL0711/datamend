@@ -2,7 +2,7 @@
 
 ## 1. Project identity
 
-**DataMend** is a rainfall time-series data validation platform (Part A: `backend/`, `frontend/`) with an optional trained model system for gridded rainfall (Part B: `ml-service/qc`). Rainfall is the only parameter. Explainability is delivered by a rule-based baseline in this repo and an external AI narrator (MCP-based, built by the AI implementation team) behind one interface.
+**DataMend** is a rainfall time-series data validation platform (Part A: `backend/`, `frontend/`) with an optional trained model system for gridded rainfall (Part B: `ml-service/qc`). Rainfall is the only parameter with validation checks and verdicts. A complete weather variable profile and a configurable cleaning layer also serve other weather parameters (owner decision, 2026-11-20); verdicts are given only where checks exist for that parameter. Explainability is delivered by a rule-based baseline in this repo and an external AI narrator (MCP-based, built by the AI implementation team) behind one interface.
 
 Read first: `README.md`, `ARCHITECTURE.md` (short), `shared-docs/DATAMEND_ARCHITECTURE.docx` (full), `CONTEXT.md` (vocabulary), `TODO.md` (the build slices), and `docs/wayfinder/rainfall-validation-platform/MAP.md` (why the design is what it is).
 
@@ -35,7 +35,7 @@ Do not claim that basic ML anomaly detection, spatial or temporal QC, persistenc
 
 ## 6. Data and input rules
 
-- The core platform works on rainfall only. Optional metadata (station id, coordinates, quality flags) may be used but never required by the core checks.
+- The validation core works on rainfall only. The weather variable profile (what a dataset measures, whether it reports zero values, cadence, units, valid range) and the cleaning layer are parameter-agnostic and suited to rainfall as well as other parameters; a parameter without evaluated checks gets import, exploration, profiling and cleaning but NO verdicts, and the platform says so. Cleaning must never invent values the data cannot support (for example no interpolation on a dataset that omits zero values). Optional metadata (station id, coordinates, quality flags) may be used but never required by the core checks.
 - Raw data is never overwritten; any corrected value is stored separately.
 - Validate inputs: missing values, duplicate and out-of-order timestamps, impossible values, frozen values, malformed rows. File-level problems reject the file; row-level problems keep the row with a flag and a reason.
 - Non-US ISD data must not be redistributed (WMO Resolution 40): never commit it.
@@ -47,7 +47,7 @@ Do not claim that basic ML anomaly detection, spatial or temporal QC, persistenc
 - Two kinds of score are never mixed: the uncalibrated rule score and a calibrated flag (only with a score provider and a clean-period false-alarm budget).
 - The narrator never changes a verdict, score or evidence; explanations are stored separately and always marked generated.
 - SQLite now, written so it can move to PostgreSQL.
-- Do not extend the legacy temperature/pressure/humidity code; it is scheduled for removal (`TODO.md`, slices 8 to 10).
+- Do not extend the legacy temperature/pressure/humidity code; it is scheduled for removal (`TODO.md`, slices 8 to 10). The generic variable-profile and cleaning layer is new code, written parameter-agnostic, not an extension of that legacy code.
 
 ## 8. Testing
 

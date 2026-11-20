@@ -140,6 +140,13 @@ A frozen, versioned export of observations and labels cut by time, used for one 
 One accepted file of source data being read into the raw store. It records what was read, stored, already stored and rejected, and every assumption made about the source. It is not a validation run; a run is made from stored data in a separate step.
 _Avoid_: run, import
 
+**Variable profile**:
+What a dataset measures, found from the data and editable by the user: the parameter, its kind (an intermittent accumulation such as rainfall, or a continuous state such as temperature), whether it reports zero values, how often it reports, its units and its valid range. It decides which cleaning is allowed. It is not a verdict.
+
+**Cleaning policy**:
+An ordered, configurable list of cleaning steps (remove duplicates, normalise units, exclude impossible values, fill gaps) with their parameters, derived by default from the variable profile and stored with the run. Gap filling is switched off for a dataset that omits zero values, and only an explicit, recorded override can turn it on. Imputed values are always labelled imputed and the raw data is never changed.
+_Avoid_: auto-fix
+
 **Champion and challenger**:
 A registered model is a challenger until the promotion gate passes, and then the champion; the replaced champion is archived, and a model that fails the gate is rejected. Its metrics are declared by the training job, not verified by the platform, and a champion does not yet change any verdict.
 

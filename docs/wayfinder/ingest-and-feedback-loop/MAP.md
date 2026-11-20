@@ -62,3 +62,4 @@ The pipeline is built (branch `feature/ingest-pipeline`; `TODO.md` lists what is
 - [Server scoring and the shadow run](tickets/t10-server-scoring-and-shadow-run.md): blocked on t08.
 - [Migrations and upload storage](tickets/t11-migrations-and-upload-storage.md).
 - [Ask NWIC about derived data](tickets/t12-ask-nwic-about-derived-data.md): owner task; the CWC licence for derived flags is unconfirmed.
+- [Cleaning policy and generalisation](tickets/t13-cleaning-policy-and-generalization.md): the new Explore step is built to this design (variable profile, configurable cleaning, no interpolation when a dataset omits zeros, the assistant advises); the owner approved the `AGENTS.md` amendment on 2026-11-20 (profile and cleaning for any parameter, verdicts only where checks exist); still open: which other parameters first, the default maximum gap, and the fate of the legacy temperature, pressure and humidity code.
