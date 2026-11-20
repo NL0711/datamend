@@ -14,14 +14,14 @@ from sqlalchemy import delete, func, select
 
 from backend.app.config import settings
 from backend.app.db.database import async_session_factory
-from backend.app.pipeline import cwc, importers, isd, kaggle_trigger
+from backend.app.pipeline import cwc, importers, isd
 from backend.app.pipeline import jobs as jobs_svc
 from backend.app.pipeline.models import IngestJob, Observation, PipelineStation
 
 TOKEN = "i" * 32
 H = {"X-Admin-Token": TOKEN}
 AWS_KEY, AWS_SECRET, AWS_TOKEN = "FAKEACCESSKEYID0001", "fake-secret-not-real-0001", "fake-session-token-0001"
-KG_USER, KG_KEY = "fakeuser", "fake-kaggle-key-0001"
+KG_TOKEN = "KGAT_faketoken0000000000000000000001"          # obviously fake
 DELHI = "421820-99999"
 PUBLIC = "52.0.0.1"
 HEADER = ("SlNo,Station,Agency,State LGD Code,State,District LGD Code,District,Tehsil,Block,Village,River,Basin,Tributary,Subtributary,"
@@ -48,6 +48,7 @@ async def _env(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "ADMIN_TOKEN", TOKEN)
     monkeypatch.setattr(settings, "KAGGLE_USERNAME", "")
     monkeypatch.setattr(settings, "KAGGLE_KEY", "")
+    monkeypatch.setattr(settings, "KAGGLE_API_TOKEN", "")
     monkeypatch.setattr(jobs_svc, "UPLOAD_DIR", tmp_path / "uploads")
     monkeypatch.setattr(importers, "resolve_addresses", lambda host: [PUBLIC])
     from backend.app.api import settings as settings_api
@@ -118,7 +119,8 @@ async def test_sources_lists_providers_formats_and_limits(async_client: AsyncCli
     assert [p["id"] for p in body["providers"]] == ["aws", "kaggle"]
     aws = body["providers"][0]
     assert aws["label"] == "Amazon S3 (AWS)" and "s3://bucket/key" in aws["accepts"] and aws["credentials"].startswith("optional")
-    assert body["providers"][1]["accepts"] == ["owner/dataset-slug", "owner/notebook-slug (output)"]
+    assert body["providers"][1]["accepts"] == ["owner/dataset-slug", "a kaggle.com dataset link", "kernel:owner/notebook-slug (output)"]
+    assert body["providers"][1]["credentials"].startswith("none for public datasets")
     assert [f["id"] for f in body["formats"]] == ["auto", "cwc", "isd"] and body["limits"]["max_mb"] == 300
 
 
@@ -168,8 +170,8 @@ async def test_private_bucket_uses_the_callers_credentials_and_they_never_leak(a
 async def test_malformed_credential_headers_are_refused_without_echo(async_client: AsyncClient, fake_s3):
     r = await post_import(async_client, "aws", "s3://bucket-one/a.csv", headers={"X-Aws-Access-Key-Id": AWS_KEY})
     assert r.status_code == 400 and AWS_KEY not in r.text
-    r = await post_import(async_client, "kaggle", "own/set", headers={"X-Kaggle-Username": KG_USER})
-    assert r.status_code == 400 and KG_USER not in r.text
+    r = await post_import(async_client, "kaggle", "own/set", headers={"X-Kaggle-Token": "bad token with spaces!"})
+    assert r.status_code == 400 and "bad token" not in r.text
 
 
 @pytest.mark.asyncio
@@ -377,18 +379,28 @@ def test_sniff_by_content(tmp_path):
 # ---------------------------------------------------------------------------------------------- kaggle
 @pytest.fixture
 def fake_kaggle(monkeypatch):
-    calls = []
-    files = {}
+    """Kaggle's REST API as a mock transport: the API host answers 302 to a signed storage link, the storage host answers with a zip of ``files``.
+    ``private`` makes the API answer 404 (what Kaggle does for a private dataset) unless the request carries a Bearer token. ``calls`` records
+    (host, path, authorization header) of every request so tests can see where the token went."""
+    calls, files = [], {}
+    state = {"private": False, "status": None}
 
-    def run(args, creds, cwd):
-        calls.append((list(args), creds.username, creds.key))
-        out = args[args.index("-p") + 1]
-        for name, data in files.items():
-            with open(f"{out}/{name}", "wb") as f:
-                f.write(data)
-        return ""
-    monkeypatch.setattr(importers, "run_command", run)
-    return {"calls": calls, "files": files}
+    def handler(req: httpx.Request) -> httpx.Response:
+        auth = req.headers.get("authorization")
+        calls.append((req.url.host, req.url.path, auth))
+        if req.url.host == "www.kaggle.com":
+            if state["status"]:
+                return httpx.Response(state["status"])
+            if state["private"] and not auth:
+                return httpx.Response(404)
+            if state["private"] and auth != f"Bearer {KG_TOKEN}":
+                return httpx.Response(401)
+            return httpx.Response(302, headers={"location": "https://storage.googleapis.com/kaggle-data-sets/1/bundle/archive.zip?X-Goog-Signature=sig-0001"})
+        if req.url.host == "storage.googleapis.com":
+            return httpx.Response(200, content=make_zip(files) if files else b"PK\x05\x06" + b"\x00" * 18)     # an empty zip when there are no files
+        return httpx.Response(500)
+    monkeypatch.setattr(importers, "HTTP_TRANSPORT", httpx.MockTransport(handler))
+    return {"calls": calls, "files": files, "state": state}
 
 
 def make_zip(members: dict) -> bytes:
@@ -399,66 +411,130 @@ def make_zip(members: dict) -> bytes:
     return b.getvalue()
 
 
-KG_HDR = {"X-Kaggle-Username": KG_USER, "X-Kaggle-Key": KG_KEY}
+KG_HDR = {"X-Kaggle-Token": KG_TOKEN}
 
 
 @pytest.mark.asyncio
-async def test_multi_file_dataset_makes_one_job_per_file_and_lists_them(async_client: AsyncClient, fake_kaggle, caplog, tmp_path):
+async def test_a_public_dataset_imports_with_no_token_and_one_job_per_file(async_client: AsyncClient, fake_kaggle, caplog, tmp_path):
     caplog.set_level("DEBUG")
-    fake_kaggle["files"]["rain.zip"] = make_zip({"tripura.csv": cwc_csv("Amarpur"), "assam.csv": cwc_csv("Dhubri"),
-                                                 "421820-99999-2025.gz": isd_gz([isd_line(DELHI, "202507010100")]), "README.txt": "about this data",
-                                                 "../../evil.csv": cwc_csv("Evil")})
-    r = await post_import(async_client, "kaggle", "example-owner/example-rain", headers=KG_HDR)
+    fake_kaggle["files"].update({"tripura.csv": cwc_csv("Amarpur"), "assam.csv": cwc_csv("Dhubri"),
+                                 "421820-99999-2025.gz": isd_gz([isd_line(DELHI, "202507010100")]), "README.txt": "about this data",
+                                 "../../evil.csv": cwc_csv("Evil")})
+    r = await post_import(async_client, "kaggle", "example-owner/example-rain")                    # no token header at all
     assert r.status_code == 202, r.text
     j = r.json()
-    assert fake_kaggle["calls"][0][0][:3] == ["datasets", "download", "example-owner/example-rain"]
-    assert (fake_kaggle["calls"][0][1], fake_kaggle["calls"][0][2]) == (KG_USER, KG_KEY)
+    assert fake_kaggle["calls"][0] == ("www.kaggle.com", "/api/v1/datasets/download/example-owner/example-rain", None)
+    assert fake_kaggle["calls"][1][0] == "storage.googleapis.com"
     assert j["provider"] == "kaggle" and j["origin"] == "kaggle.com/datasets/example-owner/example-rain"
     assert len(j["job_ids"]) == 4 and j["id"] == j["job_ids"][0] and j["skipped_files"] == ["README.txt"]
     jobs = [await get_job(async_client, i) for i in j["job_ids"]]
     assert sorted(x["source"] for x in jobs) == ["cwc", "cwc", "cwc", "isd"] and all(x["status"] == "done" for x in jobs)
-    assert KG_KEY not in r.text + caplog.text + json.dumps(jobs)
+    assert "sig-0001" not in r.text + caplog.text + json.dumps(jobs)                                  # the signed storage link is never logged or returned
     assert no_temp_left(tmp_path)
 
 
 @pytest.mark.asyncio
-async def test_notebook_output_is_fetched_with_the_kernel_command(async_client: AsyncClient, fake_kaggle):
+async def test_a_dataset_link_from_the_browser_address_bar_works_too(async_client: AsyncClient, fake_kaggle):
     fake_kaggle["files"]["out.csv"] = cwc_csv()
-    r = await post_import(async_client, "kaggle", "kernel:example-owner/example-nb", headers=KG_HDR)
-    assert r.status_code == 202 and fake_kaggle["calls"][0][0][:3] == ["kernels", "output", "example-owner/example-nb"]
-    r = await post_import(async_client, "kaggle", "https://www.kaggle.com/code/example-owner/example-nb", headers=KG_HDR)
+    r = await post_import(async_client, "kaggle", "https://www.kaggle.com/datasets/example-owner/example-rain")
+    assert r.status_code == 202 and r.json()["origin"] == "kaggle.com/datasets/example-owner/example-rain"
+    assert fake_kaggle["calls"][0][1] == "/api/v1/datasets/download/example-owner/example-rain"
+
+
+@pytest.mark.asyncio
+async def test_a_private_dataset_asks_for_a_token_then_works_with_one_sent_to_kaggle_only(async_client: AsyncClient, fake_kaggle, caplog):
+    caplog.set_level("DEBUG")
+    fake_kaggle["state"]["private"] = True
+    fake_kaggle["files"]["out.csv"] = cwc_csv()
+    r = await post_import(async_client, "kaggle", "example-owner/private-rain")
+    assert r.status_code == 428 and "Paste a Kaggle API token" in r.json()["detail"]                    # 428: the page opens its token popup
+    assert [c[0] for c in fake_kaggle["calls"]] == ["www.kaggle.com"]
+    fake_kaggle["calls"].clear()
+    r = await post_import(async_client, "kaggle", "example-owner/private-rain", headers=KG_HDR)
+    assert r.status_code == 202, r.text
+    assert fake_kaggle["calls"][0][2] == f"Bearer {KG_TOKEN}"                                          # the token goes to the Kaggle API host ...
+    assert all(c[2] is None for c in fake_kaggle["calls"][1:]) and fake_kaggle["calls"][1][0] == "storage.googleapis.com"   # ... and not to the storage link
+    assert KG_TOKEN not in r.text + caplog.text
+
+
+@pytest.mark.asyncio
+async def test_a_wrong_token_or_a_dataset_that_does_not_exist_is_refused_plainly(async_client: AsyncClient, fake_kaggle):
+    fake_kaggle["state"]["private"] = True
+    r = await post_import(async_client, "kaggle", "example-owner/private-rain", headers={"X-Kaggle-Token": "KGAT_wrongtoken0001"})
+    assert r.status_code == 403 and "refused the token" in r.json()["detail"] and "wrongtoken" not in r.text
+    fake_kaggle["state"]["status"] = 500
+    r = await post_import(async_client, "kaggle", "example-owner/example-rain")
+    assert r.status_code == 502 and "HTTP 500" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_the_servers_own_token_is_the_fallback_when_the_caller_sends_none(async_client: AsyncClient, fake_kaggle, monkeypatch):
+    monkeypatch.setattr(settings, "KAGGLE_API_TOKEN", KG_TOKEN)
+    fake_kaggle["state"]["private"] = True
+    fake_kaggle["files"]["out.csv"] = cwc_csv()
+    r = await post_import(async_client, "kaggle", "example-owner/private-rain")
+    assert r.status_code == 202 and fake_kaggle["calls"][0][2] == f"Bearer {KG_TOKEN}"
+
+
+@pytest.mark.asyncio
+async def test_notebook_output_is_fetched_from_the_kernel_endpoint(async_client: AsyncClient, fake_kaggle):
+    fake_kaggle["files"]["out.csv"] = cwc_csv()
+    r = await post_import(async_client, "kaggle", "kernel:example-owner/example-nb")
+    assert r.status_code == 202 and fake_kaggle["calls"][0][1] == "/api/v1/kernels/output/download/example-owner/example-nb"
+    r = await post_import(async_client, "kaggle", "https://www.kaggle.com/code/example-owner/example-nb")
     assert r.status_code == 202 and r.json()["origin"] == "kaggle.com/code/example-owner/example-nb"
 
 
 @pytest.mark.asyncio
-async def test_kaggle_without_credentials_is_refused_and_bad_references_are_not_echoed(async_client: AsyncClient, fake_kaggle):
-    r = await post_import(async_client, "kaggle", "example-owner/example-rain")
-    assert r.status_code == 409 and "Kaggle is not configured" in r.json()["detail"] and fake_kaggle["calls"] == []
+async def test_bad_references_are_not_echoed_and_nothing_is_requested(async_client: AsyncClient, fake_kaggle):
     for bad in ("https://evil.example.com/datasets/a/b", "http://www.kaggle.com/datasets/a/b", "a/b/c/d", "../etc/passwd", "kernel:nope", "a b/c"):
-        r = await post_import(async_client, "kaggle", bad, headers=KG_HDR)
+        r = await post_import(async_client, "kaggle", bad)
         assert r.status_code == 400 and bad not in r.text, bad
     assert fake_kaggle["calls"] == []
 
 
 @pytest.mark.asyncio
+async def test_a_gridded_netcdf_dataset_is_explained_not_just_refused(async_client: AsyncClient, fake_kaggle, tmp_path):
+    fake_kaggle["files"].update({f"RF25_ind{1900 + i}_rfp25.nc": b"CDF\x01" for i in range(3)})        # what the real majorproj-rainfall dataset holds
+    r = await post_import(async_client, "kaggle", "nathashalewis/majorproj-rainfall")
+    assert r.status_code == 422
+    msg = r.json()["detail"]
+    assert ".nc x3" in msg and "NetCDF" in msg and "RF25_ind" not in msg                                 # file types are named, archive file names are not
+    assert no_temp_left(tmp_path)
+
+
+@pytest.mark.asyncio
+async def test_a_redirect_to_another_host_is_refused_and_a_token_never_follows_a_redirect(async_client: AsyncClient, monkeypatch):
+    seen = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        seen.append((req.url.host, req.headers.get("authorization")))
+        return httpx.Response(302, headers={"location": "https://evil.example.com/steal"})
+    monkeypatch.setattr(importers, "HTTP_TRANSPORT", httpx.MockTransport(handler))
+    r = await post_import(async_client, "kaggle", "example-owner/example-rain", headers=KG_HDR)
+    assert r.status_code == 400 and "allowed hosts" in r.json()["detail"]
+    assert seen == [("www.kaggle.com", f"Bearer {KG_TOKEN}")]                                          # evil.example.com was never contacted
+
+
+@pytest.mark.asyncio
 async def test_a_dataset_with_no_data_files_or_an_oversize_zip_member_is_refused(async_client: AsyncClient, fake_kaggle, monkeypatch, tmp_path):
     fake_kaggle["files"]["notes.md"] = b"nothing"
-    r = await post_import(async_client, "kaggle", "example-owner/example-rain", headers=KG_HDR)
-    assert r.status_code == 422
+    r = await post_import(async_client, "kaggle", "example-owner/example-rain")
+    assert r.status_code == 422 and no_temp_left(tmp_path)
     fake_kaggle["files"].clear()
-    monkeypatch.setattr(importers, "MAX_BYTES", 100)
-    fake_kaggle["files"]["z.zip"] = make_zip({"big.csv": "x" * 5000})
-    r = await post_import(async_client, "kaggle", "example-owner/example-rain", headers=KG_HDR)
+    monkeypatch.setattr(importers, "MAX_BYTES", 400)
+    fake_kaggle["files"]["z.csv"] = b"x" * 5000
+    r = await post_import(async_client, "kaggle", "example-owner/example-rain")
     assert r.status_code == 413 and no_temp_left(tmp_path)
 
 
-def test_the_kaggle_command_hides_the_key_and_translates_failures(monkeypatch, tmp_path):
-    class P:
-        returncode, stdout, stderr = 1, "", f"401 Unauthorized for key {KG_KEY}"
-    monkeypatch.setattr(importers.subprocess, "run", lambda *a, **k: P())
-    with pytest.raises(importers.ImportRefused) as e:
-        importers.run_command(["datasets", "download", "a/b"], kaggle_trigger.Credentials(KG_USER, KG_KEY), str(tmp_path))
-    assert e.value.status == 403 and KG_KEY not in str(e.value)
+def test_clean_kaggle_token_accepts_a_token_and_refuses_junk_without_echo():
+    assert importers.clean_kaggle_token(None) is None and importers.clean_kaggle_token("  ") is None
+    assert importers.clean_kaggle_token(f" {KG_TOKEN} ") == KG_TOKEN
+    for bad in ("short", "has space in it 12345", "semi;colon;12345", "x" * 300):
+        with pytest.raises(importers.ImportRefused) as e:
+            importers.clean_kaggle_token(bad)
+        assert bad not in str(e.value)
 
 
 # ---------------------------------------------------------------------------------------------- the ISD adapter

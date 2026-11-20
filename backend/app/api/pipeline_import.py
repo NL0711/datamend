@@ -4,7 +4,9 @@ GET  /api/pipeline/import/sources   the providers, link forms, formats and limit
 POST /api/pipeline/import           fetch the link (admin session), start one ingest job per file; progress is read from /api/pipeline/jobs
 
 The fetch happens before the 202 (so a bad link, a refusal or an unknown format is answered at once); reading the rows into the raw store runs
-in the background. Credentials come in per-request headers only and are never stored, logged or echoed. UNTESTED against live S3 and Kaggle.
+in the background. Credentials come in per-request headers only and are never stored, logged or echoed. Public Kaggle datasets need no token;
+a private one answers 428 and the page asks for a token (header X-Kaggle-Token, this request only). UNTESTED against live S3; the public Kaggle
+path was run once against a real public dataset (2026-11-20).
 """
 from __future__ import annotations
 
@@ -22,7 +24,6 @@ from backend.app.db.database import get_db
 from backend.app.pipeline import aws_trigger as aws_svc
 from backend.app.pipeline import importers
 from backend.app.pipeline import jobs as jobs_svc
-from backend.app.pipeline import kaggle_trigger as kaggle_svc
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline-import"])
@@ -38,8 +39,8 @@ async def import_sources() -> Dict[str, Any]:
              "credentials": "optional: only for private buckets",
              "examples": ["s3://example-bucket/rain/421820-99999-2025.gz", "https://example-bucket.s3.eu-west-1.amazonaws.com/rain/tripura.csv"]},
             {"id": "kaggle", "label": "Kaggle",
-             "accepts": ["owner/dataset-slug", "owner/notebook-slug (output)"],
-             "credentials": "your Kaggle username and API key",
+             "accepts": ["owner/dataset-slug", "a kaggle.com dataset link", "kernel:owner/notebook-slug (output)"],
+             "credentials": "none for public datasets; an API token only for private ones",
              "examples": ["example-owner/example-rainfall-dataset", "kernel:example-owner/example-notebook"]},
         ],
         "formats": [{"id": "auto", "label": "Detect from the file"}, {"id": "cwc", "label": "CWC hourly CSV"}, {"id": "isd", "label": "NOAA ISD (gz)"}],
@@ -62,10 +63,18 @@ def aws_import_request(x_aws_access_key_id: Optional[str] = Header(None), x_aws_
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
 
 
+def kaggle_token(x_kaggle_token: Optional[str] = Header(None)) -> Optional[str]:
+    """The caller's Kaggle API token for this request only (never stored, logged or echoed); None for a public dataset."""
+    try:
+        return importers.clean_kaggle_token(x_kaggle_token)
+    except importers.ImportRefused as e:
+        raise HTTPException(e.status, str(e))
+
+
 @router.post("/import", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(require_admin)])
 async def start_import(body: ImportBody, background: BackgroundTasks, session: AsyncSession = Depends(get_db),
                        aws_req: Optional[aws_svc.Request] = Depends(aws_import_request),
-                       kaggle_creds: Optional[kaggle_svc.Credentials] = Depends(pipeline_api.kaggle_creds)) -> Dict[str, Any]:
+                       kg_token: Optional[str] = Depends(kaggle_token)) -> Dict[str, Any]:
     try:
         if body.provider == "aws":
             link = importers.parse_aws_link(body.url)
@@ -74,7 +83,7 @@ async def start_import(body: ImportBody, background: BackgroundTasks, session: A
         else:
             ref = importers.parse_kaggle_ref(body.url)
             origin = ref.origin
-            fetched = await importers.fetch_kaggle(ref, kaggle_creds)
+            fetched = await importers.fetch_kaggle(ref, kg_token)
     except importers.ImportRefused as e:
         raise HTTPException(e.status, str(e))
 

@@ -88,6 +88,10 @@ class Settings(BaseSettings):
     # In .env only. A long random string, different from ADMIN_TOKEN.
     EVIDENCE_API_TOKEN: str = ""
 
+    # Kaggle API token (KGAT_...) for IMPORTING private datasets, used only when the caller sends none. Public datasets need no token at all.
+    # Environment only, never a tracked file; leave empty and the page asks the visitor for a token when a dataset turns out to be private.
+    KAGGLE_API_TOKEN: str = ""
+
     # Kaggle retraining (pipeline/kaggle_trigger.py): the owner's Kaggle account. Secrets: environment only, never a tracked file.
     KAGGLE_USERNAME: str = ""
     KAGGLE_KEY: str = ""
@@ -117,7 +121,8 @@ class Settings(BaseSettings):
         """Accept the string a host hands out (postgres://... ?sslmode=require) and make it work with the async driver."""
         return normalize_database_url(v) if isinstance(v, str) else v
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # DATAMEND_ENV_FILE points at another .env (for example the main checkout's) so a second checkout can run with the same secrets without a copy.
+    model_config = SettingsConfigDict(env_file=os.environ.get("DATAMEND_ENV_FILE") or ".env", extra="ignore")
 
 
 def normalize_database_url(url: str) -> str:

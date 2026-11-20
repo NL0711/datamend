@@ -44,13 +44,28 @@ describe('import', () => {
     api.rememberImportAws(null);
     expect(api.storedImportAws()).toBeNull();
   });
-  it('sends the Kaggle headers only for kaggle', async () => {
-    api.rememberKaggle({ username: 'someone', key: 'FAKE-KEY' });
+  it('sends no Kaggle credential on a first try (a public dataset needs none), not even a username', async () => {
+    api.rememberKaggle({ username: 'someone', key: 'FAKE-KEY' });                       // the training form's account must not leak into an import
+    api.rememberKaggleToken('KGAT_fakefakefake0001');                                    // a remembered token is not sent proactively either
     await api.startImport('kaggle', 'https://www.kaggle.com/datasets/o/d', 'auto');
-    expect(headers()).toMatchObject({ 'X-Kaggle-Username': 'someone', 'X-Kaggle-Key': 'FAKE-KEY' });
     expect(last()[0]).toBe('/api/pipeline/import');
-    await api.startImport('aws', 's3://b/k', 'auto');
-    expect(headers()['X-Kaggle-Key']).toBeUndefined();
+    expect(Object.keys(headers()).filter((k) => /kaggle/i.test(k))).toEqual([]);
+    api.rememberKaggleToken(null);
+  });
+  it('sends the Kaggle token, and only the token, when one is passed for kaggle', async () => {
+    await api.startImport('kaggle', 'owner/data', 'auto', 'KGAT_fakefakefake0001');
+    expect(headers()).toMatchObject({ 'X-Kaggle-Token': 'KGAT_fakefakefake0001' });
+    expect(headers()['X-Kaggle-Username']).toBeUndefined(); expect(headers()['X-Kaggle-Key']).toBeUndefined();
+    expect(last()[0]).not.toContain('KGAT'); expect(JSON.stringify(body())).not.toContain('KGAT');
+    await api.startImport('aws', 's3://b/k', 'auto', 'KGAT_fakefakefake0001');           // a token is never sent to the S3 provider
+    expect(headers()['X-Kaggle-Token']).toBeUndefined();
+  });
+  it('remembers a Kaggle token for this tab only and can forget it', () => {
+    expect(api.storedKaggleToken()).toBeNull();
+    api.rememberKaggleToken('KGAT_fakefakefake0001');
+    expect(api.storedKaggleToken()).toBe('KGAT_fakefakefake0001');
+    api.rememberKaggleToken(null);
+    expect(api.storedKaggleToken()).toBeNull();
   });
 });
 

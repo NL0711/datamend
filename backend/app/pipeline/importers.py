@@ -20,8 +20,8 @@ import ipaddress
 import logging
 import os
 import re
+import shutil
 import socket
-import subprocess
 import tempfile
 import zipfile
 from dataclasses import dataclass
@@ -187,16 +187,19 @@ def _public(addr: str) -> bool:
     return ip.is_global and not (ip.is_multicast or ip.is_loopback or ip.is_link_local or ip.is_private or ip.is_reserved or ip.is_unspecified)
 
 
-async def check_url(url: str) -> None:
-    """Refuse a URL that is not https on amazonaws.com, has user info or a port, or resolves to anything but public addresses."""
+async def check_url(url: str, allowed_hosts: Optional[Tuple[str, ...]] = None) -> None:
+    """Refuse a URL that is not https on amazonaws.com (or, with ``allowed_hosts``, on exactly those hosts), has user info or a port, or resolves
+    to anything but public addresses."""
     parts = urlsplit(url)
     try:
         port = parts.port
     except ValueError:
         raise ImportRefused(BAD_AWS_LINK) from None
     host = (parts.hostname or "").lower()
-    if parts.scheme != "https" or parts.username or parts.password or port not in (None, 443) or not host.endswith(ALLOWED_SUFFIX):
-        raise ImportRefused("the link, or a redirect it follows, leaves Amazon S3 (https on amazonaws.com): refused")
+    host_ok = host in allowed_hosts if allowed_hosts is not None else host.endswith(ALLOWED_SUFFIX)
+    if parts.scheme != "https" or parts.username or parts.password or port not in (None, 443) or not host_ok:
+        raise ImportRefused("the link, or a redirect it follows, leaves the allowed hosts (https only): refused" if allowed_hosts is not None
+                            else "the link, or a redirect it follows, leaves Amazon S3 (https on amazonaws.com): refused")
     try:
         addrs = await asyncio.to_thread(resolve_addresses, host)
     except OSError:
@@ -212,17 +215,18 @@ def _new_temp() -> Tuple[int, str]:
 
 
 class _Sink:
-    """Writes blocks to a new temp file, hashing and counting them; refuses more than MAX_BYTES."""
+    """Writes blocks to a new temp file, hashing and counting them; refuses more than MAX_BYTES (or ``limit``: a zip archive may hold several files)."""
 
-    def __init__(self) -> None:
+    def __init__(self, limit: Optional[int] = None) -> None:
         fd, self.path = _new_temp()
         self.f = os.fdopen(fd, "wb")
-        self.sha, self.size = hashlib.sha256(), 0
+        self.sha, self.size, self.limit = hashlib.sha256(), 0, limit
 
     def write(self, block: bytes) -> None:
         self.size += len(block)
-        if self.size > MAX_BYTES:
-            raise ImportRefused(f"the file is larger than {MAX_BYTES // (1024 * 1024)} MB", 413)
+        cap = self.limit if self.limit is not None else MAX_BYTES
+        if self.size > cap:
+            raise ImportRefused(f"the file is larger than {cap // (1024 * 1024)} MB", 413)
         self.sha.update(block)
         self.f.write(block)
 
@@ -347,23 +351,79 @@ async def fetch_aws(link: AwsLink, req: Optional[aws_svc.Request], transport: Op
 
 
 # ------------------------------------------------------------------------------------------------ Kaggle
-def run_command(args: List[str], creds: kaggle_svc.Credentials, cwd: str) -> str:
-    """Run the kaggle command line with the caller's credentials. Tests replace this function. Output has the key removed."""
+KAGGLE_API = "https://www.kaggle.com/api/v1"
+KAGGLE_FETCH_HOSTS = ("www.kaggle.com", "storage.googleapis.com")      # the API host, then the signed download link it redirects to
+TOKEN_REQUIRED_STATUS = 428                                           # Precondition Required: the page opens its token popup on this status
+TOKEN_REQUIRED = "This dataset is private or could not be found. Paste a Kaggle API token to try again."
+_TOKEN = re.compile(r"[A-Za-z0-9_\-]{8,200}")
+
+
+def clean_kaggle_token(token: Optional[str]) -> Optional[str]:
+    """A Kaggle API token (KGAT_...) from a header or the server's environment, or None when empty. A malformed one is refused without echo."""
+    t = (token or "").strip()
+    if not t:
+        return None
+    if not _TOKEN.fullmatch(t):
+        raise ImportRefused("that does not look like a Kaggle API token (letters, digits, underscore and hyphen only)", 400)
+    return t
+
+
+def server_kaggle_token() -> Optional[str]:
+    """The server's own token (KAGGLE_API_TOKEN in the environment), used only when the caller sent none. Never logged or returned."""
+    from backend.app.config import settings
     try:
-        p = subprocess.run(["kaggle", *args], capture_output=True, text=True, timeout=KAGGLE_TIMEOUT_S, env=kaggle_svc._env(creds), cwd=cwd)
-    except FileNotFoundError:
-        raise ImportRefused("the kaggle command line is not installed on the server (pip install kaggle)", 503) from None
-    except subprocess.TimeoutExpired:
-        raise ImportRefused("the kaggle download timed out", 504) from None
-    out = ((p.stdout or "") + (p.stderr or "")).replace(creds.key, "***")
-    if p.returncode != 0:
-        low = out.lower()
-        if "401" in low or "403" in low or "unauthorized" in low or "forbidden" in low:
-            raise ImportRefused("Kaggle refused the credentials or the dataset is private", 403)
-        if "404" in low or "not found" in low:
-            raise ImportRefused("Kaggle does not know that dataset or notebook", 404)
-        raise ImportRefused(f"the kaggle command failed (exit {p.returncode})", 502)
-    return out
+        return clean_kaggle_token(getattr(settings, "KAGGLE_API_TOKEN", ""))
+    except ImportRefused:
+        return None
+
+
+async def download_kaggle(ref: KaggleRef, token: Optional[str], transport: Optional[httpx.AsyncBaseTransport] = None) -> Fetched:
+    """Download a public Kaggle dataset (or notebook output) over HTTPS, with no account. A token, when given, goes as a Bearer header to the
+    Kaggle API host only (never to the redirected storage link). The answer to an anonymous request for a private dataset is 401, 403 or 404:
+    that becomes status 428 (``TOKEN_REQUIRED``) so the page can ask for a token. Hosts are allow-listed, every hop is address-checked, and the
+    file streams to disk with the usual size cap."""
+    path = f"/datasets/download/{ref.slug}" if ref.kind == "dataset" else f"/kernels/output/download/{ref.slug}"
+    sink: Optional[_Sink] = None
+    try:
+        async with httpx.AsyncClient(transport=transport or HTTP_TRANSPORT, follow_redirects=False, timeout=httpx.Timeout(30.0, read=120.0), trust_env=False) as client:
+            current, first = KAGGLE_API + path, True
+            for _hop in range(MAX_REDIRECTS + 1):
+                await check_url(current, KAGGLE_FETCH_HOSTS)
+                headers = {"Authorization": f"Bearer {token}"} if (token and first) else {}
+                async with client.stream("GET", current, headers=headers) as r:
+                    if r.is_redirect:
+                        loc = r.headers.get("location")
+                        if not loc:
+                            raise ImportRefused("Kaggle answered with a redirect that has no target", 502)
+                        current, first = urljoin(current, loc), False
+                        continue
+                    if r.status_code in (401, 403, 404):
+                        if token:
+                            raise ImportRefused("Kaggle refused the token, or your account has no access to that dataset", 403)
+                        raise ImportRefused(TOKEN_REQUIRED, TOKEN_REQUIRED_STATUS)
+                    if r.status_code != 200:
+                        raise ImportRefused(f"Kaggle did not return the file (HTTP {r.status_code})", 502)
+                    cl = r.headers.get("content-length")
+                    if cl and cl.isdigit() and int(cl) > MAX_TOTAL_BYTES:
+                        raise ImportRefused(f"the download is larger than {MAX_TOTAL_BYTES // (1024 * 1024)} MB", 413)
+                    sink = _Sink(MAX_TOTAL_BYTES)               # the archive may hold several files; each one inside is still capped at MAX_BYTES
+                    async for block in r.aiter_bytes(1024 * 1024):
+                        sink.write(block)
+                    sink.close()
+                    return Fetched(sink.path, sink.sha.hexdigest(), sink.size, _safe_name(ref.slug.replace("/", "_")))
+            raise ImportRefused("too many redirects", 502)
+    except ImportRefused:
+        if sink is not None:
+            sink.discard()
+        raise
+    except httpx.HTTPError as e:
+        if sink is not None:
+            sink.discard()
+        raise ImportRefused(f"the Kaggle download failed ({type(e).__name__})", 502) from None
+    except BaseException:
+        if sink is not None:
+            sink.discard()
+        raise
 
 
 def _extract_zip(zpath: Path, dest: Path, budget: List[int]) -> List[Path]:
@@ -409,14 +469,39 @@ def _collect(root: Path) -> List[Path]:
     return found
 
 
-def _fetch_kaggle_sync(ref: KaggleRef, creds: kaggle_svc.Credentials) -> List[Fetched]:
+def _nothing_to_import(root: Path) -> str:
+    """Why a download gave no importable file, naming what it did hold (file types only, never names or paths from the archive)."""
+    counts: Dict[str, int] = {}
+    for p in root.rglob("*"):
+        names = []
+        if p.is_file() and p.suffix.lower() == ".zip":
+            try:
+                with zipfile.ZipFile(p) as z:
+                    names = [i.filename for i in z.infolist() if not i.is_dir()]
+            except zipfile.BadZipFile:
+                continue
+        elif p.is_file():
+            names = [p.name]
+        for n in names:
+            ext = re.sub(r"[^a-z0-9]", "", os.path.splitext(n)[1].lower())[:8] or "no-extension"
+            counts[ext] = counts.get(ext, 0) + 1
+    held = ", ".join(f".{e} x{n}" if e != "no-extension" else f"{n} without an extension" for e, n in sorted(counts.items(), key=lambda kv: -kv[1])[:4])
+    hint = " Gridded NetCDF (.nc) data is for model training, not for this step." if "nc" in counts else ""
+    return (f"This dataset has no file the Import step can read (it holds {held}). Import reads station files: CWC hourly CSV, NOAA ISD (gz), or a CSV/txt "
+            f"in one of those layouts.{hint}") if held else "the Kaggle download holds no file at all"
+
+
+def _fetch_kaggle_sync(downloaded: Fetched) -> List[Fetched]:
+    """Unpack what download_kaggle fetched (a zip, or a single data file) into data files, each as its own capped, hashed temp file."""
     sinks: List[_Sink] = []
     with tempfile.TemporaryDirectory(prefix="datamend_import_") as d:
-        args = ["datasets", "download", ref.slug, "-p", d] if ref.kind == "dataset" else ["kernels", "output", ref.slug, "-p", d]
-        run_command(args, creds, d)
+        with open(downloaded.path, "rb") as probe:
+            is_zip = probe.read(4) == b"PK\x03\x04"
+        target = Path(d) / ("download.zip" if is_zip else _safe_name(downloaded.name if downloaded.name.lower().endswith(DATA_SUFFIXES) else downloaded.name + ".csv"))
+        shutil.move(downloaded.path, target)                 # the temp file moves into our own folder; nothing else keeps a reference to it
         files = _collect(Path(d))
         if not files:
-            raise ImportRefused("the Kaggle download holds no CSV, gz or txt file", 422)
+            raise ImportRefused(_nothing_to_import(Path(d)), 422)
         out: List[Fetched] = []
         try:
             for p in files[:MAX_FILES]:
@@ -439,11 +524,15 @@ def _fetch_kaggle_sync(ref: KaggleRef, creds: kaggle_svc.Credentials) -> List[Fe
             raise
 
 
-async def fetch_kaggle(ref: KaggleRef, creds: Optional[kaggle_svc.Credentials]) -> List[Fetched]:
-    creds = kaggle_svc.resolve(creds)
-    if creds is None:
-        raise ImportRefused(kaggle_svc.NO_CREDENTIALS, 409)
-    return await asyncio.to_thread(_fetch_kaggle_sync, ref, creds)
+async def fetch_kaggle(ref: KaggleRef, token: Optional[str] = None, transport: Optional[httpx.AsyncBaseTransport] = None) -> List[Fetched]:
+    """Public datasets need no token. ``token`` is the caller's (from the popup); the server's KAGGLE_API_TOKEN is the fallback. A private dataset
+    with no usable token answers status 428 so the page can ask for one."""
+    token = clean_kaggle_token(token) or server_kaggle_token()
+    downloaded = await download_kaggle(ref, token, transport)
+    try:
+        return await asyncio.to_thread(_fetch_kaggle_sync, downloaded)
+    finally:
+        Path(downloaded.path).unlink(missing_ok=True)       # normally already moved; a failure before the move must not leave it behind
 
 
 # ------------------------------------------------------------------------------------------------ format detection

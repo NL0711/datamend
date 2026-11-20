@@ -94,18 +94,25 @@ export const rememberImportAws = (a: ImportAwsAccount | null) => {
   if (typeof sessionStorage === 'undefined') return;
   if (a) sessionStorage.setItem(IMPORT_AWS_KEY, JSON.stringify(a)); else sessionStorage.removeItem(IMPORT_AWS_KEY);
 };
+/** A Kaggle API token for a PRIVATE dataset only. It is never sent on a first try: a public dataset needs none, and the server answers 428 when it
+ *  needs one. After it worked it is kept for this tab (sessionStorage) so the next private dataset does not ask again. */
+export const IMPORT_KAGGLE_TOKEN_KEY = 'datamend-import-kaggle-token';
+export const storedKaggleToken = (): string | null => (typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(IMPORT_KAGGLE_TOKEN_KEY));
+export const rememberKaggleToken = (t: string | null) => {
+  if (typeof sessionStorage === 'undefined') return;
+  if (t) sessionStorage.setItem(IMPORT_KAGGLE_TOKEN_KEY, t); else sessionStorage.removeItem(IMPORT_KAGGLE_TOKEN_KEY);
+};
+/** Headers of an import request. AWS credentials go only when the visitor saved them (a private bucket). Kaggle credentials never go here: pass the
+ *  token to startImport after the server asked for one. */
 export const importHeaders = (provider: ImportProvider): Record<string, string> => {
-  if (provider === 'kaggle') {
-    const k = storedKaggle();
-    return k ? { 'X-Kaggle-Username': k.username, 'X-Kaggle-Key': k.key } : {};
-  }
+  if (provider === 'kaggle') return {};
   const a = storedImportAws();
   if (!a) return {};
   return { 'X-Aws-Access-Key-Id': a.accessKeyId, 'X-Aws-Secret-Access-Key': a.secret, ...(a.sessionToken ? { 'X-Aws-Session-Token': a.sessionToken } : {}), 'X-Aws-Region': a.region };
 };
 export const getImportSources = () => get<ImportSources>(`${P}/import/sources`);
-export const startImport = (provider: ImportProvider, url: string, format: ImportFormat) =>
-  post<ImportedJob>(`${P}/import`, { provider, url, format }, importHeaders(provider));
+export const startImport = (provider: ImportProvider, url: string, format: ImportFormat, kaggleToken?: string) =>
+  post<ImportedJob>(`${P}/import`, { provider, url, format }, { ...importHeaders(provider), ...(provider === 'kaggle' && kaggleToken ? { 'X-Kaggle-Token': kaggleToken } : {}) });
 
 /** Step 2, Explore and clean. */
 export const getExploreTables = () => get<{ tables: ExploreTable[] }>(`${P}/explore/tables`);
