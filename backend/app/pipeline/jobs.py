@@ -21,13 +21,13 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.database import async_session_factory
-from backend.app.pipeline import cwc
+from backend.app.pipeline import cwc, isd
 from backend.app.pipeline.models import IngestJob, Observation
 from backend.app.pipeline.store import insert_observations, upsert_stations
 
 logger = logging.getLogger(__name__)
 
-SOURCES = {"cwc": cwc}
+SOURCES = {"cwc": cwc, "isd": isd}          # every adapter exposes ASSUMPTIONS, omits_zero_values, FormatError, read_rows, station_record
 MAX_BYTES = 300 * 1024 * 1024
 CHUNK_ROWS = 2000
 MAX_BAD_SAMPLES = 50
@@ -62,9 +62,10 @@ async def save_upload(upload: UploadFile) -> Dict[str, Any]:
     return {"path": tmp, "sha256": sha.hexdigest(), "size": size}
 
 
-async def create_job(session: AsyncSession, source: str, filename: str, sha: str, size: int) -> IngestJob:
+async def create_job(session: AsyncSession, source: str, filename: str, sha: str, size: int, extra: Optional[Dict[str, Any]] = None) -> IngestJob:
     mod = SOURCES[source]
-    job = IngestJob(source=source, filename=(filename or "upload")[:255], sha256=sha, size_bytes=size, status="queued", assumptions=dict(mod.ASSUMPTIONS))
+    assumptions = {**mod.ASSUMPTIONS, "format": source, "omits_zero_values": bool(getattr(mod, "omits_zero_values", False)), **(extra or {})}
+    job = IngestJob(source=source, filename=(filename or "upload")[:255], sha256=sha, size_bytes=size, status="queued", assumptions=assumptions)
     session.add(job)
     await session.commit()
     return job
