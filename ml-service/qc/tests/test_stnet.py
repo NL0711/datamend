@@ -214,6 +214,11 @@ def test_stage_two_trains_on_years_the_encoder_never_saw_and_the_probe_reports_p
     y1 = {r["year"] for r in rows if r["phase"] == 1}
     y2 = {r["year"] for r in rows if r["phase"] == 2}
     assert y1 and y2 and not (y1 & y2)                                           # disjoint: stage 2 never sees features the encoder was fitted on
+    last2 = [r for r in rows if r["phase"] == 2][-1]                              # the end of a long-memory epoch carries the held-out check
+    assert last2["val_loss"] is not None and np.isfinite(last2["val_loss"]) and last2["val_year"] in set(p.split.years["val"])
+    assert all("val_loss" not in r for r in rows if r["phase"] == 1)
+    best = torch.load(log_file.parent / "checkpoints" / "stt_s0_best.pt", weights_only=False)      # the best epoch by validation loss is kept
+    assert best["val_loss"] == last2["val_loss"] and all(torch.isfinite(v).all() for v in best["long"].values() if v.dtype.is_floating_point)
     probe = json.loads((log_file.parent / "probe_stt_s0.json").read_text(encoding="utf-8"))
     assert set(probe) == set(S.KINDS)
     assert all(v["auc"] is None or 0.0 <= v["auc"] <= 1.0 for v in probe.values())

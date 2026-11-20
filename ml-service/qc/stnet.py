@@ -60,6 +60,7 @@ DISC_R_TRAIN = (4.5, 6.5)
 DISC_R_SCORE, DISC_SPACING = 5.0, 12     # 4 phases of this lattice hide every cell once
 PHASES = ((0, 0), (6, 0), (0, 6), (6, 6))
 RESID_SCALE = 10.0
+LONG_VAL_STEPS = 10                      # stage 2: validation-loss samples (of long_cells cells each) at the end of every long-memory epoch
 
 
 @dataclass
@@ -510,33 +511,52 @@ def train_long(model: STNet, long: LongMemory, opt, d: YearData, stat: Static, c
                rng: np.random.Generator, device, steps: int) -> List[float]:
     """Stage 2 on one year: frozen encoder, per-cell LSTM over the whole year (with its pre-history), weighted BCE like stage 1."""
     enc = run_sequence(model, d.seen, d.doy, stat, cfg)
-    rows, cols = targets
-    n = rows.numel()
-    day_ok = torch.from_numpy(np.arange(d.rows) >= d.pad).to(device)
     losses: List[float] = []
     long.train()
     for _ in range(steps):
-        pick = torch.from_numpy(rng.choice(n, min(cfg.long_cells, n), replace=False)).to(device)
-        r, c = rows[pick], cols[pick]
-        f = enc["feat"][:, :, r, c].permute(2, 0, 1)
-        fl = enc["fault"][:, :, r, c].permute(2, 0, 1)
-        rs = enc["resid"][:, :, r, c].permute(2, 0, 1) if cfg.long_skip else None
-        logit = fl.float() + long(long_input(f, fl, rs))                    # (cells, R, N_OUT)
-        lab = d.labels[:, :, r, c].permute(2, 0, 1).float()
-        pos, wpos, w = d.pos[:, r, c].T, d.wpos[:, r, c].T, d.weight[:, r, c].T
-        ok = torch.isfinite(d.seen[:, r, c]).T & day_ok[None, :]
-        wt = torch.where(pos > 0.5, cfg.pos_weight * wpos, w)
-        bce = F.binary_cross_entropy_with_logits(logit, lab, reduction="none").mean(dim=2)
-        loss = (bce * wt * ok.float()).sum() / ok.float().sum().clamp(min=1.0)
-        if not torch.isfinite(loss):
-            raise RuntimeError("STNet stage-2 loss is not finite (encoder features finite: %s, stage-1 logits finite: %s)"
-                               % (bool(torch.isfinite(enc["feat"].float()).all()), bool(torch.isfinite(enc["fault"].float()).all())))
+        loss = _long_loss(long, enc, d, cfg, targets, rng, device)
         opt.zero_grad(set_to_none=True)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(long.parameters(), 1.0)
         opt.step()
         losses.append(float(loss.detach()))
     return losses
+
+
+def _long_loss(long: LongMemory, enc: Dict[str, torch.Tensor], d: YearData, cfg: STConfig, targets: Tuple[torch.Tensor, torch.Tensor],
+               rng: np.random.Generator, device) -> torch.Tensor:
+    """The stage-2 loss on one random sample of ``cfg.long_cells`` cells of a year (the same loss for training and for the validation check)."""
+    rows, cols = targets
+    n = rows.numel()
+    day_ok = torch.from_numpy(np.arange(d.rows) >= d.pad).to(device)
+    pick = torch.from_numpy(rng.choice(n, min(cfg.long_cells, n), replace=False)).to(device)
+    r, c = rows[pick], cols[pick]
+    f = enc["feat"][:, :, r, c].permute(2, 0, 1)
+    fl = enc["fault"][:, :, r, c].permute(2, 0, 1)
+    rs = enc["resid"][:, :, r, c].permute(2, 0, 1) if cfg.long_skip else None
+    logit = fl.float() + long(long_input(f, fl, rs))                    # (cells, R, N_OUT)
+    lab = d.labels[:, :, r, c].permute(2, 0, 1).float()
+    pos, wpos, w = d.pos[:, r, c].T, d.wpos[:, r, c].T, d.weight[:, r, c].T
+    ok = torch.isfinite(d.seen[:, r, c]).T & day_ok[None, :]
+    wt = torch.where(pos > 0.5, cfg.pos_weight * wpos, w)
+    bce = F.binary_cross_entropy_with_logits(logit, lab, reduction="none").mean(dim=2)
+    loss = (bce * wt * ok.float()).sum() / ok.float().sum().clamp(min=1.0)
+    if not torch.isfinite(loss):
+        raise RuntimeError("STNet stage-2 loss is not finite (encoder features finite: %s, stage-1 logits finite: %s)"
+                           % (bool(torch.isfinite(enc["feat"].float()).all()), bool(torch.isfinite(enc["fault"].float()).all())))
+    return loss
+
+
+@torch.no_grad()
+def val_long_loss(model: STNet, long: LongMemory, d: YearData, stat: Static, cfg: STConfig, targets: Tuple[torch.Tensor, torch.Tensor],
+                  rng: np.random.Generator, device, steps: int = LONG_VAL_STEPS) -> float:
+    """Stage-2 loss on a VALIDATION year, no gradient: the held-out signal that tells over-fitting to the few long years from learning.
+    The caller passes a freshly seeded ``rng`` so every epoch sees the same faults and the same cells and the numbers are comparable."""
+    enc = run_sequence(model, d.seen, d.doy, stat, cfg)
+    long.eval()
+    out = [float(_long_loss(long, enc, d, cfg, targets, rng, device)) for _ in range(steps)]
+    long.train()
+    return float(np.mean(out))
 
 
 # ---------------------------------------------------------------------------------------------- scoring
@@ -808,6 +828,19 @@ def run_stnet(p: Prepared, seed: int, cfg: STConfig, splits: Sequence[str] = ("v
         log_rows.append({"phase": phase, "epoch": epoch, "year": year, "loss": float(np.mean(losses)) if losses else None})
         log.info("%s: stage %d epoch %d year %d loss %.4f (%d/%d)", name, phase, epoch, year, log_rows[-1]["loss"] or float("nan"),
                  done, total1 + total2)
+        if phase == 2 and i == len(ys) - 1 and p.split.years["val"]:                       # end of a long-memory epoch: the held-out check
+            vy = int(p.split.years["val"][0])
+            with telemetry.span("stnet.train.stage2_val_loss", sync=False):
+                vd = year_data(p, vy, gen, np.random.default_rng([seed, 7, vy]), cfg, readable, device)
+                vl = val_long_loss(model, long, vd, stat, cfg, targets, np.random.default_rng([seed, 8, vy]), device)
+            del vd
+            log_rows[-1]["val_loss"], log_rows[-1]["val_year"] = vl, vy
+            best = min([r["val_loss"] for r in log_rows[:-1] if r.get("val_loss") is not None], default=float("inf"))
+            log.info("%s: long-memory epoch %d: train loss (mean of its visits) vs validation-year loss %.4f (best before: %s)", name, epoch, vl,
+                     "none" if best == float("inf") else f"{best:.4f}")
+            if vl < best:                                                                  # the best epoch by validation loss is kept next to the final one
+                torch.save({"model": model.state_dict(), "long": long.state_dict(), "sig": sig, "seed": seed, "epoch": epoch, "val_loss": vl,
+                            "config_digest": p.cfg.digest()}, ck_last.with_name(f"{name}_best.pt"))
         torch.save({"model": model.state_dict(), "long": long.state_dict() if long is not None else None, "opt": opt.state_dict(),
                     "opt_long": opt_long.state_dict() if opt_long is not None else None, "done": done, "total": (total1, total2),
                     "log": log_rows, "seed": seed, "sig": sig, "config_digest": p.cfg.digest()}, ck_last.with_suffix(".tmp"))
