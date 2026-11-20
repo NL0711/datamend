@@ -1,5 +1,5 @@
 // Pure helpers of the validation dashboard (unit-tested in lib.test.ts). No React, no network.
-import type { Completeness, Headline, SeriesPoint, SettingsState, SettingsUpdate, Verdict } from './types';
+import type { Completeness, Headline, SeriesPoint, Verdict } from './types';
 
 export const PAGE_SIZE = 50;
 
@@ -23,17 +23,6 @@ export function rowsQuery(opts: { page: number; verdict?: Verdict | 'ALL'; check
   if (opts.verdict && opts.verdict !== 'ALL') q.set('verdict', opts.verdict);
   if (opts.check) q.set('check', opts.check);
   if (opts.station) q.set('station', opts.station);
-  return q.toString();
-}
-
-/** Data Explorer query: every row (not only flagged), in time order, server-side pages of 50, with optional filters. */
-export function explorerQuery(o: { page: number; station?: string; verdict?: Verdict | 'ALL'; check?: string; from?: string; to?: string }): string {
-  const q = new URLSearchParams({ scope: 'all', sort: 'time', page: String(Math.max(1, Math.floor(o.page))), page_size: String(PAGE_SIZE) });
-  if (o.station) q.set('station', o.station);
-  if (o.verdict && o.verdict !== 'ALL') q.set('verdict', o.verdict);
-  if (o.check) q.set('check', o.check);
-  if (o.from) q.set('time_from', o.from);
-  if (o.to) q.set('time_to', o.to);
   return q.toString();
 }
 
@@ -92,28 +81,6 @@ export function chartData(points: SeriesPoint[]): { t: number; intensity: number
 
 export function markerY(p: SeriesPoint): number {
   return p.intensity ?? p.mm ?? 0;
-}
-
-export interface SettingsForm {
-  apiKey: string; city: string; intervalMinutes: string; mode: string; narratorUrl: string; narratorToken: string;
-}
-
-/** The settings request: only what the user changed. Secrets are sent only when typed (an empty box means "keep"); the interval is
- *  entered in minutes and sent in seconds. Returns null when nothing changed. */
-export function buildSettingsUpdate(form: SettingsForm, current: SettingsState, clear: string[] = []): SettingsUpdate | null {
-  const u: SettingsUpdate = {};
-  if (form.apiKey.trim()) u.weather_union_api_key = form.apiKey.trim();
-  if (form.narratorToken.trim()) u.narrator_token = form.narratorToken.trim();
-  if (form.city && form.city !== current.weather_union.city) u.weather_union_city = form.city;
-  if (form.mode && form.mode !== current.weather_union.accumulation_mode) u.weather_union_accumulation_mode = form.mode;
-  const minutes = Number(form.intervalMinutes);
-  if (form.intervalMinutes.trim() !== '' && Number.isFinite(minutes) && minutes * 60 !== current.weather_union.poll_interval_seconds) {
-    u.weather_union_poll_interval_seconds = minutes * 60;
-  }
-  const url = form.narratorUrl.trim();
-  if (url && url !== current.narrator.url) u.narrator_url = url;
-  if (clear.length) u.clear = clear;
-  return Object.keys(u).length ? u : null;
 }
 
 export function headlineLine(h: Headline | null | undefined): string {

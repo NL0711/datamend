@@ -1,5 +1,5 @@
 // Admin sign-in. One small store (the session token and email live in sessionStorage, so a closed tab signs out) and one form used
-// wherever a write needs it (Settings, the review box, the replay button). Reading the dashboard never needs a sign-in.
+// wherever a write needs it (imports, cleaning, the review box, training). Reading the dashboard never needs a sign-in.
 import { useEffect, useSyncExternalStore, useState } from 'react';
 import { LogIn, LogOut } from 'lucide-react';
 import { getMe, login, logout, rememberToken, storedToken } from './api';

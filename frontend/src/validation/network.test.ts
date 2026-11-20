@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getAllGauges, getImdStations, getMapLayers, getQueue, getStationCycle } from './api';
+import { getImdStations, getMapLayers, getQueue } from './api';
 import {
   CYCLE_COLOR, INDIA_BOUNDS, MAX_SCALE, MIN_SCALE, cycleState, distanceKm, fitView, nearestPoint, networkTotals, panBy, project, queueQuery, regionColor,
   unproject, zoomAt,
@@ -94,13 +94,13 @@ describe('small helpers', () => {
 
 describe('network API calls', () => {
   afterEach(() => vi.unstubAllGlobals());
-  it('asks for the whole gauge catalogue, the IMD list, the map layers and the station cycle', async () => {
+  it('asks for the optional IMD list and the map layers, and the queue of one station', async () => {
     const f = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ stations: [], rows: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
     vi.stubGlobal('fetch', f);
-    await getAllGauges(); await getImdStations(); await getMapLayers(); await getStationCycle();
+    await getImdStations(); await getMapLayers();
     await getQueue(queueQuery({ page: 1, status: 'unreviewed', station: 'S 1' }));
     expect(f.mock.calls.map((c) => c[0])).toEqual([
-      '/api/places/stations?limit=600', '/api/places/imd-stations', '/api/places/map', '/api/validation/stations',
+      '/api/places/imd-stations', '/api/places/map',
       '/api/validation/review/queue?status=unreviewed&page=1&page_size=50&station=S+1',
     ]);
   });

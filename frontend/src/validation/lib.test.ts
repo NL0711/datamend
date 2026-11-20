@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ADMIN_TOKEN_KEY, ApiError, generateLab, getExplorer, getFeed, getQueue, getRows, postReview, rememberToken, saveSettings, sendChat, storedToken, uploadRun } from './api';
-import { ALL_CHECKS, DECISION_LABEL, PAGE_SIZE, asPlainText, buildLanes, buildSettingsUpdate, chartData, completenessText, explorerQuery, lanePosition, markerY, pct, queueQuery, rowsQuery } from './lib';
-import type { SeriesPoint, SettingsState } from './types';
+import { ADMIN_TOKEN_KEY, ApiError, generateLab, getQueue, getRows, postReview, rememberToken, sendChat, storedToken } from './api';
+import { ALL_CHECKS, DECISION_LABEL, PAGE_SIZE, asPlainText, buildLanes, chartData, completenessText, lanePosition, markerY, pct, queueQuery, rowsQuery } from './lib';
+import type { SeriesPoint } from './types';
 
 const pt = (id: number, time: string, over: Partial<SeriesPoint> = {}): SeriesPoint => ({
   id, time, intensity: 0, accumulation: 0, mm: null, verdict: 'SUSPECT', rule_score: 0.7, ...over,
@@ -59,13 +59,7 @@ describe('timeline helpers', () => {
   });
 });
 
-describe('explorer and review queries', () => {
-  it('asks for every row in time order, 50 per page, with only the filters that are set', () => {
-    expect(explorerQuery({ page: 1 })).toBe('scope=all&sort=time&page=1&page_size=50');
-    expect(explorerQuery({ page: 2, station: 'A', verdict: 'OK', check: 'counter_jump', from: '2026-07-01', to: '2026-07-31' }))
-      .toBe('scope=all&sort=time&page=2&page_size=50&station=A&verdict=OK&check=counter_jump&time_from=2026-07-01&time_to=2026-07-31');
-    expect(explorerQuery({ page: 0, verdict: 'ALL', station: '' })).toBe('scope=all&sort=time&page=1&page_size=50');
-  });
+describe('review queries', () => {
   it('builds the review queue query: unreviewed by default, data filter mapped to the synthetic flag', () => {
     expect(queueQuery({ page: 1, status: 'unreviewed' })).toBe('status=unreviewed&page=1&page_size=50');
     expect(queueQuery({ page: 3, status: 'all', verdict: 'SUSPECT', check: 'frozen_intensity', runId: 7, synthetic: 'synthetic' }))
@@ -80,51 +74,13 @@ describe('explorer and review queries', () => {
   });
 });
 
-describe('settings update', () => {
-  const current = {
-    editing_enabled: true, cities: ['Mumbai', 'Pune'], accumulation_modes: ['cumulative', 'per_reading'], interval_limits_seconds: [60, 86400],
-    weather_union: { api_key_set: true, api_key_source: 'runtime', city: 'Mumbai', city_source: 'runtime', poll_interval_seconds: 900,
-      poll_interval_source: 'environment', accumulation_mode: 'cumulative', accumulation_mode_source: 'environment', enabled: true },
-    narrator: { url: '', url_source: 'unset', token_set: false, token_source: 'unset', connected: false }, feed_running: true,
-  } as const as unknown as SettingsState;
-  const unchanged = { apiKey: '', city: 'Mumbai', intervalMinutes: '15', mode: 'cumulative', narratorUrl: '', narratorToken: '' };
-
-  it('sends nothing when nothing changed, so an empty secret box never overwrites a saved key', () => {
-    expect(buildSettingsUpdate(unchanged, current)).toBeNull();
-  });
-  it('sends only what changed and converts minutes to seconds', () => {
-    expect(buildSettingsUpdate({ ...unchanged, city: 'Pune', intervalMinutes: '30' }, current)).toEqual({ weather_union_city: 'Pune', weather_union_poll_interval_seconds: 1800 });
-  });
-  it('sends a secret only when one was typed, trimmed', () => {
-    expect(buildSettingsUpdate({ ...unchanged, apiKey: '  new-key-12345  ', narratorToken: ' tok-1234567 ' }, current))
-      .toEqual({ weather_union_api_key: 'new-key-12345', narrator_token: 'tok-1234567' });
-  });
-  it('sends the narrator URL only when it differs, and passes clear requests through', () => {
-    expect(buildSettingsUpdate({ ...unchanged, narratorUrl: 'https://n.example/x' }, current)).toEqual({ narrator_url: 'https://n.example/x' });
-    expect(buildSettingsUpdate(unchanged, current, ['narrator_url'])).toEqual({ clear: ['narrator_url'] });
-  });
-  it('ignores a blank or non-numeric interval instead of sending garbage', () => {
-    expect(buildSettingsUpdate({ ...unchanged, intervalMinutes: '' }, current)).toBeNull();
-    expect(buildSettingsUpdate({ ...unchanged, intervalMinutes: 'abc' }, current)).toBeNull();
-  });
-});
-
 describe('api client', () => {
   afterEach(() => { vi.unstubAllGlobals(); });
   const respond = (status: number, body: unknown) => vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }));
 
-  it('surfaces the server reason for a rejected upload', async () => {
-    vi.stubGlobal('fetch', respond(422, { detail: { rejected: true, reason: 'missing required column(s) for the reading profile: station_id', run_id: 4 } }));
-    const file = new File(['x'], 'a.csv');
-    await expect(uploadRun({ file, profile: 'reading', synthetic: false })).rejects.toMatchObject({ status: 422, message: expect.stringContaining('station_id') });
-  });
-  it('sends upload options as a form and only the ones that were set', async () => {
-    const f = respond(201, { id: 1 });
-    vi.stubGlobal('fetch', f);
-    await uploadRun({ file: new File(['x'], 'a.csv'), profile: 'reading', accumulationMode: 'cumulative', intervalMinutes: '15', synthetic: true });
-    const fd = (f.mock.calls[0][1] as RequestInit).body as FormData;
-    expect([...fd.keys()].sort()).toEqual(['accumulation_mode', 'file', 'interval_minutes', 'profile', 'synthetic']);
-    expect(fd.get('synthetic')).toBe('true');
+  it('surfaces the server reason of a rejected request', async () => {
+    vi.stubGlobal('fetch', respond(422, { detail: { rejected: true, reason: 'missing required column(s): station_id', run_id: 4 } }));
+    await expect(getRows(4, 'page=1')).rejects.toMatchObject({ status: 422, message: expect.stringContaining('station_id') });
   });
   it('requests a page with the server-side query', async () => {
     const f = respond(200, { page: 1, page_size: 50, total: 0, pages: 0, rows: [] });
@@ -142,17 +98,15 @@ describe('api client', () => {
     expect((init.headers as Record<string, string>)['X-Admin-Token']).toBe('');
     expect(JSON.parse(init.body as string)).toEqual({ decision: 'false_alarm', note: 'n' });
   });
-  it('requests the queue, the explorer page and the lab with the right URLs', async () => {
+  it('requests the queue and the lab with the right URLs', async () => {
     const f = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ rows: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
     vi.stubGlobal('fetch', f);
     await getQueue(queueQuery({ page: 1, status: 'unreviewed' }));
-    await getExplorer(4, explorerQuery({ page: 1, station: 'A' }));
     await generateLab({ profile: 'daily', n_stations: 6, length: 60, faults: ['repeated_value'], seed: 5 });
     expect(f.mock.calls.map((c) => c[0])).toEqual([
       '/api/validation/review/queue?status=unreviewed&page=1&page_size=50',
-      '/api/validation/runs/4/rows?scope=all&sort=time&page=1&page_size=50&station=A',
       '/api/validation/lab/generate']);
-    expect(JSON.parse((f.mock.calls[2][1] as RequestInit).body as string)).toEqual({ profile: 'daily', n_stations: 6, length: 60, faults: ['repeated_value'], seed: 5 });
+    expect(JSON.parse((f.mock.calls[1][1] as RequestInit).body as string)).toEqual({ profile: 'daily', n_stations: 6, length: 60, faults: ['repeated_value'], seed: 5 });
   });
   it('keeps the admin token for this tab only', () => {
     const store: Record<string, string> = {};
@@ -161,21 +115,6 @@ describe('api client', () => {
     rememberToken('abc');
     expect(storedToken()).toBe('abc');
     expect(store[ADMIN_TOKEN_KEY]).toBe('abc');
-  });
-  it('sends the admin token as a header and surfaces a refusal', async () => {
-    const f = respond(401, { detail: 'the admin token is missing or wrong' });
-    vi.stubGlobal('fetch', f);
-    await expect(saveSettings({ weather_union_city: 'Pune' }, 'tok')).rejects.toMatchObject({ status: 401, message: expect.stringContaining('admin token') });
-    const init = f.mock.calls[0][1] as RequestInit;
-    expect(init.method).toBe('PUT');
-    expect((init.headers as Record<string, string>)['X-Admin-Token']).toBe('tok');
-    expect(JSON.parse(init.body as string)).toEqual({ weather_union_city: 'Pune' });
-  });
-  it('treats a disabled live feed (503) as a state, not an error', async () => {
-    vi.stubGlobal('fetch', respond(503, { detail: 'Rainfall feed is not enabled: set WEATHER_UNION_API_KEY and WEATHER_UNION_CITY in the environment' }));
-    const feed = await getFeed();
-    expect(feed.enabled).toBe(false);
-    expect(feed.enabled === false && feed.reason).toContain('not enabled');
   });
   it('chat with no narrator comes back as an ApiError carrying the 503 message, never an invented reply', async () => {
     vi.stubGlobal('fetch', respond(503, { detail: 'AI narrator not connected' }));

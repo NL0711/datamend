@@ -4,10 +4,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { getNarrator, getQueue, getReviewSummary } from './api';
 import { ALL_CHECKS, DECISION_LABEL, PAGE_SIZE, queueQuery } from './lib';
 import { EvidencePane } from './EvidencePane';
+import { ProposalsPanel } from './ProposalsPanel';
 import type { NarratorStatus, QueuePage, ReviewSummary } from './types';
-import { Notice, Panel, SeverityPill, SyntheticBadge, VerdictBadge, formatError } from './ui';
+import { NextButton, Notice, Panel, SeverityPill, SyntheticBadge, VerdictBadge, formatError } from './ui';
 
-export function ReviewView({ station: initialStation = '', onClearStation }: { station?: string; onClearStation?: () => void }) {
+export function ReviewView({ station: initialStation = '', onClearStation, runId = null, onNext }: { station?: string; onClearStation?: () => void; runId?: number | null; onNext?: () => void }) {
   const [station, setStation] = useState(initialStation);
   const [status, setStatus] = useState<'unreviewed' | 'reviewed' | 'all'>('unreviewed');
   const [verdict, setVerdict] = useState<'' | 'SUSPECT' | 'UNCERTAIN'>('');
@@ -83,6 +84,11 @@ export function ReviewView({ station: initialStation = '', onClearStation }: { s
         {sel ? <EvidencePane runId={sel.run} rowId={sel.id} narrator={narrator} onSelectRow={(id) => setSel({ run: sel.run, id })} onReviewed={load} />
           : <Panel className="p-4"><p className="text-xs text-slate-500">Select a flagged row to read its evidence and record a review.</p></Panel>}
       </div>
+      <details className="rain-panel p-3">
+        <summary className="cursor-pointer text-sm font-bold text-slate-900">Proposals and audit sample{runId !== null ? ` for run ${runId}` : ''}</summary>
+        <div className="mt-3">{runId === null ? <p className="text-xs text-slate-500">Run the checks (step 4) to get a run to work on.</p> : <ProposalsPanel key={runId} runId={runId} />}</div>
+      </details>
+      {onNext && <NextButton label="Anomalies" onClick={onNext} />}
     </div>
   );
 }

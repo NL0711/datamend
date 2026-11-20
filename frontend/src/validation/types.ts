@@ -114,22 +114,11 @@ export interface ReviewSummary {
   by_check: Record<string, Record<Decision, number>>; truncated: boolean; caveat: string;
 }
 
-export interface ExplorerRow extends RowItem { intensity: number | null; accumulation: number | null; mm: number | null }
-export interface ExplorerPage extends Omit<RowsPage, 'rows'> { rows: ExplorerRow[] }
-
 export interface ContextRow {
   id: number; row_ref: string; time: string | null; intensity: number | null; accumulation: number | null; mm: number | null;
   verdict: Verdict; rule_score: number; checks: string[];
 }
 export interface RowContext { station_id: string; selected_id: number; rows: ContextRow[] }
-
-export interface Overview {
-  storage: string;
-  runs: { total: number; completed: number; open_live: number; rejected_uploads: number };
-  rows: { total: number; uploaded_or_live: number; synthetic: number };
-  verdicts: Record<Verdict, number>; checks_fired: Record<string, number>;
-  latest_run: RunSummary | null; live_run: RunSummary | null; note: string;
-}
 
 export interface LabOptions {
   label: string; faults: Record<Profile, string[]>; expected_check: Record<string, string>; stations: [number, number]; length: Record<Profile, [number, number]>;
@@ -139,19 +128,6 @@ export interface LabResult {
   run: RunFull; seed: number; note: string;
   injected: Array<{ fault: string; station_id: string; row_ref: string; time: string; expected_check: string; caught: boolean }>;
   summary: { injected: number; caught: number; other_flagged_rows: number; rows: number; label: string };
-}
-
-export interface PlaceInfo {
-  latitude: number; longitude: number; cell: { row: number; col: number; lat: number; lon: number; grid: string };
-  is_land: boolean | null; client_region: number | null; imd_subdivision: { status: string; reason: string };
-}
-
-export interface NearestImd { id: string; name: string; km: number }
-
-export interface GaugeStation {
-  station_id: string; city: string; place: string; latitude: number; longitude: number; device: string;
-  cell: { row: number; col: number; lat: number; lon: number; grid: string } | null; is_land: boolean | null;
-  nearest_imd?: NearestImd | null;
 }
 
 /** An Indian synoptic station from NOAA's station inventory (most are IMD's). NOT IMD's own list: that one is not public. */
@@ -167,21 +143,6 @@ export interface MapLayers {
   rows: string[]; regions: number[]; held_out_regions: number[]; note: string;
 }
 
-/** One station's check -> flag -> audit cycle, from the stored runs and reviews. */
-export interface StationCycle {
-  station_id: string; place: string | null; city: string | null; latitude: number | null; longitude: number | null;
-  position_source: 'catalogue' | 'upload' | 'imd' | null; nearest_imd: NearestImd | null;
-  checked: number; runs: number; synthetic_rows: number; replay_rows: number; last_run_at: string | null; latest_run_id: number | null;
-  flagged: number; suspect: number; uncertain: number; no_data: number;
-  audited: number; unaudited: number; decisions: Record<Decision, number>; top_checks: Record<string, number>;
-}
-/** The NOAA ISD India replay: real station rainfall to Aug 2025, shown as a REPLAY, never as live. */
-export interface ReplayStatus {
-  state: 'idle' | 'running' | 'done' | 'failed'; started_at: string | null; finished_at: string | null; run_id: number | null;
-  stations: { id: string; name: string | null; ok: boolean; totals: number; error: string | null }[]; stations_ok: number;
-  message: string | null; default_stations: number; year: number; note: string;
-  stored_run_id: number | null; stored_run_label: string | null; on_start: boolean;
-}
 
 /** The bulk-ingest and feedback loop (backend/app/api/pipeline.py). */
 export interface PipelineStatus {
@@ -194,6 +155,69 @@ export interface IngestJob {
   stations: number; bad_samples: { row: number; problem: string }[]; assumptions: Record<string, string>; error: string | null;
   started_at: string | null; finished_at: string | null; run_id: number | null;
 }
+/** The import step (a remote link, never a hand upload): what the server accepts, and the job it starts. */
+export type ImportProvider = 'aws' | 'kaggle';
+export type ImportFormat = 'auto' | 'cwc' | 'isd';
+export interface ImportSources {
+  providers: { id: ImportProvider; label: string; accepts: string[]; credentials: string; examples: string[] }[];
+  formats: { id: string; label?: string }[];
+  limits: { max_mb: number };
+}
+export type ImportedJob = IngestJob & { provider?: ImportProvider; origin?: string; job_ids?: number[] };
+
+/** The explore step: tables, a query spec, and its answer. */
+export interface ExploreColumn { name: string; type: string; description?: string }
+export interface ExploreTable { id: string; label: string; description: string; columns: ExploreColumn[] }
+export type FilterOp = '=' | '!=' | '>' | '>=' | '<' | '<=' | 'contains' | 'in' | 'is_null' | 'not_null';
+export interface QueryFilter { column: string; op: FilterOp | string; value?: unknown }
+export interface QueryAggregate { fn: string; column: string; as: string }
+export interface QueryOrder { column: string; dir: 'asc' | 'desc' }
+export interface QuerySpec {
+  table: string; columns?: string[]; filters?: QueryFilter[]; group_by?: string[]; aggregates?: QueryAggregate[];
+  order_by?: QueryOrder[]; limit?: number; run_id?: number | null;
+}
+export type Cell = string | number | boolean | null;
+export interface QueryResult { columns: { name: string; type: string }[]; rows: Cell[][]; total: number; truncated: boolean; spec: QuerySpec }
+export interface ExploreStation {
+  station_key: string; name: string | null; state: string | null; district: string | null; latitude: number | null; longitude: number | null; located: boolean;
+  rf25: { row: number; col: number; lat: number; lon: number; grid: string; is_land: boolean | null; client_region: number | null } | null;
+  nearest_imd: { id: string; name: string; km: number } | null; n_observations: number; first: string | null; last: string | null;
+}
+export interface ExploreStations { stations: ExploreStation[]; located: number; unlocated: number; note: string }
+
+/** The assistant (rule-based baseline now, the AI narrator when connected). Its text is always generated. */
+export interface AssistantReply {
+  reply: string; generator: 'baseline-rules' | 'mcp-narrator'; generated: true; label: string;
+  table_spec: QuerySpec | null; cleaning: { plan_hint: Record<string, unknown> | string | null } | null; why: string[];
+}
+export interface ChatTurn { role: 'user' | 'assistant'; text: string; reply?: AssistantReply }
+
+/** Cleaning: proposals are derived suggestions and change nothing until accepted and applied. */
+export interface CleanPlanResult { created: number; skipped: { station_key: string; reason: string; count: number }[]; proposals: CleanProposal[]; policy?: CleanPolicy }
+/** What the dataset is (detected by the server, never guessed silently) and the cleaning policy built from it. */
+export interface DatasetProfile {
+  parameter: string; kind: 'intermittent_accumulation' | 'continuous_state' | 'unknown'; reports_zero_values: boolean;
+  cadence: { median_minutes: number | null; regular: boolean }; units: string | null; valid_range: [number | null, number | null] | null;
+  missing_codes: (string | number)[]; evidence: string[]; notes?: string | null;
+}
+export interface PolicyStep { id: string; enabled: boolean; params: Record<string, unknown>; locked?: boolean; locked_reason?: string }
+export interface CleanPolicy { steps: PolicyStep[] }
+export interface CleanPlanBody { source: string; policy?: CleanPolicy; override_reason?: string; method?: string; max_gap_hours?: number }
+export interface CleanProposal {
+  id: number; station_key: string; at: string; kind: 'interpolate' | 'exclude'; original: number | null; proposed: number | null; method: string;
+  why: string; neighbours: { at: string; value: number | null }[]; basis: 'derived'; status: 'pending' | 'accepted' | 'rejected' | string;
+}
+export interface CleanApplyResult { accepted: number; excluded: number; interpolated: number }
+
+/** The model card: how a flag is made, as the server describes it. */
+export interface ModelCard {
+  method: string;
+  checks: { name: string; profile: string; layer: string; kind: string; weight: number | null; needs: string | string[] | null; threshold_note: string | null }[];
+  champion: { id: number; name: string; version: string; weights: Record<string, number> | null; metrics_basis: string; trained_from_snapshot: number | null } | null;
+  explanation: { generator: string; narrator_connected: boolean; note: string };
+  flags_how: string[]; not_implemented: string[];
+}
+
 export interface PipelineProposal {
   id: number; run_id: number; row_ref: string; station_id: string; kind: string; original_mm: number | null; proposed_mm: number | null;
   text: string; generator: string; generated: true; label: string; status: 'pending' | 'accepted' | 'rejected';
@@ -227,39 +251,3 @@ export interface LineageNode {
 }
 export interface Lineage { columns: string[]; nodes: LineageNode[]; edges: { from: string; to: string }[]; note: string }
 
-export interface StationCycleResponse {
-  storage: string; count: number; shown: number; truncated: boolean; positioned: number; positions_truncated: boolean;
-  truncated_reviews: boolean; stations: StationCycle[]; note: string;
-}
-
-export interface SettingsState {
-  editing_enabled: boolean; cities: string[]; accumulation_modes: string[]; interval_limits_seconds: [number, number];
-  weather_union: {
-    api_key_set: boolean; api_key_source: 'runtime' | 'environment' | 'unset'; city: string; city_source: string;
-    poll_interval_seconds: number; poll_interval_source: string; accumulation_mode: string; accumulation_mode_source: string; enabled: boolean;
-  };
-  narrator: { url: string; url_source: string; token_set: boolean; token_source: string; connected: boolean };
-  gemini?: { key_set: boolean; model: string; active: boolean };
-  feed_running: boolean;
-  feed?: { stations: number; poll_interval_seconds: number; calls_used_today: number; calls_remaining_today: number; last_poll_at: string | null; last_error: string | null };
-  saved?: string[]; feed_error?: string;
-}
-
-export interface SettingsUpdate {
-  weather_union_api_key?: string; weather_union_city?: string; weather_union_poll_interval_seconds?: number;
-  weather_union_accumulation_mode?: string; narrator_url?: string; narrator_token?: string; clear?: string[];
-}
-
-export interface FeedTestResult { ok: boolean; message: string; station_id: string; place?: string; status?: string }
-
-export interface FeedStatus {
-  source: string; stations: number; poll_interval_seconds: number; calls_used_today: number; calls_remaining_today: number;
-  last_poll_at: string | null; last_error: string | null; accumulation_mode: string; caveats: string[];
-}
-
-export interface FeedStation {
-  station_id: string; place: string; city: string; device: string; latitude: number; longitude: number;
-  last_reading: { received_at: string; status: string; rain_intensity: number | null; rain_accumulation: number | null } | null;
-  today: { rain_day: string; total_mm: number | null; n_readings: number; complete: boolean; units_confirmed: boolean; mode: string };
-  quality: { assessment: Verdict; score: number; severity: Severity; score_kind: string; reasons: Array<{ check: string; detail: string }>; neighbours_used: number } | null;
-}

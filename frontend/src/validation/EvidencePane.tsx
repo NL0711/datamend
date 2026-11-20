@@ -137,7 +137,7 @@ export function EvidencePane({ runId, rowId, narrator, onSelectRow, onReviewed }
                       className="px-2 py-1 rounded border border-dashed border-slate-400 text-slate-800 text-[11px] font-bold disabled:opacity-50">Explain (AI)</button>)}
           </div>
           {narrator?.connected && narrator.provider === 'gemini' && <p className="text-[11px] text-slate-500">AI explanations come from Gemini ({narrator.model}), an interim layer; they are generated text and never change a verdict.</p>}
-          {!narrator?.connected && <p className="text-[11px] text-slate-500">AI narrator not connected: set GEMINI_API_KEY in .env, or a narrator URL in Settings.</p>}
+          {!narrator?.connected && <p className="text-[11px] text-slate-500">AI not connected (the server has neither GEMINI_API_KEY nor a narrator URL); the rule-based explanation above is what is available.</p>}
         </>)}
     </Panel>
   );

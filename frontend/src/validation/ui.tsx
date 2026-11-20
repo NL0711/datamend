@@ -38,9 +38,37 @@ export const SyntheticBadge = () => (
   <span className={`px-1.5 py-0.5 rounded ${NOT_MEASURED} text-[10px] font-mono font-bold`}>SYNTHETIC</span>
 );
 
-export const ReplayBadge = () => (
-  <span className="px-1.5 py-0.5 rounded border border-sky-300 bg-sky-50 text-sky-800 text-[10px] font-mono font-bold" title="Real NOAA ISD observations replayed from the past, not live">REPLAY</span>
+/** Text written by the rule-based baseline or the AI narrator: dashed and always called GENERATED. */
+export const GeneratedBadge = ({ text = 'GENERATED' }: { text?: string }) => (
+  <span className={`px-1.5 py-0.5 rounded ${NOT_MEASURED} text-[10px] font-mono font-bold`}>{text}</span>
 );
+
+/** A value the cleaning proposed (interpolated): never a measurement. */
+export const ImputedBadge = () => (
+  <span className={`px-1.5 py-0.5 rounded ${NOT_MEASURED} text-[10px] font-mono font-bold`} title="Proposed by interpolation; not a measurement. basis: derived">IMPUTED</span>
+);
+
+export const btn = 'px-3 py-1.5 rounded bg-teal-700 text-white text-xs font-bold disabled:opacity-40';
+export const btnQuiet = 'px-3 py-1.5 rounded border border-[#D3DCE7] bg-white text-xs font-bold disabled:opacity-40';
+export const field = 'text-xs border border-[#D3DCE7] rounded px-2 py-1.5 bg-white';
+export const num = (n: number) => n.toLocaleString('en-IN');
+
+/** The end of every step: one clear button to the next. */
+export function NextButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <div className="flex justify-end pt-2">
+      <button onClick={onClick} disabled={disabled} className="px-5 py-2.5 rounded bg-teal-700 text-white text-sm font-bold disabled:opacity-40 inline-flex items-center gap-2">
+        Next: {label}<span aria-hidden="true">→</span></button>
+    </div>);
+}
+
+export function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+  return (
+    <Panel className="p-4 space-y-3">
+      <div><h2 className="text-sm font-bold text-slate-900">{title}</h2>{hint && <p className="text-xs text-slate-600 mt-0.5">{hint}</p>}</div>
+      {children}
+    </Panel>);
+}
 
 export function formatError(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
