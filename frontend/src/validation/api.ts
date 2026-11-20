@@ -4,7 +4,7 @@ import type {
   MapLayers, NarratorStatus, ReplayStatus, StationCycleResponse,
   AuditEstimate, AuditItem, IngestJob, Lineage, PipelineModel, PipelineProposal, PipelineSnapshot, PipelineStatus, TrainingJob,
   Overview, PlaceInfo, GaugeStation, Profile, QueuePage, ReviewItem, ReviewSummary, RowContext, RowDetail, RowsPage, RunFull, RunSummary,
-  Series, SettingsState, SettingsUpdate,
+  Series, SettingsState, SettingsUpdate, ScoreSummary, ShadowRun,
 } from './types';
 
 const V = '/api/validation';
@@ -167,7 +167,10 @@ export const refreshTrainingJob = (id: number, target: 'kaggle' | 'aws' = 'kaggl
 export const getLineage = () => get<Lineage>(`${P}/lineage`);
 export const listModels = () => get<{ models: PipelineModel[]; not_implemented: string[] }>(`${P}/models`);
 export const registerModel = (body: { name: string; version: string; metrics: Record<string, unknown>; snapshot_id?: number }) => post<PipelineModel>(`${P}/models`, body);
-export const promoteModel = (id: number) => post<PipelineModel>(`${P}/models/${id}/promote`, {});
+export const promoteModel = (id: number, requireShadow = false) => post<PipelineModel>(`${P}/models/${id}/promote${requireShadow ? '?require_shadow=true' : ''}`, {});
+export const scoreRun = (runId: number, modelId: number) => post<ScoreSummary>(`${P}/runs/${runId}/score`, { model_id: modelId });
+export const shadowRun = (runId: number, challengerId: number) => post<ShadowRun>(`${P}/runs/${runId}/shadow`, { model_id: challengerId });
+export const getModelShadow = (id: number) => get<{ shadow: ShadowRun | null }>(`${P}/models/${id}/shadow`);
 export const rollbackModel = (name: string) => post<PipelineModel>(`${P}/models/${encodeURIComponent(name)}/rollback`, {});
 
 /** The admin token is kept for this browser tab only (sessionStorage). Reviews and Settings need it; reading never does. */

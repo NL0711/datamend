@@ -5,12 +5,13 @@ import { ClipboardCheck, Download, FileUp, Loader2, ShieldCheck } from 'lucide-r
 import {
   checkJob, decideAudit, decideProposal, downloadSnapshot, drawAudit, getLineage, getNarrator, getPipelineStatus, ingestFile, listAudit, listJobs, listModels, listProposals,
   listSnapshots, listTrainingJobs, makeProposals, makeSnapshot, promoteModel, refreshTrainingJob, registerModel, rememberAws, rememberKaggle, rollbackModel,
-  startAwsTraining, startTraining, storedAws, storedKaggle, AWS_INSTANCE_TYPES,
+  startAwsTraining, startTraining, storedAws, storedKaggle, AWS_INSTANCE_TYPES, scoreRun, shadowRun, getModelShadow,
 } from './api';
 import type { AwsAccount, KaggleAccount } from './api';
 import { LineageGraph } from './LineageGraph';
+import { ShadowReport } from './ShadowReport';
 import { useAdmin } from './Login';
-import type { AuditEstimate, AuditItem, IngestJob, Lineage, NarratorStatus, PipelineModel, PipelineProposal, PipelineSnapshot, PipelineStatus, TrainingJob } from './types';
+import type { AuditEstimate, AuditItem, IngestJob, Lineage, NarratorStatus, ShadowRun, PipelineModel, PipelineProposal, PipelineSnapshot, PipelineStatus, TrainingJob } from './types';
 import { NOT_MEASURED, Notice, Panel, formatError } from './ui';
 
 const btn = 'px-3 py-1.5 rounded bg-teal-700 text-white text-xs font-bold disabled:opacity-40';
@@ -31,6 +32,7 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
   const [status, setStatus] = useState<PipelineStatus | null>(null);
   const [ai, setAi] = useState<NarratorStatus | null>(null);
   useEffect(() => { getNarrator().then(setAi).catch(() => setAi(null)); }, []);
+  const [shadows, setShadows] = useState<Record<number, ShadowRun | null>>({});
   const [jobs, setJobs] = useState<IngestJob[]>([]);
   const [runId, setRunId] = useState<number | null>(null);
   const [proposals, setProposals] = useState<PipelineProposal[]>([]);
@@ -61,7 +63,10 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
     getPipelineStatus().then(setStatus).catch(fail);
     listJobs().then((r) => setJobs(r.jobs)).catch(fail);
     listSnapshots().then((r) => setSnaps(r.snapshots)).catch(fail);
-    listModels().then((r) => setModels(r.models)).catch(fail);
+    listModels().then((r) => {
+      setModels(r.models);
+      r.models.filter((m) => m.alias === 'challenger').forEach((m) => getModelShadow(m.id).then((s) => setShadows((x) => ({ ...x, [m.id]: s.shadow }))).catch(() => undefined));
+    }).catch(fail);
     listTrainingJobs().then((r) => { setTjobs(r.jobs); setKaggleOn(r.kaggle_configured); setAwsOn(!!r.aws_configured); }).catch(fail);
     getLineage().then(setLineage).catch(fail);
   }, []);
@@ -321,8 +326,17 @@ export function PipelineView({ onOpenRun }: { onOpenRun: (id: number) => void })
               <div className="flex items-center gap-2 flex-wrap"><b>{m.name} {m.version}</b>
                 <span className={`px-1.5 py-0.5 rounded border text-[10px] font-mono font-bold ${m.alias === 'champion' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : m.alias === 'rejected' ? 'border-red-300 bg-red-50 text-red-700' : 'border-slate-300 bg-slate-50 text-slate-700'}`}>{m.alias}</span>
                 {m.alias === 'challenger' && <button className={btn} disabled={!signedIn || !!busy} onClick={() => void run('promote' + m.id, () => promoteModel(m.id), 'Gate run. See the result on the model.')}>Run the gate</button>}
+                {m.alias === 'challenger' && <button className={btnQuiet} disabled={!signedIn || !!busy} title="The gate plus the newest shadow run's rules; with no shadow run the model stays a challenger"
+                  onClick={() => void run('promoteS' + m.id, () => promoteModel(m.id, true), 'Gate with the shadow rules run. See the result on the model.')}>Run the gate with shadow</button>}
+                {m.metrics.kind === 'label_fusion' && runId !== null && (
+                  <button className={btnQuiet} disabled={!signedIn || !!busy} title="Score every row of the open run with this model; verdicts and rule scores stay as they are"
+                    onClick={() => void run('score' + m.id, async () => { const r = await scoreRun(runId, m.id); setMsg({ tone: 'info', text: `Scored run ${runId}: ${r.flagged} of ${r.rows} rows reach the model's threshold. Stored apart from the verdicts. Open a flagged row to see its model score.` }); })}>Score run {runId}</button>)}
+                {m.alias === 'challenger' && m.metrics.kind === 'label_fusion' && runId !== null && (
+                  <button className={btnQuiet} disabled={!signedIn || !!busy} title="Score the open run with the champion and this challenger and compare them on the rows you labelled"
+                    onClick={() => void run('shadow' + m.id, async () => { const s = await shadowRun(runId, m.id); setShadows((x) => ({ ...x, [m.id]: s })); }, 'Shadow run stored. The comparison is shown below the model.')}>Shadow run on {runId}</button>)}
                 {m.alias === 'champion' && <button className={btnQuiet} disabled={!signedIn || !!busy} onClick={() => void run('rollback', () => rollbackModel(m.name), 'Rolled back to the previous champion.')}>Roll back</button>}</div>
               {m.gate && <ul className="font-mono text-[11px]">{m.gate.checks.map((c) => <li key={c.rule} className={c.passed ? 'text-emerald-700' : 'text-red-700'}>{c.passed ? 'pass' : 'FAIL'} · {c.rule}: {c.detail}</li>)}</ul>}
+              {shadows[m.id] && <ShadowReport s={shadows[m.id] as ShadowRun} />}
               <div className="text-[10px] text-slate-500">{m.metrics_basis}</div>
             </li>))}</ul>)}
       </Section>

@@ -67,7 +67,19 @@ export interface Evidence {
   history?: { n_wet_days: number; basis: 'derived' };
   tail_probability?: { value: number; basis: 'derived' };
   issue?: string; truncated?: boolean; next?: string;
+  /** Present only when a trained model scored the row (a stored score or an exported file); never invented. */
+  provider?: { model_id?: string; model_kind?: 'label_fusion' | 'stnet'; score?: number; flagged?: boolean; fault_scores?: Record<string, number>;
+               ensemble_disagreement?: number; calibrated: boolean; label_tier: 'synthetic' | 'reviewer_labels' };
 }
+
+export interface ShadowSide { model_id: number; flagged: number; faults: number; faults_flagged: number; recall_on_reviewed: number | null;
+                              false_alarms_labelled: number; false_alarms_flagged: number; genuine_extremes: number; genuine_extremes_flagged: number }
+export interface ShadowRun {
+  id: number; run_id: number; champion_id: number | null; challenger_id: number; created_at: string | null;
+  report: { rows: number; reviewed_rows_used: number; note: string; challenger: ShadowSide; champion: ShadowSide | null; disagreements: number;
+            only_challenger_flags: string[]; only_champion_flags: string[]; no_champion: boolean };
+}
+export interface ScoreSummary { run_id: number; model_id: number; rows: number; flagged: number; threshold: number; note: string }
 
 export interface RowDetail {
   id: number; run_id: number; row_ref: string; station_id: string; time: string | null; verdict: Verdict;

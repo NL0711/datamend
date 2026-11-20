@@ -116,6 +116,18 @@ describe('pipeline functions', () => {
     await api.makeProposals(3, 'ai');
     expect(bodyOf()).toEqual({ generator: 'ai' });
   });
+  it('scoring, shadow run and the gated promote call the right URLs', async () => {
+    await api.scoreRun(4, 9);
+    expect(lastCall()[0]).toBe('/api/pipeline/runs/4/score'); expect(bodyOf()).toEqual({ model_id: 9 });
+    await api.shadowRun(4, 9);
+    expect(lastCall()[0]).toBe('/api/pipeline/runs/4/shadow'); expect(bodyOf()).toEqual({ model_id: 9 });
+    await api.getModelShadow(9);
+    expect(lastCall()[0]).toBe('/api/pipeline/models/9/shadow');
+    await api.promoteModel(9);
+    expect(lastCall()[0]).toBe('/api/pipeline/models/9/promote');
+    await api.promoteModel(9, true);
+    expect(lastCall()[0]).toBe('/api/pipeline/models/9/promote?require_shadow=true');
+  });
   it('decideProposal sends accept and a null reviewer when none is given', async () => {
     await api.decideProposal(5, true);
     expect(lastCall()[0]).toBe('/api/pipeline/proposals/5/decide');

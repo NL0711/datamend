@@ -51,6 +51,14 @@ function EvidenceCard({ ev }: { ev: Evidence }) {
         </div>)}
       {ev.history && <div className="font-mono text-[11px]">own history: {ev.history.n_wet_days} earlier wet days <BasisTag basis={ev.history.basis} /></div>}
       {ev.tail_probability && <div className="font-mono text-[11px]">upper-tail probability {ev.tail_probability.value.toExponential(2)} <BasisTag basis={ev.tail_probability.basis} /></div>}
+      {ev.provider && (
+        <div className="rounded border border-dashed border-slate-400 bg-slate-50 px-2 py-1 text-[11px] space-y-0.5" data-testid="provider-block">
+          <div className="font-mono font-bold text-slate-700 uppercase text-[10px]">Model score · {ev.provider.model_kind ?? 'model'} · {ev.provider.label_tier === 'synthetic' ? 'validated on synthetic faults' : 'learned from reviewer labels'}</div>
+          <div className="font-mono">{ev.provider.model_id}{ev.provider.score !== undefined ? ` · score ${ev.provider.score.toFixed(3)}` : ''}
+            {ev.provider.flagged !== undefined ? ` · ${ev.provider.flagged ? 'above' : 'below'} its threshold` : ' · no threshold'}</div>
+          {ev.provider.fault_scores && <div className="font-mono">{Object.entries(ev.provider.fault_scores).map(([k, v]) => `${k} ${v.toFixed(2)}`).join(' · ')}</div>}
+          <div className="text-slate-500">{ev.provider.calibrated ? 'calibrated against a clean-period false-alarm budget' : 'uncalibrated: not a probability, not ground truth'}. It never changes the verdict or the rule score.</div>
+        </div>)}
       {ev.truncated && <Notice tone="warn">This payload was cut to stay under 64 KB; the full record is at <span className="font-mono">{ev.next}</span>.</Notice>}
     </div>
   );
