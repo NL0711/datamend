@@ -110,7 +110,7 @@ export function RunsView({ onOpen }: { onOpen: (id: number) => void }) {
       <Panel className="p-3">
         <h2 className="text-sm font-bold text-slate-900 mb-2">Runs</h2>
         {error && <Notice tone="error">{error}</Notice>}
-        {runs && runs.length === 0 && <p className="text-xs text-slate-500">No runs yet.</p>}
+        {runs && runs.length === 0 && <p className="text-xs text-slate-600">No files imported yet. Choose a file or paste a link above; each one is checked and listed here as a run.</p>}
         <ul>
           {runs?.map((r) => (
             <li key={r.id} className="border-t border-[#E2E8F2] py-2 flex items-center gap-3 flex-wrap">

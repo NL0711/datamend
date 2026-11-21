@@ -22,6 +22,8 @@ import { describeStream, fmtScore, fmtUtc, hasVerdict, notRunLines, verdictWords
 import type { StreamObservation } from '../services/stream';
 import { StatusBadge } from '../design-system/components/StatusBadge';
 import { EmptyState } from '../design-system/components/EmptyState';
+import { NeedStation, openStationPicker } from './PageIntro';
+import { hashForPage } from '../validation/shell';
 import { ContextualStatusStrip } from './ContextualStatusStrip';
 import { DataSourceControl } from './DataSourceControl';
 import { dewPoint, reading, vaporPressure } from './pins';
@@ -249,9 +251,9 @@ export function LiveMonitoringView({ latestTelemetry, historyBuffer, isStreaming
           <button
             onClick={openSettings}
             className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#D3DCE7] bg-[#F4F6FA] hover:bg-[#EDF1F7] text-slate-600 hover:text-slate-900 font-semibold transition-all"
-            title="Configure data source and location"
+            title="Choose the input stream and the Open-Meteo site"
           >
-            <span className="hidden sm:inline">Source</span>
+            <span className="hidden sm:inline">Input stream</span>
           </button>
           <button
             onClick={onToggleStreaming}
@@ -273,10 +275,17 @@ export function LiveMonitoringView({ latestTelemetry, historyBuffer, isStreaming
         </div>
       )}
       {historyError && <div className="p-3 rounded-xl border border-rose-300 bg-rose-50 text-xs text-rose-800 font-mono">{historyError}</div>}
-      {!hasPoints && !isLoadingHistory && !historyNotBuilt && (
+      {!stationId && (
+        <NeedStation what="Live shows the readings of one station as they arrive." />
+      )}
+      {stationId && !hasPoints && !isLoadingHistory && !historyNotBuilt && (
         <EmptyState
-          title={`No readings for ${stationId ?? 'a station'} yet`}
-          description="Nothing is stored for this station. Start a source above (the simulator has its own stations, Open-Meteo and Weather Union read the gauges of the chosen city). The rainfall gauge feed below is separate."
+          title={`No readings for ${stationId} yet`}
+          description={stream.live
+            ? 'The stream is running but has not sent a reading for this station yet. Wait for the next reading, or pick a station the active source covers (the simulator has its own stations; Open-Meteo and Weather Union cover the stations of the chosen city).'
+            : 'Nothing is stored for this station and the stream is not delivering. Choose an input stream in Settings (the simulator, Open-Meteo, Weather Union or an ESP32). The rain-gauge feed below is separate.'}
+          actionLabel={stream.live ? 'Pick another station' : 'Open Settings: Input stream'}
+          onAction={stream.live ? openStationPicker : () => { window.location.hash = hashForPage('settings'); }}
         />
       )}
 
@@ -439,7 +448,7 @@ export function LiveMonitoringView({ latestTelemetry, historyBuffer, isStreaming
         <div className="h-80 w-full">
           {!hasPoints ? (
             <div className="h-full flex items-center justify-center text-xs text-slate-500 font-mono border border-dashed border-[#D3DCE7] rounded-lg">
-              No frames for {stationId ?? 'a station'} yet.
+              {stationId ? `No readings for ${stationId} yet.` : 'Pick a station to see its readings here.'}
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">

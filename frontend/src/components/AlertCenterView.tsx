@@ -23,11 +23,12 @@ import { verdictVariant } from './severity';
 interface AlertCenterViewProps {
   onNavigateToEvent?: (row: QueueRow) => void;
   onLocateOnGlobe?: (stationId: string) => void;
+  onImport?: () => void;
 }
 
 const field = 'bg-[#F4F6FA] border border-[#D3DCE7] text-slate-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 font-bold';
 
-export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCenterViewProps = {}) {
+export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe, onImport }: AlertCenterViewProps = {}) {
   const { stationId } = useStation();
   const [fleetWide, setFleetWide] = useState<boolean>(false);
   const [status, setStatus] = useState<'unreviewed' | 'reviewed' | 'all'>('unreviewed');
@@ -78,11 +79,11 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
     <div className="space-y-6">
       {/* Stream detections of the last 24 hours (GET /api/anomalies/stats; network-wide, the API has no station filter) */}
       <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl px-4 py-3 shadow-lg text-xs font-mono text-slate-700" data-testid="stream-stats">
-        <b className="uppercase tracking-wider text-slate-900">Stream detections, last 24 h, all stations</b>: {streamStatsLine(streamStats, streamStatsError)}
+        <b className="uppercase tracking-wider text-slate-900">Section 1, live stream: detections in the last 24 h, all stations</b>:{streamStatsLine(streamStats, streamStatsError)}
       </div>
 
       {/* 4 summary metric cards: counts of the stored flagged rainfall rows (uploaded files), all stations */}
-      <p className="text-[11px] font-mono text-slate-500 -mb-3">The four cards below count the rainfall review queue (rows of imported files), not stream detections.</p>
+      <p className="text-[11px] font-mono text-slate-500 -mb-3">Section 2, uploaded files: the four cards below count flagged readings of imported files, not stream detections. Stream detections for the chosen station are listed again at the bottom right.</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           label="Flagged Rows (rainfall review queue)"
@@ -132,11 +133,11 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
           </div>
 
           <span className="text-slate-600 font-bold">
-            {station ? <>Station <span className="text-sky-600">{station}</span></> : 'All stations (fleet-wide)'}
+            {station ? <>Station <span className="text-sky-600">{station}</span></> : 'All stations'}
           </span>
           {stationId && (
             <label className="flex items-center gap-1 text-slate-600">
-              <input type="checkbox" checked={fleetWide} onChange={(e) => setFleetWide(e.target.checked)} /> Whole fleet
+              <input type="checkbox" checked={fleetWide} onChange={(e) => setFleetWide(e.target.checked)} /> Show all stations
             </label>
           )}
 
@@ -169,9 +170,9 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono flex items-center gap-2">
-                Flagged Rows Audit Log ({data ? data.total : '…'})
+                Section 2: flagged readings from uploaded files ({data ? data.total : '…'})
               </h3>
-              <span className="text-[11px] font-mono text-slate-500">Click a row for its evidence</span>
+              <span className="text-[11px] font-mono text-slate-500">Click one for its evidence</span>
             </div>
 
             <div className="overflow-x-auto max-h-[700px] overflow-y-auto pr-1">
@@ -189,7 +190,15 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
                   {!data && !error ? (
                     <tr><td colSpan={5} className="py-6"><TableSkeleton rows={8} /></td></tr>
                   ) : filtered.length === 0 ? (
-                    <tr><td colSpan={5} className="py-12 text-center text-slate-500 font-sans">No flagged rows match the current filters.</td></tr>
+                    <tr><td colSpan={5} className="py-12 text-center text-slate-600 font-sans space-y-2">
+                      <p>{status === 'unreviewed' && !verdict && !check && !searchQuery.trim()
+                        ? `Nothing is waiting for review${station ? ` at ${station}` : ''}. Flags from uploaded files appear here once a file is imported and checked.`
+                        : 'No flagged readings match these filters. Loosen a filter to see more.'}</p>
+                      <div className="flex justify-center gap-2">
+                        {onImport && <button onClick={onImport} className="px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-mono font-bold text-xs rounded-lg shadow">Import a file</button>}
+                        {stationId && !fleetWide && <button onClick={() => setFleetWide(true)} className="px-3 py-1.5 bg-[#EDF1F7] hover:bg-[#E2E8F2] text-slate-700 font-mono font-semibold text-xs rounded-lg border border-[#D3DCE7]">Show all stations</button>}
+                      </div>
+                    </td></tr>
                   ) : (
                     filtered.map((r) => {
                       const isSelected = sel?.run === r.run_id && sel.id === r.id;
@@ -229,13 +238,13 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
             <>
               <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Incident Dossier <span className="text-sky-600">row #{selectedRow.id}</span></h3>
-                  <span className="text-[10px] text-slate-500 font-sans">Original row, the evidence behind each flag and the review. A review never changes a verdict or score.</span>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Flagged reading <span className="text-sky-600">#{selectedRow.id}</span></h3>
+                  <span className="text-[10px] text-slate-500 font-sans">The original reading, the evidence behind each flag and your review. A review never changes a verdict or score.</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {onLocateOnGlobe && (
                     <button onClick={() => onLocateOnGlobe(selectedRow.station_id)} className="py-2 px-3 bg-[#EDF1F7] hover:bg-[#E2E8F2] border border-sky-500/40 hover:border-sky-400 text-sky-700 hover:text-slate-900 rounded-lg text-xs font-mono font-bold transition-all">
-                      Locate {selectedRow.station_id} on Globe
+                      Show {selectedRow.station_id} on the map
                     </button>
                   )}
                   {onNavigateToEvent && (
@@ -249,13 +258,13 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
             </>
           ) : (
             <EmptyState
-              title="No incident selected"
-              description="Click a row of the audit log to read the evidence for its flag. When no row is listed, nothing is waiting for review with these filters."
+              title="No flagged reading selected"
+              description="Click a reading in the list on the left to read the evidence for its flag. When the list is empty, nothing is waiting for review with these filters."
             />
           )}
 
           <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-4 shadow-lg space-y-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Stream detections (temperature, pressure, humidity, rain)</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Live stream detections (temperature, pressure, humidity, rain)</h4>
             <AnomalyFeed stationId={station || null} limit={8} evidence />
           </div>
         </div>

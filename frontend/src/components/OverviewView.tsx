@@ -19,6 +19,7 @@ import { buildPins, dewPoint, reading } from './pins';
 import { verdictVariant } from './severity';
 import { useSystemConfiguration } from '../context/SystemConfigurationContext';
 import { useStation } from '../validation/StationContext';
+import { openStationPicker } from './PageIntro';
 import { getQueue } from '../validation/api';
 import { globeState, queueQuery } from '../validation/lib';
 import type { QueueRow } from '../validation/types';
@@ -85,10 +86,10 @@ export function OverviewView({ latestByStation, onNavigate }: OverviewViewProps)
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 font-mono">
-                Geospatial Station Topology
+                Station map
               </h3>
               <p className="text-[11px] text-slate-600">
-                {loading ? 'Loading the station catalogue…' : `${gauges.length} Weather Union gauges plus stations from uploaded files and the stream. Click a pin to select the station. Pin colour is the real verdict only; grey means nothing checked.`}
+                {loading ? 'Loading the station list…' : `${gauges.length} Weather Union gauges plus stations from uploaded files and the stream. Click a pin to select the station. Pin colour is the latest verdict (see "?" for the words); grey means nothing checked yet.`}
               </p>
             </div>
 
@@ -117,9 +118,10 @@ export function OverviewView({ latestByStation, onNavigate }: OverviewViewProps)
         {/* Right 5 Cols: the selected station's dossier */}
         <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg flex flex-col justify-between space-y-4">
           {!stationId ? (
-            <div className="py-16 text-center text-xs text-slate-500 font-mono space-y-1">
-              <p className="text-slate-700 font-semibold">No station selected</p>
-              <p className="text-[11px]">Pick a station in the header or click a pin on the globe.</p>
+            <div className="py-12 text-center text-xs text-slate-600 space-y-2">
+              <p className="text-slate-900 font-bold font-mono">No station selected</p>
+              <p className="text-[11px]">Pick a station to see its latest readings and verdict here. You can also click a pin on the map.</p>
+              <button onClick={openStationPicker} className="mt-2 px-3.5 py-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-mono font-bold text-xs rounded-lg shadow">Pick a station</button>
             </div>
           ) : (
             <div>
@@ -132,7 +134,7 @@ export function OverviewView({ latestByStation, onNavigate }: OverviewViewProps)
                   <h4 className="text-base font-bold text-slate-900 mt-1 font-mono">{entry?.place ?? stationId}</h4>
                 </div>
                 <div className="text-right font-mono text-xs">
-                  <span className="text-slate-500 block text-[10px] uppercase">Rows checked</span>
+                  <span className="text-slate-500 block text-[10px] uppercase">Readings checked</span>
                   <span className="text-lg font-bold text-slate-900">{selectedCycle?.checked ?? 0}</span>
                 </div>
               </div>
@@ -216,12 +218,13 @@ export function OverviewView({ latestByStation, onNavigate }: OverviewViewProps)
               onClick={() => onNavigate('live')}
               className="flex-1 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-mono font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-2 shadow"
             >
-              Inspect Live Console →
+              Watch this station on Live →
             </button>
             <button
               onClick={openSettings}
               className="py-2.5 px-3 bg-[#F4F6FA] hover:bg-[#EDF1F7] border border-[#D3DCE7] text-slate-600 hover:text-slate-900 font-mono font-bold text-xs rounded-lg transition-all shadow"
-              title="Display and live source"
+              title="Display preferences and the input stream"
+              aria-label="Display preferences and the input stream"
             >
               ⚙
             </button>
@@ -243,10 +246,10 @@ export function OverviewView({ latestByStation, onNavigate }: OverviewViewProps)
             <table className="w-full text-left text-xs font-mono">
               <thead className="sticky top-0 bg-[#FFFFFF] z-10">
                 <tr className="border-b border-slate-200 text-slate-500 font-sans font-semibold uppercase text-[11px] tracking-wider">
-                  <th className="pb-3">Station Node</th>
+                  <th className="pb-3">Station</th>
                   <th className="pb-3">City</th>
-                  <th className="pb-3 text-right">Rows checked</th>
-                  <th className="pb-3 text-right">QC Status</th>
+                  <th className="pb-3 text-right">Readings checked</th>
+                  <th className="pb-3 text-right">Verdict</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
@@ -286,19 +289,20 @@ export function OverviewView({ latestByStation, onNavigate }: OverviewViewProps)
 
         <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 font-mono">Flagged Incident Stream</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 font-mono">Newest flags</h3>
             <button onClick={() => onNavigate('alerts')} className="text-xs font-mono text-sky-600 hover:underline">
-              Alert Center →
+              Open Alerts →
             </button>
           </div>
 
           <div className="space-y-2.5">
-            <div className="text-[10px] uppercase font-bold text-slate-500 font-mono tracking-wider">Rainfall rows awaiting review</div>
+            <div className="text-[10px] uppercase font-bold text-slate-500 font-mono tracking-wider">Uploaded-file readings awaiting review</div>
             {queue === null ? (
               <p className="text-xs text-slate-500 font-mono">Loading…</p>
             ) : queue.length === 0 ? (
-              <div className="p-4 text-center text-xs text-slate-500 font-sans border border-dashed border-[#D3DCE7] rounded-lg">
-                No flagged rainfall rows are waiting for a reviewer.
+              <div className="p-4 text-center text-xs text-slate-500 font-sans border border-dashed border-[#D3DCE7] rounded-lg space-y-2">
+                <p>Nothing is waiting for review. Flags from your own data appear here once you import a file.</p>
+                <button onClick={() => onNavigate('import')} className="px-3 py-1.5 bg-[#EDF1F7] hover:bg-[#E2E8F2] text-slate-700 text-xs font-semibold rounded-lg border border-[#D3DCE7] font-mono">Import a file</button>
               </div>
             ) : (
               queue.map((r) => (
@@ -320,7 +324,7 @@ export function OverviewView({ latestByStation, onNavigate }: OverviewViewProps)
               ))
             )}
 
-            <div className="pt-2 text-[10px] uppercase font-bold text-slate-500 font-mono tracking-wider">Stream detections (T, P, RH, rain)</div>
+            <div className="pt-2 text-[10px] uppercase font-bold text-slate-500 font-mono tracking-wider">Live stream detections (temperature, pressure, humidity, rain)</div>
             <AnomalyFeed limit={3} onOpen={() => onNavigate('alerts')} />
           </div>
         </div>

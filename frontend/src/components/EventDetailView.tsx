@@ -25,13 +25,13 @@ export function EventDetailView({ focus, onImport, onNavigateToLive }: EventDeta
             <div className="p-2 bg-sky-500/15 border border-sky-500/35 rounded-lg text-sky-600" />
             <div>
               <h2 className="text-sm font-bold text-slate-900 uppercase font-mono tracking-wide flex items-center gap-2">
-                Event Forensics & Evidence
+                Evidence behind each flag
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/15 text-sky-700 border border-sky-500/30 font-semibold">
                   {stationId ? 'SELECTED STATION' : 'NO STATION'}
                 </span>
               </h2>
               <p className="text-xs text-slate-600">
-                Flagged rows of the station's latest run, with the check, the observed value, the threshold and the window behind every flag
+                Flagged readings of the station's latest uploaded-file run, with the check, the observed value, the threshold and the readings behind every flag
               </p>
             </div>
           </div>
@@ -44,7 +44,7 @@ export function EventDetailView({ focus, onImport, onNavigateToLive }: EventDeta
             )}
             {selectedCycle && (
               <span className="px-2.5 py-1 rounded bg-[#F4F6FA] border border-[#D3DCE7] text-slate-600">
-                Flagged: <strong className="text-sky-600">{selectedCycle.flagged}</strong> of {selectedCycle.checked} rows
+                Flagged: <strong className="text-sky-600">{selectedCycle.flagged}</strong> of {selectedCycle.checked} readings
               </span>
             )}
             {stationId && onNavigateToLive && (
@@ -59,7 +59,8 @@ export function EventDetailView({ focus, onImport, onNavigateToLive }: EventDeta
       <StationRunPanel scope="flagged" focus={focus} onImport={onImport} />
 
       <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-4 shadow-lg space-y-2">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Stream detections (temperature, pressure, humidity, rain)</h4>
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Live stream detections (temperature, pressure, humidity, rain)</h4>
+        {!stationId && <p className="text-[11px] text-slate-600">No station is selected, so this lists detections from every station. Pick a station to narrow it down.</p>}
         <AnomalyFeed stationId={stationId} limit={12} evidence />
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useStation } from '../validation/StationContext';
 import { RunView } from '../validation/RunView';
 import type { EventFocus } from '../validation/shell';
 import { EmptyState } from '../design-system/components/EmptyState';
+import { NeedStation } from './PageIntro';
 
 /** Words for a station with no file run. It never implies the station has no data: live-stream readings and detections are stored separately. */
 export function emptyRunText(scope: 'flagged' | 'all'): string {
@@ -14,7 +15,7 @@ export function emptyRunText(scope: 'flagged' | 'all'): string {
 
 export function StationRunPanel({ scope, focus, onImport }: { scope: 'flagged' | 'all'; focus: (EventFocus & { station: string | null }) | null; onImport: () => void }) {
   const { stationId, selectedCycle, cycleLoaded } = useStation();
-  if (!stationId) return <EmptyState title="No station selected" description="Select a station in the header to see its rows." />;
+  if (!stationId) return <NeedStation what={scope === 'flagged' ? 'Events shows the evidence behind the flags of one station.' : 'This list shows the checked rows of one station.'} />;
   const usable = scope === 'flagged' && focus && (focus.station === null || focus.station === stationId) ? focus : null;
   const runId = usable?.runId ?? selectedCycle?.latest_run_id ?? null;
   if (runId === null) {

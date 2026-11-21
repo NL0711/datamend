@@ -13,6 +13,7 @@ import { TableSkeleton } from '../design-system/components/SkeletonLoader';
 import { EmptyState } from '../design-system/components/EmptyState';
 import { useStation } from '../validation/StationContext';
 import { StationRunPanel } from './StationRunPanel';
+import { openStationPicker } from './PageIntro';
 
 const PAGE_LIMIT = 50;
 
@@ -51,9 +52,9 @@ export function DataExplorerView({ onImport }: { onImport: () => void }) {
       {/* Ingestion section */}
       <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-5 shadow-lg flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 font-mono">Batch Dataset Ingestion</h3>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 font-mono">Bring in your own data</h3>
           <p className="text-xs text-slate-600 mt-0.5">
-            Upload a rainfall file, or import one from an Amazon S3 or Kaggle link. Files are validated on arrival; a bad file is rejected with the reason.
+            Upload a file, or import one from an Amazon S3 or Kaggle link. Files are checked on arrival; a bad file is rejected with the reason.
           </p>
         </div>
         <button onClick={onImport} className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-mono font-bold text-xs rounded-lg transition-all shadow">
@@ -91,14 +92,22 @@ export function DataExplorerView({ onImport }: { onImport: () => void }) {
                     <th className="pb-3">Rain (mm)</th>
                     <th className="pb-3">Source</th>
                     <th className="pb-3 text-right">Rule score</th>
-                    <th className="pb-3 text-right">QC Status</th>
+                    <th className="pb-3 text-right">Verdict</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {isLoading ? (
                     <tr><td colSpan={10} className="py-6"><TableSkeleton rows={4} /></td></tr>
                   ) : observations.length === 0 ? (
-                    <tr><td colSpan={10} className="py-8 text-center text-slate-500 font-sans">No stored stream readings{stationId ? ` for ${stationId}` : ''}. Start a source on the Live page.</td></tr>
+                    <tr><td colSpan={10} className="py-8 text-center text-slate-600 font-sans space-y-2">
+                      <p>{stationId
+                        ? `No stream readings are stored for ${stationId} yet. Readings are stored while the input stream runs and covers this station; your own files are listed further down.`
+                        : 'No stream readings are stored yet. Pick a station, or wait for the input stream to deliver readings.'}</p>
+                      <div className="flex justify-center gap-2">
+                        {!stationId && <button onClick={openStationPicker} className="px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-mono font-bold text-xs rounded-lg shadow">Pick a station</button>}
+                        <button onClick={onImport} className="px-3 py-1.5 bg-[#EDF1F7] hover:bg-[#E2E8F2] text-slate-700 font-mono font-semibold text-xs rounded-lg border border-[#D3DCE7]">Import a file</button>
+                      </div>
+                    </td></tr>
                   ) : (
                     observations.map((obs, i) => (
                       <tr key={obs.id ?? `${obs.station_id}-${obs.timestamp}-${i}`} className="hover:bg-[#EDF1F7] transition-colors">
@@ -132,7 +141,7 @@ export function DataExplorerView({ onImport }: { onImport: () => void }) {
 
       {/* Stored rainfall rows */}
       <div className="space-y-2">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Stored rainfall rows from uploaded files (latest run of the station)</h3>
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Readings from uploaded files (latest run of the station)</h3>
         <StationRunPanel scope="all" focus={null} onImport={onImport} />
       </div>
     </div>

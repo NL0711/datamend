@@ -5,6 +5,7 @@ import { askAgent, decideAgentProposal, fetchAgentEvents, fetchAgentProposals, f
 import type { AgentEventRow, AgentProposal, AgentStatus, AgentTaskResult } from '../services/api';
 import { useStation } from '../validation/StationContext';
 import { AuthNotice } from './AuthNotice';
+import { openStationPicker } from './PageIntro';
 import { agentErrorText, describeEvent, describeProposal, statusWords } from './agentText';
 
 const card = 'bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-4 shadow-lg space-y-2';
@@ -64,7 +65,12 @@ export function AgentView() {
 
       <div className={card}>
         <h3 className={h3}>Ask about {stationId ?? 'a station'}</h3>
-        {!stationId && <p className="text-xs text-slate-600">Select a station in the header first.</p>}
+        {!stationId && (
+          <div className="flex items-center gap-3">
+            <p className="text-xs text-slate-600">The agent answers about one station. Pick a station first.</p>
+            <button onClick={openStationPicker} className="px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-mono font-bold text-xs rounded-lg shadow">Pick a station</button>
+          </div>
+        )}
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} maxLength={1000} aria-label="Question for the agent"
           className="w-full text-xs border border-[#D3DCE7] rounded-lg p-2 font-mono" />
         <button onClick={ask} disabled={!stationId || busy || !text.trim()} className="px-3 py-2 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-mono font-bold text-xs rounded-lg shadow">
@@ -102,7 +108,7 @@ export function AgentView() {
 
       <div className={card}>
         <h3 className={h3}>Proposed actions (a human accepts)</h3>
-        {proposals.length === 0 && <p className="text-xs text-slate-600">Nothing proposed for this station.</p>}
+        {proposals.length === 0 && <p className="text-xs text-slate-600">{stationId ? 'Nothing proposed for this station yet. Ask the agent a question above and any proposal appears here.' : 'Pick a station to see what the agent proposed for it.'}</p>}
         <ul className="space-y-1">
           {proposals.map((p) => (
             <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono border border-[#D3DCE7] rounded-lg p-2">

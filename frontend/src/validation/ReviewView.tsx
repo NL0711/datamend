@@ -35,13 +35,13 @@ export function ReviewView({ station: initialStation = '', onClearStation }: { s
       {station && (
         <Notice tone="info">
           Showing only station <b className="font-mono">{station}</b>.{' '}
-          <button className="font-bold text-sky-700" onClick={() => { setStation(''); onClearStation?.(); }}>Show every station</button>
+          <button className="font-bold text-sky-700" onClick={() => { setStation(''); onClearStation?.(); }}>Show all stations</button>
         </Notice>)}
       {summary && (
         <Panel className="p-3 space-y-2">
           <div className="flex items-center gap-4 flex-wrap text-[11px] font-mono">
-            <span className="font-bold text-sm font-sans text-slate-900">Review loop</span>
-            <span>{summary.unreviewed_rows} unreviewed of {summary.flagged_rows} flagged</span>
+            <span className="font-bold text-sm font-sans text-slate-900">Decisions so far</span>
+            <span>{summary.unreviewed_rows} not reviewed of {summary.flagged_rows} flagged readings</span>
             {(Object.keys(summary.by_decision) as (keyof typeof summary.by_decision)[]).map((d) => <span key={d}>{DECISION_LABEL[d]} {summary.by_decision[d]}</span>)}
           </div>
         </Panel>)}
@@ -71,7 +71,9 @@ export function ReviewView({ station: initialStation = '', onClearStation }: { s
                 <div className="text-[11px] text-slate-700 mt-0.5">{r.station_id} · run #{r.run_id} · <span className="font-mono">{r.checks.join(', ')}</span></div>
                 {r.review && <div className="text-[10px] font-bold text-slate-600 mt-0.5">{DECISION_LABEL[r.review.decision]}{r.review.reviewer ? ` · ${r.review.reviewer}` : ''}</div>}
               </li>))}
-            {data && data.rows.length === 0 && <li className="p-3 text-xs text-slate-500">{status === 'unreviewed' ? 'Nothing left to review.' : 'Nothing here.'}</li>}
+            {data && data.rows.length === 0 && <li className="p-3 text-xs text-slate-500">{status === 'unreviewed'
+              ? `Nothing is waiting for your decision${station ? ` at ${station}` : ''}. Flagged readings appear here after you import a file (Import in the header) or when the rain-gauge feed flags one.`
+              : 'No readings match this filter. Try "all".'}</li>}
           </ul>
           <div className="flex items-center justify-between p-1 border-t border-[#E2E8F2]">
             <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="px-2 py-0.5 text-[11px] border rounded disabled:opacity-40">Previous</button>
@@ -80,7 +82,7 @@ export function ReviewView({ station: initialStation = '', onClearStation }: { s
           </div>
         </Panel>
         {sel ? <EvidencePane runId={sel.run} rowId={sel.id} narrator={narrator} onSelectRow={(id) => setSel({ run: sel.run, id })} onReviewed={load} />
-          : <Panel className="p-4"><p className="text-xs text-slate-500">Select a flagged row to read its evidence and record a review.</p></Panel>}
+          : <Panel className="p-4"><p className="text-xs text-slate-600">Select a flagged reading on the left to read its evidence and record your decision.</p></Panel>}
       </div>
     </div>
   );
