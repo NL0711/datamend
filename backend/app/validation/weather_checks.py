@@ -47,7 +47,8 @@ FROZEN_N = 8                        # identical readings in a row (this one incl
 FROZEN_MIN_SPAN_S = 120.0           # and they must span at least this long (a coarse sensor repeats a value for seconds)
 SATURATED_RH = 99.9                # humidity at saturation can legitimately stay at 100 for hours: not a frozen sensor
 SPIKE_WINDOW, SPIKE_MIN, LEVEL_N = 30, 10, 9
-SPIKE_K = 8.0                       # robust standard deviations of successive differences
+SPIKE_RECENT_SKIP = 24              # readings skipped when looking for the level before an episode (same span as SHIFT_RECENT_EXCLUDE)
+SPIKE_K = 8.0                      # robust standard deviations of successive differences
 SPIKE_SCALE_FLOOR = {"temperature": 0.2, "pressure": 0.15, "humidity": 0.8}
 SPIKE_ABS = {"temperature": 3.0, "pressure": 2.5, "humidity": 12.0}      # a deviation smaller than this is never a spike
 NATURAL_PER_MIN = {"temperature": 0.04, "pressure": 0.05, "humidity": 0.2}   # slowest-to-fastest natural drift allowed on top, per minute
@@ -317,8 +318,12 @@ def run_weather_checks(sample: Mapping[str, Optional[float]], ts: datetime, hist
             allowed = max(SPIKE_K * scale, SPIKE_ABS[v] + NATURAL_PER_MIN[v] * minutes)
             dev = abs(x - level)
             spike_dev[v] = (dev, allowed, level)
-            if dev > allowed:
-                spike_hits[v] = cat._hit("spike_vs_history", "stream", f"{v} {x:g} {UNIT[v]} is {dev:.2f} away from its recent level {level:.2f} (limit {allowed:.2f}) and nothing else moves with it",
+            # A return to the level BEFORE an episode is not a new anomaly: the recent median is still contaminated by the episode, so compare with
+            # the readings older than the last SPIKE_RECENT_SKIP (bounded, causal). A permanent shift stays away from that level and is still hit.
+            older = [val for _, val in series[:-SPIKE_RECENT_SKIP]][-SPIKE_WINDOW:]
+            returned = len(older) >= SPIKE_MIN and abs(x - statistics.median(older)) <= allowed
+            if dev > allowed and not returned:
+                spike_hits[v] = cat._hit("spike_vs_history", "stream", f"{v} {x:g} {UNIT[v]} is {dev:.2f} away from its recent level {level:.2f} (limit {allowed:.2f})",
                                          {"variable": v, "observed": _obs(v, x), "level": _derived(level, UNIT[v], f"median of the last {LEVEL_N} usable readings"),
                                           "deviation": _derived(dev, UNIT[v], "absolute difference to the level"),
                                           "threshold": _thr(round(allowed, 3), f"larger of {SPIKE_K:g} robust sigmas ({scale:.3f}) and {SPIKE_ABS[v]:g} {UNIT[v]} plus {NATURAL_PER_MIN[v]:g} {UNIT[v]}/min"),
@@ -389,6 +394,10 @@ def run_weather_checks(sample: Mapping[str, Optional[float]], ts: datetime, hist
             h.evidence["corroboration"] = corr
             if coherent:
                 h.kind, h.weight = "uncertain", 0.30
-                h.reason += "; the variables moved together with a steady dew point, so this is a genuine-extreme candidate, not a fault"
+                h.reason += "; other variables moved with it and the dew point stayed steady, so this is a genuine-extreme candidate, not a fault"
+            elif len(moving) >= 2:
+                h.reason += "; other variables moved with it, but the dew point did not stay steady (or could not be derived), so nothing confirms a genuine extreme"
+            else:
+                h.reason += " and nothing else moves with it"
             hits.append(h)
     return res

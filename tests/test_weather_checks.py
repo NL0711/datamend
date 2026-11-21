@@ -168,7 +168,9 @@ def test_isolated_spike_is_a_fault_when_history_exists_and_not_run_when_it_does_
     t, p, rh = next_values(hist)
     res = run(hist, t, p + 12.0, rh)
     assert "spike_vs_history" in names(res) and verdict(res) == "SUSPECT"
-    assert next(h for h in res.hits if h.check == "spike_vs_history").evidence["corroboration"]["coherent"] is False
+    spike = next(h for h in res.hits if h.check == "spike_vs_history")
+    assert spike.evidence["corroboration"]["coherent"] is False
+    assert "nothing else moves with it" in spike.reason and "genuine-extreme" not in spike.reason
     short = series(6)
     res = run(short, short[-1].temperature, short[-1].pressure + 12.0, short[-1].humidity)
     assert "spike_vs_history" not in names(res)
@@ -187,7 +189,8 @@ def test_a_squall_front_is_a_genuine_extreme_candidate_uncertain_not_a_fault():
     spikes = [h for h in res.hits if h.check == "spike_vs_history"]
     assert len(spikes) == 3 and all(h.evidence["corroboration"]["coherent"] for h in spikes)
     assert all(h.kind == "uncertain" for h in res.hits) and verdict(res) == "UNCERTAIN"
-    assert "genuine-extreme candidate" in spikes[0].reason
+    assert "genuine-extreme candidate" in spikes[0].reason and "nothing else moves" not in spikes[0].reason
+    assert "other variables moved with it" in spikes[0].reason
     out = score_reading(StreamReading("S", after(hist), "x", t - 8.0, p - 14.0, _rh_for_dew_point(t - 8.0, dp)), (), hist)
     assert out.status == "UNCERTAIN" and out.genuine_extreme and out.flagged and out.rule_score > 0       # (several UNCERTAIN hits can still band high: the band is of the score only)
 
