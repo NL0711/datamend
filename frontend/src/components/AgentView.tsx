@@ -49,16 +49,6 @@ export function AgentView() {
     } catch (e) { fail(e); } finally { setBusy(false); }
   }, [stationId, text]);
 
-  const commentLive = useCallback(async () => {
-    if (!stationId) return;
-    setBusy(true); setError(null); setNeedSignIn(false); setEvents(null);
-    try {
-      const r = await askAgent(stationId, 'Comment on the current live feed of this station.', 'live');
-      setResult(r);
-      setEvents((await fetchAgentEvents(r.task_id)).events);
-    } catch (e) { fail(e); } finally { setBusy(false); }
-  }, [stationId]);
-
   const decide = async (id: number, d: 'accept' | 'dismiss') => {
     setError(null);
     try {
@@ -78,17 +68,6 @@ export function AgentView() {
         {status && (status.connected
           ? <p className="text-xs font-mono text-slate-700">Agent connected.</p>
           : <p role="status" className="text-xs font-mono text-amber-800">Agent not connected. The rule-based explanation still works.</p>)}
-      </div>
-
-      <div className={card}>
-        <h3 className={h3}>Live feed of {stationId ?? 'a station'}</h3>
-        <p className="text-xs text-slate-600">
-          The agent reads the latest stored readings and detections of this station from the live stream (read-only tools), and says what they show.
-          It works from a snapshot, so the comment is about that moment, not a running commentary.
-        </p>
-        <button onClick={commentLive} disabled={!stationId || busy} className="px-3 py-2 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-mono font-bold text-xs rounded-lg shadow">
-          {busy ? 'Working...' : 'Comment on the live feed'}
-        </button>
       </div>
 
       <div className={card}>
