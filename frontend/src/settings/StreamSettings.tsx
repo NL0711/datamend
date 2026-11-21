@@ -81,8 +81,11 @@ export function StreamSettings() {
   return (
     <section className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-4 shadow-lg space-y-3" aria-label="Input stream settings">
       <div>
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Input stream</h3>
-        <p className="text-xs text-slate-600">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Input stream: where live readings come from</h3>
+        <p className="text-xs text-slate-700">
+          The simulator, Open-Meteo, Weather Union or an ESP32 sensor. The Live page, the Overview tiles and the stream detections all use this one.
+        </p>
+        <p className="text-xs text-slate-600 mt-1">
           Active: {SOURCE_WORDS[s.active_source] ?? s.active_source}
           {state?.state ? ` (${state.state})` : ''}; stations: {s.station_set.mode === 'city' ? s.station_set.city : s.station_set.mode}. Changing a setting restarts the stream.
         </p>

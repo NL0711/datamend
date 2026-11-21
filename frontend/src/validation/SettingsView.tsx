@@ -60,10 +60,14 @@ export function SettingsView() {
 
       <Panel className="p-4 space-y-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2"><CloudSun className="w-4 h-4" />Weather data</h2>
+          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2"><CloudSun className="w-4 h-4" />Rain-gauge feed (Weather Union)</h2>
           <span className={`px-2 py-0.5 rounded border text-[10px] font-mono font-bold ${state.feed_running ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-300 bg-slate-100 text-slate-600'}`}>
             {state.feed_running ? 'RUNNING' : wu.enabled ? 'CONFIGURED, NOT RUNNING' : 'OFF'}</span>
         </div>
+        <p className="text-xs text-slate-700">
+          The separate rain-only gauge poller: the server polls one city's gauges and checks each rain day. It fills the "Rain-gauge feed" table at the bottom of the Live page and does not
+          set the input stream above, which is what the Live page's readings use.
+        </p>
         {state.feed && <p className="text-[11px] font-mono text-slate-600">{state.feed.stations} stations · poll every {Math.round(state.feed.poll_interval_seconds / 60)} min · {state.feed.calls_used_today} calls used, {state.feed.calls_remaining_today} left today · last poll {state.feed.last_poll_at ?? 'none yet'}{state.feed.last_error ? ` · ${state.feed.last_error}` : ''}</p>}
         <div className="grid md:grid-cols-2 gap-3">
           <div><Label hint={chosen.note}>Provider</Label>

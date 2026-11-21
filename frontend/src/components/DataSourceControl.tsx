@@ -139,8 +139,8 @@ export const DataSourceControl: React.FC = () => {
       {/* Top header bar and the source selector */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-200">
         <div>
-          <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono">Telemetry source</h2>
-          <p className="text-[11px] text-slate-600 mt-0.5">The feed that is read into the checks. One source runs at a time; choosing one needs an admin sign-in.</p>
+          <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono">Input stream: where this page's readings come from</h2>
+          <p className="text-[11px] text-slate-600 mt-0.5">The source that is read into the checks. One source runs at a time; choosing one needs an admin sign-in. The full form is under Settings, "Input stream".</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 bg-[#F4F6FA] p-1 rounded-lg border border-[#D3DCE7]">
