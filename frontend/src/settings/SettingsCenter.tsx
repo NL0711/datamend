@@ -14,7 +14,6 @@ import { StatusBadge } from '../design-system/components/StatusBadge';
 import { startSimulation, stopSimulation, getSimulationStatus, isNotBuilt } from '../services/api';
 
 const SOURCES: { type: DataSourceType; code: string; title: string; text: string; ring: string }[] = [
-  { type: 'SIMULATED', code: 'SIM', title: 'Automatic weather stations', text: 'Generated diurnal readings for testing the checks (the original simulator).', ring: 'border-amber-500 ring-amber-500/40' },
   { type: 'EXTERNAL_API', code: 'EXT', title: 'Open-Meteo Global Weather API (live REST)', text: 'Model-based temperature, pressure and humidity polled for the chosen site.', ring: 'border-sky-500 ring-sky-500/40' },
   { type: 'WEATHER_UNION', code: 'WU', title: 'Weather Union', text: 'Gauge network answering by live field; pressure is never present and is reported as not run.', ring: 'border-cyan-500 ring-cyan-500/40' },
   { type: 'PHYSICAL_AWS', code: 'HW', title: 'Physical AWS (ESP32 over MQTT)', text: 'A hardware station that publishes its own readings.', ring: 'border-emerald-500 ring-emerald-500/40' },

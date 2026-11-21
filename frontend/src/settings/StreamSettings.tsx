@@ -94,7 +94,8 @@ export function StreamSettings() {
       <div className="flex flex-wrap items-end gap-3 text-xs font-mono text-slate-600">
         <label className="flex flex-col gap-1">Source
           <select value={source} onChange={(e) => { setSource(e.target.value); setIntervalText(String(s.intervals_seconds[e.target.value] ?? '')); }} className={field} disabled={!editable || busy}>
-            {s.source_ids.map((id) => <option key={id} value={id}>{SOURCE_WORDS[id] ?? id}</option>)}
+            {/* the simulator starts by itself; it is listed only while it is the active source, so the box can show it */}
+            {s.source_ids.filter((id) => id !== 'simulated' || s.active_source === 'simulated').map((id) => <option key={id} value={id}>{SOURCE_WORDS[id] ?? id}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-1">Stations

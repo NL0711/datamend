@@ -26,7 +26,6 @@ import { AuthNotice } from './AuthNotice';
 import { SimulatorControls } from './SimulatorControls';
 
 const SOURCE_BUTTONS: { type: DataSourceType; label: string; active: string }[] = [
-  { type: 'SIMULATED', label: 'Simulator', active: 'bg-amber-500/20 text-amber-700 border border-amber-500/40 shadow-sm' },
   { type: 'EXTERNAL_API', label: 'Open-Meteo', active: 'bg-sky-500/20 text-sky-700 border border-sky-500/40 shadow-sm' },
   { type: 'WEATHER_UNION', label: 'Weather Union', active: 'bg-cyan-500/20 text-cyan-700 border border-cyan-500/40 shadow-sm' },
   { type: 'PHYSICAL_AWS', label: 'ESP32', active: 'bg-emerald-500/20 text-emerald-700 border border-emerald-500/40 shadow-sm' },
