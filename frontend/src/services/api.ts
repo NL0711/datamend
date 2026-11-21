@@ -373,7 +373,25 @@ export interface AgentProposal {
   status: 'proposed' | 'accepted' | 'dismissed';
   review_id: number | null;
 }
+/** The facts of a live-feed comment (scope 'live'): what the agent read, from a snapshot fixed at perception. */
+export interface AgentLiveFacts {
+  station_id: string;
+  feed_state_at_perception: string;
+  feed_state_at_gate: string | null;
+  source_id: string | null;
+  cadence_seconds: number | null;
+  last_reading_at: string | null;
+  last_verdict: string | null;
+  n_readings: number;
+  detections_in_window: number;
+  model_score_present: boolean;
+  model_score_label: string;
+  snapshot: { cutoff_id: number; cutoff_timestamp: string | null; evidence_hash: string };
+}
 export interface AgentTaskResult {
+  scope?: 'run' | 'live';
+  live?: AgentLiveFacts | null;
+  comment?: string | null;
   task_id: string;
   status: string;
   agent_connected: boolean;
@@ -406,11 +424,11 @@ export interface AgentEventRow {
 export async function fetchAgentStatus(): Promise<AgentStatus> {
   return handleResponse(await request(`${API_BASE_URL}/agent/status`));
 }
-export async function askAgent(stationId: string, text: string): Promise<AgentTaskResult> {
+export async function askAgent(stationId: string, text: string, scope: 'run' | 'live' = 'run'): Promise<AgentTaskResult> {
   const res = await request(`${API_BASE_URL}/agent/tasks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ station_id: stationId, request: text }),
+    body: JSON.stringify({ station_id: stationId, request: text, scope }),
   });
   return handleResponse(res);
 }

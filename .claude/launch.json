@@ -14,6 +14,12 @@
       "port": 8010
     },
     {
+      "name": "backend-venv",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": ["-c", "import os,tempfile; t=tempfile.gettempdir().replace(chr(92),'/'); os.environ.update(DATABASE_URL='sqlite+aiosqlite:///'+t+'/datamend_ui_check_venv.db', RUNTIME_SETTINGS_PATH=t+'/datamend_ui_check_venv_settings.json', FEED_HISTORY_PATH=t+'/datamend_ui_check_venv_feed.db', WEATHER_UNION_API_KEY='', WEATHER_UNION_CITY='', GEMINI_API_KEY='', FEED_HISTORY_URL='', ADMIN_TOKEN='ui-check-token'); import uvicorn; uvicorn.run('backend.app.main:app', host='127.0.0.1', port=8010)"],
+      "port": 8010
+    },
+    {
       "name": "frontend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "frontend", "run", "dev"],

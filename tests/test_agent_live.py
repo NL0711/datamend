@@ -246,7 +246,7 @@ def test_guard_rules_for_simulated_data_and_the_model_score():
     st = _state_with({**FEED, "model_score": {"present": True}}, status="running")
     ok = "Station LIVE-T1 is running. The readings are simulated data. The model score is not validated."
     assert live.validate_live_text(ok, st) == []
-    assert any("simulated" in p for p in live.validate_live_text("Station LIVE-T1 is running with 3 readings.", st))                       # does not say simulated
+    assert not any("does not say so" in p for p in live.validate_live_text("Station LIVE-T1 is running with 3 readings.", st))           # no forced 'simulated' label
     assert any("called real" in p for p in live.validate_live_text("The readings are simulated but these are real measurements.", st))
     assert live.validate_live_text("The readings are simulated, not real measurements.", st) == []
     assert any("not validated" in p for p in live.validate_live_text("The readings are simulated; the Keras model reports a high error.", st))
