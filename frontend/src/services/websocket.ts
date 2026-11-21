@@ -33,8 +33,28 @@ export class TelemetryStreamClient {
   public connect(): void {
     this.shouldReconnect = true;
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
+    const direct = (import.meta.env.VITE_WS_URL as string | undefined)?.trim();
+    if (direct) {
+      // Vercel proxies /api but not WebSockets: ask the backend (through the proxy, with the session cookie) for a 60 s single-use ticket,
+      // then connect straight to the backend's own address with it.
+      if (this.ticketPending) return;
+      this.ticketPending = true;
+      fetch('/api/stream/ticket', { method: 'POST', credentials: 'include' })
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`ticket ${r.status}`))))
+        .then((t: { ticket: string }) => this.open(`${direct}?ticket=${encodeURIComponent(t.ticket)}`))
+        .catch(() => { this.callbacks.onClose?.(1006); this.scheduleReconnect(); })
+        .finally(() => { this.ticketPending = false; });
+      return;
+    }
+    this.open(liveSocketUrl());
+  }
+
+  private ticketPending = false;
+
+  private open(url: string): void {
+    if (!this.shouldReconnect) return;
     try {
-      const ws = new WebSocket(liveSocketUrl());
+      const ws = new WebSocket(url);
       this.ws = ws;
       ws.onopen = () => {
         this.attempts = 0;

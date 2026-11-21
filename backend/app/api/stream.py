@@ -226,8 +226,42 @@ def _origin_allowed(ws: WebSocket) -> bool:
     return urlparse(origin).netloc == ws.headers.get("host")
 
 
+TICKET_TTL_SECONDS = 60.0
+_tickets: Dict[str, float] = {}           # single-use WebSocket tickets -> expiry (monotonic); in memory, so valid on this instance only
+
+
+def _purge_tickets(now: float) -> None:
+    for k in [k for k, exp in _tickets.items() if exp <= now]:
+        _tickets.pop(k, None)
+
+
+@router.post("/stream/ticket")
+async def stream_ticket() -> Dict[str, Any]:
+    """A 60 s single-use ticket for /ws/live. For a dashboard on another site (Vercel proxies /api but not WebSockets), whose browser cannot
+    send the session cookie to the backend's own address. This route sits behind the normal sign-in; the ticket is not a session."""
+    import secrets
+    import time
+    now = time.monotonic()
+    _purge_tickets(now)
+    if len(_tickets) >= 1000:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "too many open tickets, try again shortly")
+    ticket = secrets.token_urlsafe(24)
+    _tickets[ticket] = now + TICKET_TTL_SECONDS
+    return {"ticket": ticket, "expires_in": int(TICKET_TTL_SECONDS)}
+
+
+def _ticket_valid(ticket: Optional[str]) -> bool:
+    import time
+    if not ticket:
+        return False
+    exp = _tickets.pop(ticket, None)          # single use, valid or not
+    return exp is not None and exp > time.monotonic()
+
+
 async def _ws_authorized(ws: WebSocket) -> bool:
     if not settings.REQUIRE_LOGIN:
+        return True
+    if _ticket_valid(ws.query_params.get("ticket")):
         return True
     header = ws.headers.get("x-admin-token")
     cookie = ws.cookies.get(SESSION_COOKIE)
