@@ -111,6 +111,7 @@ export function AgentView() {
               Feed {result.live.feed_state_at_perception}{result.live.feed_state_at_gate && result.live.feed_state_at_gate !== result.live.feed_state_at_perception ? `, then ${result.live.feed_state_at_gate}` : ''}
               {' · '}{result.live.n_readings} readings read{result.live.last_reading_at ? `, last at ${result.live.last_reading_at}` : ''}
               {' · '}last verdict {result.live.last_verdict ?? 'none'} · {result.live.detections_in_window} detections in the window
+              {' · '}checks not run: {result.live.checks_not_run_available === false ? 'not available' : 'see the comment'}
               {result.live.model_score_present ? ` · model score present (${result.live.model_score_label})` : ''}
               {' · '}snapshot up to reading {result.live.snapshot.cutoff_id}
             </p>

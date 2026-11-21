@@ -117,7 +117,9 @@ def baseline_text(state: AgentState) -> Optional[str]:
     parts.append(f"{total} detections in the window" + (f"; checks that fired: {', '.join(fired)}." if fired else "."))
     not_run = [f"{x.get('check')} ({x.get('reason')})" for x in (feed.get("checks_not_run") or [])]
     if not_run:
-        parts.append("Checks that did not run: " + "; ".join(not_run) + ".")
+        parts.append("Checks that did not run (from the stored detections): " + "; ".join(not_run) + ".")
+    else:       # readings keep no 'not run' list; it is only known from detections, so an empty list is not 'all checks ran'
+        parts.append("Checks that did not run: not available (stored readings do not keep that list, so this feed cannot say).")
     if feed.get("readings_with_no_checks"):
         parts.append(f"{feed['readings_with_no_checks']} readings had no check that could run.")
     ms = feed.get("model_score") or {}
@@ -132,6 +134,8 @@ def baseline_text(state: AgentState) -> Optional[str]:
 
 # ------------------------------------------------------------------------------------------------ the guard for a live comment
 _REAL = re.compile(r"(?<!not )(?<!no )(?<!never )\breal[- ](?:world )?(?:data|readings?|measurements?|weather|observations?)\b", re.I)
+_NO_CHECKS_RAN = re.compile(r"\bno (?:checks?|rules?)\s+(?:ran|were run|was run|have run|were executed)\b|\bchecks?\s+(?:did not|didn't|never)\s+run\b", re.I)
+_MODEL_PRESENT = re.compile(r"\b(?:model|keras) scores?\s+(?:is|are)\s+present\b|\ba (?:model|keras) scores?\s+is\s+(?:present|available)\b|\bscore is present\b", re.I)
 _MODEL_WORDS = re.compile(r"\b(?:keras|reconstruction|model score|model flag|model error|model's|the model)\b", re.I)
 _MODEL_VERDICT = re.compile(r"\b(?:model|keras|score)\b[^.]{0,60}\b(?:verdict|confirm\w*|prove\w*|decid\w*)\b", re.I)
 _NEGATED_VERDICT = re.compile(r"\b(?:not|never|no|neither)\s+(?:a\s+|an\s+)?(?:verdicts?|decisions?)\b", re.I)
@@ -148,6 +152,11 @@ def validate_live_text(text: Any, state: AgentState, known_checks: Iterable[str]
     # it may still never call simulated data real or measured
     if _REAL.search(text) and "simulated" in sources:
         problems.append("simulated data is called real")
+    counts = feed.get("counts_by_check_status") or {}
+    if _NO_CHECKS_RAN.search(text) and any(k not in ("NO_CHECKS", "NO_DATA") for k in counts):
+        problems.append("the comment says no checks ran, but readings in the window carry check verdicts")
+    if _MODEL_PRESENT.search(text) and not (feed.get("model_score") or {}).get("present"):
+        problems.append("the comment says a model score is present, but the feed holds none")
     if _MODEL_WORDS.search(text) and "not validated" not in text.lower():
         problems.append("the model score is mentioned without saying it is not validated")
     if _MODEL_VERDICT.search(_NEGATED_VERDICT.sub("", text)):
@@ -262,7 +271,7 @@ def live_summary(state: AgentState) -> dict:
     return {"station_id": feed.get("station_id"), "feed_state_at_perception": feed.get("feed_state"), "source_id": feed.get("source_id"), "cadence_seconds": feed.get("cadence_seconds"),
             "last_reading_at": feed.get("last_reading_at"), "last_verdict": feed.get("last_verdict"), "n_readings": feed.get("n_readings"), "window": feed.get("window"),
             "counts_by_check_status": feed.get("counts_by_check_status"), "detections_in_window": feed.get("detections_in_window"),
-            "checks_not_run": feed.get("checks_not_run"), "model_score_present": bool((feed.get("model_score") or {}).get("present")), "model_score_label": "not validated",
+            "checks_not_run": feed.get("checks_not_run"), "checks_not_run_available": bool(feed.get("checks_not_run")), "model_score_present": bool((feed.get("model_score") or {}).get("present")), "model_score_label": "not validated",
             "snapshot": {"cutoff_id": snap.get("cutoff_id"), "cutoff_timestamp": snap.get("cutoff_timestamp"), "evidence_hash": ev.get("evidence_hash")},
             "feed_state_at_gate": next((c.get("feed_state_now") for c in (state.get("gate_result") or {}).get("checks", []) if c.get("check") == "source_state"), None)}
 

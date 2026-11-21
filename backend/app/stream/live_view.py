@@ -118,7 +118,9 @@ async def feed_view(session: AsyncSession, manager: StreamManager, station_id: s
         "data_age_seconds": round((now - aware(last.timestamp)).total_seconds(), 1) if last else None,
         "last_verdict": last.check_status if last else None, "last_rule_score": last.rule_score if last else None,
         "counts_by_check_status": counts, "detections_in_window": len(events),
-        "checks_not_run": [{"check": k, "reason": v} for k, v in sorted(not_run.items())],
+        # readings keep no 'not run' list, only detections do: an empty list would read as 'all checks ran' (or 'none ran'), so it is null with a note
+        "checks_not_run": [{"check": k, "reason": v} for k, v in sorted(not_run.items())] or None,
+        "checks_not_run_note": None if not_run else "not available: stored readings keep no list of checks that did not run; do not say that no checks ran or that all checks ran",
         "readings_with_no_checks": counts.get("NO_CHECKS", 0) + counts.get("NO_DATA", 0),
         "model_score": {"present": latest_provider is not None, "label": MODEL_LABEL, "kind": SCORE_KIND,
                         "provider": scorer_expand(latest_provider.provider) if latest_provider else None,

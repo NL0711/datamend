@@ -384,6 +384,8 @@ export interface AgentLiveFacts {
   last_verdict: string | null;
   n_readings: number;
   detections_in_window: number;
+  /** false when the list of checks that did not run is empty: readings keep no such list, so it is "not available", not "all checks ran" */
+  checks_not_run_available?: boolean;
   model_score_present: boolean;
   model_score_label: string;
   snapshot: { cutoff_id: number; cutoff_timestamp: string | null; evidence_hash: string };

@@ -242,6 +242,20 @@ async def test_guard_refuses_an_invented_number_and_an_invented_station(async_cl
     assert out["status"] == "explanation_refused" and "LIVE-T9" in out["abstain_reason"]
 
 
+def test_guard_refuses_no_checks_ran_when_readings_carry_verdicts():
+    st = _state_with(FEED, status="running")
+    bad = live.validate_live_text("Station LIVE-T1 is running and no checks ran in the window.", st)
+    assert any("no checks ran" in p for p in bad)
+    assert not any("no checks ran" in p for p in live.validate_live_text("Station LIVE-T1 is running. The list of checks that did not run is not available.", st))
+
+
+def test_guard_refuses_a_model_score_that_is_not_there():
+    st = _state_with(FEED, status="running")          # FEED holds no model score
+    assert any("holds none" in p for p in live.validate_live_text("Station LIVE-T1 is running. A model score is present, but it is not validated.", st))
+    st2 = _state_with({**FEED, "model_score": {"present": True}}, status="running")
+    assert not any("holds none" in p for p in live.validate_live_text("Station LIVE-T1 is running. A model score is present, but it is not validated.", st2))
+
+
 def test_guard_rules_for_simulated_data_and_the_model_score():
     st = _state_with({**FEED, "model_score": {"present": True}}, status="running")
     ok = "Station LIVE-T1 is running. The readings are simulated data. The model score is not validated."
