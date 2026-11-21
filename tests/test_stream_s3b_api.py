@@ -331,6 +331,13 @@ async def test_the_active_source_setting_selects_and_clearing_it_stops(async_cli
 
 
 @pytest.mark.asyncio
+async def test_autostart_starts_the_simulator_when_nothing_is_saved(env, monkeypatch):
+    monkeypatch.setattr(settings, "STREAM_AUTOSTART_SIMULATOR", True)
+    assert await control.autostart(env.manager) is None
+    assert env.manager.active is not None and env.manager.active.source_id == "simulator"
+
+
+@pytest.mark.asyncio
 async def test_autostart_starts_only_a_saved_active_source(env, monkeypatch):
     assert await control.autostart(env.manager) is None and env.manager.active is None            # nothing saved: nothing starts
     import backend.app.runtime_settings as rs

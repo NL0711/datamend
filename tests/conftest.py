@@ -10,7 +10,8 @@ os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///" + (Path(tempfile.gettempdir(
 # ...and a throwaway file for dashboard-saved settings, so tests never read or write the developer's real data/runtime_settings.json
 os.environ["RUNTIME_SETTINGS_PATH"] = (Path(tempfile.gettempdir()) / "datamend_tests_runtime_settings.json").as_posix()
 os.environ["REQUIRE_LOGIN"] = "false"     # most tests call the API without a session; tests/test_auth.py switches it on where it matters
-os.environ["NARRATOR_EMBEDDED"] = "false"       # most tests expect "no narrator"; the embedded narrator's own tests switch it on
+os.environ["STREAM_AUTOSTART_SIMULATOR"] = "false"   # tests start sources themselves; the server default starts the simulator
+os.environ["NARRATOR_EMBEDDED"] = "false"      # most tests expect "no narrator"; the embedded narrator's own tests switch it on
 for _name in ("ANTHROPIC_API_KEY", "WEATHER_PROVIDER", "WEATHER_UNION_API_KEY", "WEATHER_UNION_CITY", "NARRATOR_URL", "NARRATOR_TOKEN", "ADMIN_TOKEN", "GEMINI_API_KEY",
               "FEED_HISTORY_URL"):
     os.environ[_name] = ""           # a developer's real .env values must not leak into a test run (environment outranks .env)

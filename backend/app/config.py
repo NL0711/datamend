@@ -72,6 +72,7 @@ class Settings(BaseSettings):
     MQTT_USERNAME: str = ""
     MQTT_PASSWORD: str = ""
     # Keras reconstruction scorer (separate service, ml-service/scorer). Empty URL: no scorer, the checks still run. The secret lives in .env only.
+    STREAM_AUTOSTART_SIMULATOR: bool = True      # with no saved active source the simulator starts with the server (its readings are synthetic); False = nothing starts on its own
     SCORER_URL: str = ""
     SCORER_SECRET: str = ""
     SCORER_TIMEOUT_SECONDS: float = 2.0

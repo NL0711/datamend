@@ -6,6 +6,7 @@ from typing import Iterable, List, Optional, Set
 
 from backend.app import runtime_settings as rs
 from backend.app import stream_settings as ss
+from backend.app.config import settings
 from backend.app.rainfall.catalog import load_catalog
 from backend.app.stream import stations as station_sets
 from backend.app.stream.esp32 import Esp32Source
@@ -98,12 +99,13 @@ async def apply_changes(manager: StreamManager, changed: Iterable[str]) -> Optio
 
 
 async def autostart(manager: StreamManager) -> Optional[str]:
-    """At server start: select the source saved as the active one (none by default: nothing starts on its own)."""
+    """At server start: select the source saved as the active one; with none saved, start the simulator (STREAM_AUTOSTART_SIMULATOR, default on)."""
     eff = ss.effective()
-    if not eff.active_source:
+    source = eff.active_source or ("simulator" if settings.STREAM_AUTOSTART_SIMULATOR else None)    # no saved choice: the simulator, unless switched off
+    if not source:
         return None
     try:
-        await manager.select(eff.active_source)
+        await manager.select(source)
     except StreamError as exc:
         logger.warning("[STREAM] the saved active source %s did not start: %s", eff.active_source, exc)
         return str(exc)
