@@ -1,0 +1,9 @@
+# Build-time only (fetch + convert + parity); Python 3.11. The service never installs these.
+# tensorflow 2.15 ships keras 2.15 (the model needs keras<3)
+tensorflow==2.15.1
+keras==2.15.0
+tf2onnx
+ml_dtypes==0.3.2
+onnx==1.16.2
+onnxruntime==1.18.1
+huggingface_hub

@@ -104,6 +104,9 @@ ml-service/*.nc
 *.nc
 
 
+# Scorer service: model weights are fetched at setup, not committed
+ml-service/scorer/weights/
+
 # notebooks with credentials written into them
 *.local.ipynb
 
