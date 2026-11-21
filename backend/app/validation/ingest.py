@@ -186,6 +186,35 @@ def _map_columns(headers: Sequence[str], profile: str) -> Tuple[Dict[str, str], 
     return canon_to_orig, renamed
 
 
+def detect_profile(headers: Sequence[str]) -> Optional[str]:
+    """'reading' or 'daily' when the headers (after the documented aliases) hold that profile's required columns, else None. The same alias
+    table as ``_map_columns``; a link import uses it to choose the profile when the caller did not say. 'reading' wins when both match."""
+    canon = {(_norm(h) if _norm(h) in ALIASES else _ALIAS_TO_CANON.get(_norm(h))) for h in headers}
+    if {"timestamp", "station_id"} <= canon and ({"accumulation", "intensity"} & canon):
+        return "reading"
+    if set(REQUIRED["daily"]) <= canon:
+        return "daily"
+    return None
+
+
+def sniff_profile(content: bytes) -> Optional[Tuple[str, str]]:
+    """``(profile, fmt)`` of a CSV or JSON file from its content (the first line for CSV, the keys of the rows for JSON), or None when it is
+    neither. For a link import, where there is no file name to read the type from."""
+    stripped = content.lstrip(b"\xef\xbb\xbf \t\r\n")
+    try:
+        if stripped[:1] in (b"[", b"{"):
+            headers, _rows = _read_rows(content, "json")
+            fmt = "json"
+        else:
+            first = next((ln for ln in content[:65536].decode("utf-8-sig", errors="replace").splitlines() if ln.strip()), "")
+            headers, _rows = _read_rows(first.encode("utf-8"), "csv")
+            fmt = "csv"
+    except InputRejected:
+        return None
+    profile = detect_profile(headers)
+    return (profile, fmt) if profile else None
+
+
 # ------------------------------------------------------------------------------------------------ parse
 
 def parse_upload(content: bytes, opts: UploadOptions) -> ParsedInput:

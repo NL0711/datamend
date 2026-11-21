@@ -32,9 +32,10 @@ from urllib.parse import parse_qsl, quote, unquote, urljoin, urlsplit
 import httpx
 
 from backend.app.pipeline import aws_trigger as aws_svc
-from backend.app.pipeline import cwc
+from backend.app.pipeline import cwc, isd
 from backend.app.pipeline import jobs as jobs_svc
 from backend.app.pipeline import kaggle_trigger as kaggle_svc
+from backend.app.validation import ingest as intake_ingest
 
 # httpx logs every request URL at INFO, and a presigned URL carries its signature in the query: keep that out of the logs.
 for _name in ("httpx", "httpcore"):
@@ -45,15 +46,28 @@ MAX_FILES = 20
 MAX_TOTAL_BYTES = 1024 * 1024 * 1024
 MAX_REDIRECTS = 3
 KAGGLE_TIMEOUT_S = 900
-DATA_SUFFIXES = (".csv", ".gz", ".txt")
+DATA_SUFFIXES = (".csv", ".gz", ".txt", ".json")
+FORMAT_IDS = ("auto", "cwc", "isd", "reading", "daily")
+ACCEPTED_FORMATS = ("Accepted: a CWC hourly rainfall CSV (Station, Latitude, Longitude, Data Acquisition Time, Telemetry Hourly Rainfall (mm)); "
+                    "an NOAA ISD hourly file (fixed-width or CSV, plain or .gz, with AA1 rainfall groups); a reading CSV or JSON (timestamp, "
+                    "station_id and accumulation and/or intensity); a daily CSV or JSON (day, station_id, mm).")
 ALLOWED_SUFFIX = ".amazonaws.com"
 KAGGLE_HOSTS = ("kaggle.com", "www.kaggle.com")
 
 BAD_AWS_LINK = ("this is not a supported Amazon S3 link: use s3://bucket/key, https://bucket.s3.<region>.amazonaws.com/key, "
                 "https://s3.<region>.amazonaws.com/bucket/key or a presigned https URL on amazonaws.com")
 BAD_KAGGLE_LINK = "this is not a supported Kaggle reference: use owner/dataset-slug or kernel:owner/notebook-slug (or a kaggle.com dataset or code URL)"
-UNKNOWN_FORMAT = ("the file is not a recognised format: expected a CWC hourly rainfall CSV (Station, Latitude, Longitude, Data Acquisition Time, "
-                  "Telemetry Hourly Rainfall (mm))")
+UNKNOWN_FORMAT = "the file is not a recognised format. " + ACCEPTED_FORMATS
+
+
+def unknown_format(first_line: str) -> str:
+    """The refusal for a file no reader recognises: what is accepted and the first line the sniffer saw (cut, printable characters only)."""
+    seen = _seen(first_line)
+    return UNKNOWN_FORMAT + (f" The first line of the file was: {seen!r}" if seen else " The file has no text lines.")
+
+
+def _seen(first_line: str) -> str:
+    return re.sub(r"[^\x20-\x7e]", "?", first_line.strip())[:120]
 
 
 class Boto3Missing(Exception):
@@ -63,9 +77,10 @@ class Boto3Missing(Exception):
 class ImportRefused(Exception):
     """A refusal or failure with a SAFE message (fixed text) and the HTTP status the API should answer with."""
 
-    def __init__(self, message: str, status: int = 400):
+    def __init__(self, message: str, status: int = 400, short: Optional[str] = None):
         super().__init__(message)
         self.status = status
+        self.short = short or message              # the reason as listed beside a skipped file inside an archive
 
 
 @dataclass
@@ -74,6 +89,7 @@ class Fetched:
     sha256: str
     size: int
     name: str                    # a safe display name (no path, no query)
+    ext: str = ""                # 'csv' or 'json' once prepare has settled a reading or daily file; empty otherwise
 
 
 @dataclass
@@ -521,8 +537,7 @@ def _nothing_to_import(root: Path) -> str:
             counts[ext] = counts.get(ext, 0) + 1
     held = ", ".join(f".{e} x{n}" if e != "no-extension" else f"{n} without an extension" for e, n in sorted(counts.items(), key=lambda kv: -kv[1])[:4])
     hint = " Gridded NetCDF (.nc) data is for model training, not for this step." if "nc" in counts else ""
-    return (f"This dataset has no file the Import step can read (it holds {held}). Import reads station files: CWC hourly CSV, or a CSV/txt "
-            f"in that layout.{hint}") if held else "the Kaggle download holds no file at all"
+    return (f"This dataset has no file the Import step can read (it holds {held}).{hint} {ACCEPTED_FORMATS}") if held else "the Kaggle download holds no file at all"
 
 
 def _fetch_kaggle_sync(downloaded: Fetched) -> List[Fetched]:
@@ -582,14 +597,34 @@ def _head(path: str, n: int = 65536) -> Tuple[bytes, bool]:
         return f.read(n), False
 
 
+def _json_like(head: bytes) -> bool:
+    return head.lstrip(b"\xef\xbb\xbf \t\r\n")[:1] in (b"[", b"{")
+
+
+def too_big_for_intake() -> ImportRefused:
+    return ImportRefused(f"the file is larger than {intake_ingest.MAX_BYTES // (1024 * 1024)} MB, the limit for reading and daily files "
+                         f"(CWC and ISD files can be up to {MAX_BYTES // (1024 * 1024)} MB)", 413)
+
+
 def sniff(path: str) -> str:
-    """'cwc' from the content (the header line of a CSV). Raises ImportRefused otherwise."""
+    """The format from the content, gzip looked through: 'cwc' (its header line), 'isd' (a fixed-width record or the CSV header), then 'reading' or
+    'daily' (the platform's own headers, JSON by its keys). Raises ImportRefused, listing the accepted formats and the first line seen, otherwise."""
     head, _ = _head(path)
     text = head.decode("utf-8-sig", errors="replace")
     first = next((ln for ln in text.splitlines() if ln.strip()), "")
     if cwc.COLUMNS["time"] in first and cwc.COLUMNS["mm"] in first:
         return "cwc"
-    raise ImportRefused(UNKNOWN_FORMAT, 422)
+    if isd.sniff_layout(first):
+        return "isd"
+    content = head
+    if _json_like(head):
+        content, _ = _head(path, intake_ingest.MAX_BYTES + 1)
+        if len(content) > intake_ingest.MAX_BYTES:
+            raise too_big_for_intake()
+    found = intake_ingest.sniff_profile(content)
+    if found:
+        return found[0]
+    raise ImportRefused(unknown_format(first), 422, short=f"not a recognised format (first line {_seen(first)!r})")
 
 
 def gunzip_to_temp(path: str) -> Fetched:
@@ -614,14 +649,51 @@ def gunzip_to_temp(path: str) -> Fetched:
 
 
 def prepare(f: Fetched, fmt: str) -> Tuple[Fetched, str]:
-    """Settle the format of a downloaded file and leave it readable by its adapter. ``fmt`` is 'auto' or 'cwc'. A gzip CSV is unpacked
-    (the CWC reader wants text). Returns the (possibly new) file and the format actually used."""
+    """Settle the format of a downloaded file and leave it readable by its reader. ``fmt`` is one of FORMAT_IDS. A gzip file is unpacked (every
+    reader wants text), whatever its format. Returns the (possibly new) file and the format actually used: cwc, isd, reading or daily. A reading
+    or daily file also gets ``ext`` ('csv' or 'json') and must fit the intake size limit."""
     detected = sniff(f.path) if fmt == "auto" else fmt
-    if detected == "cwc":
+    with open(f.path, "rb") as fh:
+        gz = fh.read(2) == b"\x1f\x8b"
+    if gz:
+        new = gunzip_to_temp(f.path)
+        name = f.name[:-3] if f.name.lower().endswith(".gz") else f.name
+        f = Fetched(new.path, new.sha256, new.size, name)
+    if detected in ("reading", "daily"):
+        if f.size > intake_ingest.MAX_BYTES:
+            if gz:
+                Path(f.path).unlink(missing_ok=True)          # the unpacked copy is ours and nobody else knows it
+            raise too_big_for_intake()
         with open(f.path, "rb") as fh:
-            gz = fh.read(2) == b"\x1f\x8b"
-        if gz:
-            new = gunzip_to_temp(f.path)
-            name = f.name[:-3] if f.name.lower().endswith(".gz") else f.name
-            f = Fetched(new.path, new.sha256, new.size, name)
+            f.ext = "json" if _json_like(fh.read(64)) else "csv"
     return f, detected
+
+
+def declaration_hint(reason: str) -> str:
+    """A file-level rejection from intake, with what to send added when the cause is a missing declaration."""
+    if "accumulation_mode" in reason and "declare" in reason:
+        return (f"{reason}. Send the request field accumulation_mode: 'cumulative' (each value is a running total) or 'per_reading' "
+                "(each value is the rain since the previous reading).")
+    if "no time zone" in reason:
+        return f"{reason}. Send the request field timezone ('UTC', an offset such as '+05:30', or an IANA name such as 'Asia/Kolkata')."
+    return reason
+
+
+async def run_reading_file(session: Any, f: Fetched, profile: str, accumulation_mode: Optional[str] = None, timezone: Optional[str] = None,
+                           interval_minutes: Optional[float] = None, synthetic: bool = False) -> Any:
+    """A prepared reading or daily file through the SAME intake as an upload (``intake.run_file``): header aliases, file-level reject, row-level
+    flags, the declared accumulation mode, zone and interval. A rejected file is stored as a failed run, as for an upload, and raised as an
+    ImportRefused (422) whose message says what to send. Returns the ValidationRun."""
+    from backend.app.validation import intake
+    from backend.app.validation.ingest import InputRejected
+    content = await asyncio.to_thread(_read_all, f.path)
+    stem = f.name.rsplit(".", 1)[0] if "." in f.name else f.name
+    try:
+        return await intake.run_file(session, content, f"{stem or 'import'}.{f.ext or 'csv'}", profile, accumulation_mode, timezone, interval_minutes, synthetic)
+    except InputRejected as e:
+        raise ImportRefused(declaration_hint(str(e)), 422) from None
+
+
+def _read_all(path: str) -> bytes:
+    with open(path, "rb") as fh:
+        return fh.read(intake_ingest.MAX_BYTES + 1)

@@ -109,7 +109,8 @@ async def test_sources_lists_providers_formats_and_limits(async_client: AsyncCli
     assert aws["label"] == "Amazon S3 (AWS)" and "s3://bucket/key" in aws["accepts"] and aws["credentials"].startswith("optional")
     assert body["providers"][1]["accepts"] == ["owner/dataset-slug", "a kaggle.com dataset link", "kernel:owner/notebook-slug (output)"]
     assert body["providers"][1]["credentials"].startswith("none for public datasets")
-    assert [f["id"] for f in body["formats"]] == ["auto", "cwc"] and body["limits"]["max_mb"] == 300
+    assert [f["id"] for f in body["formats"]] == ["auto", "cwc", "isd", "reading", "daily"] and body["limits"]["max_mb"] == 300
+    assert [d["id"] for d in body["declarations"]] == ["accumulation_mode", "timezone", "interval_minutes", "synthetic"]
 
 
 @pytest.mark.asyncio

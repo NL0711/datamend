@@ -21,13 +21,13 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.database import async_session_factory
-from backend.app.pipeline import cwc
+from backend.app.pipeline import cwc, isd
 from backend.app.pipeline.models import IngestJob, Observation
 from backend.app.pipeline.store import insert_observations, upsert_stations
 
 logger = logging.getLogger(__name__)
 
-SOURCES = {"cwc": cwc}         # every adapter exposes ASSUMPTIONS, omits_zero_values, FormatError, read_rows, station_record
+SOURCES = {"cwc": cwc, "isd": isd}         # "isd" is an import FILE FORMAT only (no replay, no station list); every adapter exposes ASSUMPTIONS, omits_zero_values, FormatError, read_rows, station_record
 MAX_BYTES = 300 * 1024 * 1024
 CHUNK_ROWS = 2000
 MAX_BAD_SAMPLES = 50
