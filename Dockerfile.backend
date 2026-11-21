@@ -5,6 +5,9 @@ WORKDIR /app
 COPY requirements.txt .
 # No torch, scikit-learn or other ML packages: the platform is rules, a gamma tail (scipy) and a neighbour check.
 RUN pip install --no-cache-dir -r requirements.txt
+# The agent (S6) packages: without them the platform runs and /api/agent is simply absent. Adds about 60 MB of memory (measured on Windows, import only).
+COPY backend/requirements-agent.txt ./requirements-agent.txt
+RUN pip install --no-cache-dir -r requirements-agent.txt
 
 COPY backend/ ./backend/
 # The platform's own MCP endpoint (POST /api/mcp) hosts the standard-library MCP server of mcp-service: its package and the pinned tool lock.

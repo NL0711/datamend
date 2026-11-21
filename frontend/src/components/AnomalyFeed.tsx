@@ -65,6 +65,18 @@ export function AnomalyFeed({ stationId, limit = 4, onOpen, evidence = false }: 
               {ev.is_fault && <span className="text-rose-600 font-bold">fault-kind check fired</span>}
             </div>
             {ev.reason && <div className="text-[11px] text-slate-600 font-sans">{ev.reason}</div>}
+            {evidence && typeof ev.provider === 'object' && ev.provider?.variables && (
+              <div className="text-[10px] text-slate-600 border-t border-[#D3DCE7] pt-1.5" onClick={(e) => e.stopPropagation()}>
+                <div className="font-bold uppercase tracking-wider">Model score (reconstruction error, not validated)</div>
+                {Object.entries(ev.provider.variables).map(([name, v]) => (
+                  <div key={name}>
+                    {name}: {v.status === 'scored'
+                      ? `error ${v.error != null ? v.error.toFixed(3) : 'n/a'}${v.threshold != null ? `, threshold ${v.threshold.toFixed(3)}${v.flagged ? ' (flagged)' : ''}` : ', no threshold yet'}`
+                      : `${v.status}${v.reason ? `: ${v.reason}` : ''}`}
+                  </div>
+                ))}
+              </div>
+            )}
             {evidence && (hits.length > 0 || notRun.length > 0) && (
               <details className="text-[11px]" onClick={(e) => e.stopPropagation()}>
                 <summary className="cursor-pointer font-bold text-slate-700">Evidence ({hits.length} check{hits.length === 1 ? '' : 's'} fired{notRun.length ? `, ${notRun.length} not run` : ''})</summary>

@@ -206,6 +206,16 @@ export interface Station {
   updated_at: string;
 }
 
+/** The Keras reconstruction-error score of S5 for one reading, per variable. Never a verdict; not validated. */
+export interface ModelProviderBlock {
+  model_id?: string;
+  revision?: string;
+  calibrated?: boolean;
+  validated?: boolean;
+  note?: string;
+  variables?: Record<string, { status: string; error?: number | null; threshold?: number | null; flagged?: boolean | null; reason?: string | null }>;
+}
+
 export interface AnomalyEvent {
   id: number;
   observation_id?: number;
@@ -227,7 +237,7 @@ export interface AnomalyEvent {
   spatial_consensus?: SpatialConsensusResult;
   source_type?: string;
   source_id?: string;
-  provider?: string;
+  provider?: string | ModelProviderBlock;
   device_id?: string;
   created_at: string;
   /** From the stream's detections (S3a/S4): the variable the checks were about, the verdict, the evidence of every check that fired. */
