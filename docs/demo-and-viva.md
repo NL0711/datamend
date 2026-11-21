@@ -80,7 +80,7 @@ Times are targets. Total about 9 minutes.
    - See: active source (simulated, Open-Meteo, ESP32, Weather Union), station set, cadence. "Save and restart stream".
    - Say: "One block chooses the source and the station set. Changing it restarts the stream. Keys are write-only secrets."
 
-5. **Live, start the simulator (2:30 to 3:30).** Press `2`. In the picker choose a simulator station (KTLX, KOKX, KAMX, KATX, KFWS or KDMX). Use the Start simulator control on the Live page (the same start is available in the Settings drawer as "Start Generator").
+5. **Live, start the simulator (2:30 to 3:30).** Press `2`. In the picker choose a simulator station (KTLX, KOKX, KAMX, KATX, KFWS or KDMX). The simulator starts by itself with the server (STREAM_AUTOSTART_SIMULATOR, default on), so there is no start button: the Live page shows "Simulator: running" and you only need to pick a station. Change the cadence in Settings > Input stream.
    - See: temperature, pressure and humidity updating, the source chip in the header turning to the live state.
    - Say: "This is the original simulator, so the data is synthetic. Every stored reading keeps a `source` field in the database and API. The dashboard has no badge, so I am telling you now: it is simulated."
    - If the Keras score area shows "not run: need 288 readings, have N", leave it. That is correct behaviour.
@@ -102,7 +102,7 @@ Times are targets. Total about 9 minutes.
 9. **Import and run an upload (7:00 to 7:45, can be done earlier off-screen).** Click Import in the header. Use the file option: choose `data/samples/synthetic_readings_with_faults.csv`, profile `reading`, accumulation mode `cumulative`, interval `15`, tick synthetic, press Validate.
    - See: a run with a headline report, flagged rows, "not run" list.
    - Say: "Same check catalogue for uploads and for the stream. The sample file is synthetic."
-   - Link import: the box accepts a Kaggle dataset or a public S3 link, but the only supported file format is CWC hourly rainfall CSV. Show the box and say that. Do not paste a link live unless you have already tried that exact link. The owner's public Kaggle dataset holds gridded NetCDF, which imports nothing. S3 import is untested against live S3.
+   - Link import: the box accepts a Kaggle dataset or a public S3 link, but it reads reading or daily CSV/JSON, gzip files and NOAA ISD hourly files (as a file format only). The S3 link `s3://noaa-isd-pds/data/2024/421820-99999-2024.gz` was tried through the Import page and gave a completed run (94 rows, 1 station): it is safe to paste live. The owner's public Kaggle dataset holds gridded NetCDF, which imports nothing, so do not paste it.
 
 10. **Explorer and Review (7:45 to 8:30).** Press `5` (Explorer): stored readings of the station in a table. Select station SYN-A (it appears in the picker after the upload). Press `6` (Review): the review queue. Open a flagged row, save a decision such as `false_alarm` or `confirmed_fault` (needs the admin sign-in).
     - Say: "A reviewer decision is stored apart from the evidence. It never changes a verdict. The summary says these are one person's opinions, not ground truth."
