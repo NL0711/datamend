@@ -28,7 +28,7 @@ async function readError(res: Response): Promise<string> {
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
     // a session the server no longer accepts (expired, or the server restarted): drop it and go to the sign-in page
-    if (res.status === 401 && typeof window !== 'undefined' && storedToken()) { rememberToken(''); window.location.hash = '#/login'; }
+    if (res.status === 401 && typeof window !== 'undefined' && storedToken()) expireSession();
     throw new ApiError(res.status, await readError(res));
   }
   return res.json() as Promise<T>;
@@ -80,6 +80,13 @@ export const getStationCycle =() => get<StationCycleResponse>(`${V}/stations`);
 export const ADMIN_TOKEN_KEY = 'datamend-admin-token';
 export const storedToken = () => (typeof localStorage === 'undefined' ? '' : localStorage.getItem(ADMIN_TOKEN_KEY) ?? '');
 export const rememberToken = (v: string) => { if (typeof localStorage !== 'undefined') localStorage.setItem(ADMIN_TOKEN_KEY, v); };
+
+/** The server no longer accepts the stored session (expired, secret changed): forget it everywhere and show the sign-in page. Called by every API layer on a 401. */
+export const SIGNED_OUT_EVENT = 'datamend:signed-out';
+export function expireSession(): void {
+  if (typeof localStorage !== 'undefined') { localStorage.setItem(ADMIN_TOKEN_KEY, ''); localStorage.removeItem('datamend-admin-email'); }
+  if (typeof window !== 'undefined') { window.dispatchEvent(new Event(SIGNED_OUT_EVENT)); window.location.hash = '#/login'; }
+}
 
 /** Admin sign-in (api/auth). The session token is sent as X-Admin-Token like the older ADMIN_TOKEN. */
 export interface Me { signed_in: boolean; email: string | null; login_enabled: boolean }

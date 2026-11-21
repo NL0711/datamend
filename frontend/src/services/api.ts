@@ -23,7 +23,7 @@ import {
   OperatorFeedbackPayload,
   OperatorFeedbackRecord,
 } from '../types';
-import { storedToken } from '../validation/api';
+import { expireSession, storedToken } from '../validation/api';
 import { apiDetail, needsSignIn } from './stream';
 
 export const API_BASE_URL = '/api';
@@ -55,7 +55,10 @@ export function isNotBuilt(err: unknown): boolean {
 /** fetch that carries the signed-in session (the server refuses anything else when sign-in is on). */
 function request(url: string, init: RequestInit = {}): Promise<Response> {
   const t = storedToken();
-  return fetch(url, { ...init, headers: { ...(t ? { 'X-Admin-Token': t } : {}), ...((init.headers as Record<string, string>) ?? {}) } });
+  return fetch(url, { ...init, headers: { ...(t ? { 'X-Admin-Token': t } : {}), ...((init.headers as Record<string, string>) ?? {}) } }).then((res) => {
+    if (res.status === 401 && t) expireSession();        // a session the server no longer accepts: go to the sign-in page instead of showing "failed"
+    return res;
+  });
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {

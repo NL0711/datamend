@@ -3,7 +3,7 @@
 // wherever a write needs it (imports, cleaning, the review box, training). Reading the dashboard never needs a sign-in.
 import { useEffect, useSyncExternalStore, useState } from 'react';
 import { LogIn, LogOut } from 'lucide-react';
-import { getMe, login, logout, rememberToken, storedToken } from './api';
+import { SIGNED_OUT_EVENT, getMe, login, logout, rememberToken, storedToken } from './api';
 import { Notice, formatError } from './ui';
 
 const EMAIL_KEY = 'datamend-admin-email';
@@ -16,6 +16,10 @@ const snapshot = () => `${storedToken()}|${adminEmail()}`;
 export function useAdmin() {
   const snap = useSyncExternalStore((cb) => { listeners.add(cb); return () => { listeners.delete(cb); }; }, snapshot);
   const [token, email] = snap.split('|');
+  useEffect(() => {              // any API layer that got a 401 has already cleared the session: re-read it
+    window.addEventListener(SIGNED_OUT_EVENT, emit);
+    return () => window.removeEventListener(SIGNED_OUT_EVENT, emit);
+  }, []);
   useEffect(() => {              // a session the server no longer knows (restart, expiry) is dropped, not trusted
     if (!token) return;
     getMe(token).then((m) => { if (!m.signed_in) { rememberToken(''); localStorage.removeItem(EMAIL_KEY); emit(); } }).catch(() => undefined);

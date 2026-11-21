@@ -6,7 +6,7 @@ import type { AgentEventRow, AgentStatus, AgentTaskResult } from '../services/ap
 import { useStation } from '../validation/StationContext';
 import { AuthNotice } from './AuthNotice';
 import { openStationPicker } from './PageIntro';
-import { agentErrorText, describeEvent, statusWords } from './agentText';
+import { agentErrorText, describeEvent, isTransient, statusWords } from './agentText';
 
 const card = 'bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-4 shadow-lg space-y-2';
 const h3 = 'text-xs font-bold uppercase tracking-wider text-slate-900 font-mono';
@@ -45,7 +45,14 @@ export function AgentView() {
     if (!stationId) return;
     setBusy(true); setError(null); setNeedSignIn(false); setEvents(null);
     try {
-      const r = await askAgent(stationId, text, source);
+      let r: AgentTaskResult;
+      try {
+        r = await askAgent(stationId, text, source);
+      } catch (first) {
+        if (!isTransient(first)) throw first;
+        await new Promise((res) => setTimeout(res, 6000));       // a sleeping free-plan server: give it a moment, then ask once more
+        r = await askAgent(stationId, text, source);
+      }
       setResult(r);
       setEvents((await fetchAgentEvents(r.task_id)).events);
     } catch (e) { fail(e); } finally { setBusy(false); }

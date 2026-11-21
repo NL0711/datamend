@@ -1,9 +1,18 @@
 // Words for the Agent page (PROTOTYPE of a sandboxed, bounded decision-support agent). Pure helpers, tested in agentText.test.ts.
-import { errorText, isNotBuilt } from '../services/api';
+import { ServiceError, errorText } from '../services/api';
 
-/** The Agent page's error line: an absent /api/agent (404, 405, 501, 502, 503) means the agent packages are not installed on this server. */
+const WAKING = 'The server did not answer. It may be waking up or restarting (the free Render plan sleeps when idle). Wait a minute and try again.';
+
+/** True for a failure that usually passes by itself: the network did not reach the server ("Failed to fetch", Safari's "Load failed") or a proxy answered 502, 503 or 504. */
+export function isTransient(err: unknown): boolean {
+  return err instanceof TypeError || (err instanceof ServiceError && [502, 503, 504].includes(err.status));
+}
+
+/** The Agent page's error line. 404, 405 and 501 mean /api/agent is absent (the agent packages are not installed); 502, 503, 504 and network failures mean the server did not answer. */
 export function agentErrorText(err: unknown): string {
-  return isNotBuilt(err) ? 'Agent service not available on this server (the agent packages are not installed).' : errorText(err);
+  if (err instanceof ServiceError && [404, 405, 501].includes(err.status)) return 'Agent service not available on this server (the agent packages are not installed).';
+  if (isTransient(err)) return WAKING;
+  return errorText(err);
 }
 
 /** What a task status means, in words. Only "completed" means a proposal was recorded. */

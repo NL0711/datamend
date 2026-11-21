@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { clockUtc, fmtLat, fmtLatLon, fmtLon, packetCount, streamStatsLine } from './geo';
 import { emptyRunText } from '../components/StationRunPanel';
-import { agentErrorText } from '../components/agentText';
+import { agentErrorText, isTransient } from '../components/agentText';
 import { simulatorLine } from '../components/SimulatorControls';
 import { ServiceError } from './api';
 
@@ -32,6 +32,14 @@ describe('geo and display helpers', () => {
   it('explains an absent agent service instead of showing a raw 404', () => {
     expect(agentErrorText(new ServiceError(404, '404: Not Found', 'Not Found'))).toMatch(/Agent service not available on this server/);
     expect(agentErrorText(new ServiceError(500, 'boom', 'boom'))).toMatch(/boom/);
+  });
+  it('says a sleeping server did not answer, instead of claiming the agent is not installed', () => {
+    for (const status of [502, 503, 504]) expect(agentErrorText(new ServiceError(status, 'x', 'x'))).toMatch(/waking up or restarting/);
+    expect(agentErrorText(new TypeError('Load failed'))).toMatch(/waking up or restarting/);
+    expect(agentErrorText(new TypeError('Failed to fetch'))).toMatch(/waking up or restarting/);
+    expect(isTransient(new TypeError('Load failed'))).toBe(true);
+    expect(isTransient(new ServiceError(500, 'x', 'x'))).toBe(false);
+    expect(isTransient(new ServiceError(404, 'x', 'x'))).toBe(false);
   });
   it('shows the simulator state without any start or stop wording', () => {
     const line = simulatorLine({ running: true, interval_seconds: 5, active_stations: ['A', 'B'], step_count: 7, pending_injections_count: 0 });
