@@ -15,7 +15,7 @@ import time
 from collections import deque
 from typing import Deque, Dict, Optional
 
-from fastapi import APIRouter, Header, HTTPException, Request, status
+from fastapi import APIRouter, Header, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import delete
@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 SESSION_TTL_S = 12 * 3600
+SESSION_COOKIE = "datamend_session"
 MAX_FAILURES, WINDOW_S = 8, 300.0
 TOKEN_MAX_FAILURES = 10
 _MAX_CLIENTS = 5000
@@ -176,7 +177,7 @@ class Credentials(BaseModel):
 
 
 @router.post("/login")
-async def login(body: Credentials, request: Request) -> Dict[str, object]:
+async def login(body: Credentials, request: Request, response: Response) -> Dict[str, object]:
     if not login_enabled():
         raise HTTPException(status.HTTP_403_FORBIDDEN, "admin sign-in is switched off: set ADMIN_PASSWORD on the server")
     client = client_key(request)                                    # per client address: one client cannot lock the admin out for everyone
@@ -191,6 +192,8 @@ async def login(body: Credentials, request: Request) -> Dict[str, object]:
     expires = time.time() + SESSION_TTL_S
     _sessions[token] = expires
     await _store_session(token, expires)
+    # the same token as an HttpOnly cookie, read ONLY by the telemetry WebSocket (a browser cannot set X-Admin-Token on one); HTTP routes ignore it
+    response.set_cookie(SESSION_COOKIE, token, max_age=SESSION_TTL_S, httponly=True, samesite="lax", secure=request.url.scheme == "https", path="/")
     return {"token": token, "email": settings.ADMIN_EMAIL, "expires_in": SESSION_TTL_S}
 
 
@@ -202,7 +205,9 @@ async def me(x_admin_token: Optional[str] = Header(None)) -> Dict[str, object]:
 
 
 @router.post("/logout")
-async def logout(x_admin_token: Optional[str] = Header(None)) -> Dict[str, bool]:
-    if x_admin_token:
-        await _forget_session(x_admin_token)
+async def logout(request: Request, response: Response, x_admin_token: Optional[str] = Header(None)) -> Dict[str, bool]:
+    for tok in {x_admin_token, request.cookies.get(SESSION_COOKIE)}:
+        if tok:
+            await _forget_session(tok)
+    response.delete_cookie(SESSION_COOKIE, path="/")
     return {"signed_in": False}

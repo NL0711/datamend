@@ -8,7 +8,7 @@ const reply = (body: unknown, status = 200) => ({ ok: status < 300, status, json
 
 beforeEach(() => {
   store.clear();
-  vi.stubGlobal('sessionStorage', {
+  vi.stubGlobal('localStorage', {
     getItem: (k: string) => store.get(k) ?? null,
     setItem: (k: string, v: string) => { store.set(k, v); },
     removeItem: (k: string) => { store.delete(k); },

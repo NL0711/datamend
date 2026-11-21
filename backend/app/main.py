@@ -21,6 +21,7 @@ from backend.app.api.pipeline_import import router as pipeline_import_router
 from backend.app.api.places import router as places_router
 from backend.app.api.rainfall import router as rainfall_router
 from backend.app.api.settings import router as settings_router
+from backend.app.api.stream import router as stream_router, ws_router as stream_ws_router
 from backend.app.api.validation import router as validation_router
 from backend.app.config import settings
 from backend.app.db.database import close_db, init_db
@@ -56,6 +57,8 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("Shutting down %s services...", settings.PROJECT_NAME)
+    from backend.app.stream import runtime as stream_runtime
+    await stream_runtime.shutdown()
     await stop_rainfall_service()
     await close_db()
     logger.info("Cleanup complete.")
@@ -85,6 +88,8 @@ app.include_router(pipeline_router)
 app.include_router(pipeline_import_router)
 app.include_router(pipeline_explore_router)
 app.include_router(settings_router)
+app.include_router(stream_router)
+app.include_router(stream_ws_router)
 app.include_router(mcp_access_router)
 app.include_router(mcp_endpoint_router)
 mcp_gateway.attach(app)                      # the platform's own narrator and MCP endpoint read the platform through this app

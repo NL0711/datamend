@@ -1,12 +1,14 @@
-"""The application surface after the legacy temperature/pressure/humidity code was removed (spec slice 9)."""
+"""The application surface. The legacy temperature/pressure/humidity app was removed (spec slice 9); its service contract (stations, observations,
+anomalies, data sources, simulation, /ws/live) came back as NEW code on the platform by the owner's decision of 2026-11-21 (slice S3a, tests/test_stream_api.py).
+What stays gone is every other legacy path."""
 import pytest
 from httpx import AsyncClient
 
 from backend.app.main import app
 
-EXPECTED_PREFIXES = ("/api/validation", "/api/rainfall", "/api/places", "/api/settings", "/api/auth", "/api/pipeline", "/api/mcp")
-LEGACY_PATHS = ["/api/stations", "/api/observations", "/api/anomalies", "/api/health", "/api/locations", "/api/simulation/status",
-                "/api/sources", "/ws/telemetry"]
+EXPECTED_PREFIXES = ("/api/validation", "/api/rainfall", "/api/places", "/api/settings", "/api/auth", "/api/pipeline", "/api/mcp",
+                     "/api/stations", "/api/observations", "/api/anomalies", "/api/data-sources", "/api/simulation", "/api/simulate")
+LEGACY_PATHS = ["/api/health", "/api/locations", "/api/sources", "/ws/telemetry", "/api/health/fleet", "/api/metrics", "/api/inference"]
 
 
 @pytest.mark.asyncio
@@ -20,6 +22,7 @@ def test_only_the_platform_routes_exist():
     extra = [p for p in paths if p != "/" and not p.startswith(EXPECTED_PREFIXES)]
     assert extra == []
     assert any(p.startswith("/api/validation/runs") for p in paths) and "/api/places/locate" in paths
+    assert {"/api/stations", "/api/observations", "/api/anomalies", "/api/data-sources", "/api/simulation/start", "/api/simulate/inject"} <= set(paths)
 
 
 @pytest.mark.asyncio

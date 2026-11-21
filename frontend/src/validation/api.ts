@@ -75,10 +75,11 @@ export const getMapLayers = () => get<MapLayers>('/api/places/map');
 export const getInsights = (query: string) => get<InsightsData>(`${V}/insights?${query}`);
 export const getStationCycle =() => get<StationCycleResponse>(`${V}/stations`);
 
-/** The admin token is kept for this browser tab only (sessionStorage). Reviews and Settings need it; reading never does. */
+/** The admin session token is kept in this browser (localStorage), so a refresh, a new tab or a restart does not sign you out; the server
+ *  still expires it after 12 hours and keeps sessions in the database. Sign out removes it. */
 export const ADMIN_TOKEN_KEY = 'datamend-admin-token';
-export const storedToken = () => (typeof sessionStorage === 'undefined' ? '' : sessionStorage.getItem(ADMIN_TOKEN_KEY) ?? '');
-export const rememberToken = (v: string) => { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(ADMIN_TOKEN_KEY, v); };
+export const storedToken = () => (typeof localStorage === 'undefined' ? '' : localStorage.getItem(ADMIN_TOKEN_KEY) ?? '');
+export const rememberToken = (v: string) => { if (typeof localStorage !== 'undefined') localStorage.setItem(ADMIN_TOKEN_KEY, v); };
 
 /** Admin sign-in (api/auth). The session token is sent as X-Admin-Token like the older ADMIN_TOKEN. */
 export interface Me { signed_in: boolean; email: string | null; login_enabled: boolean }

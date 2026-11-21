@@ -174,9 +174,9 @@ describe('api client', () => {
       '/api/validation/review/queue?status=unreviewed&page=1&page_size=50',
       '/api/validation/runs/4/rows?scope=all&sort=time&page=1&page_size=50&station=A']);
   });
-  it('keeps the admin token for this tab only', () => {
+  it('keeps the admin token in the browser (localStorage), so a refresh does not sign out', () => {
     const store: Record<string, string> = {};
-    vi.stubGlobal('sessionStorage', { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; } });
+    vi.stubGlobal('localStorage', { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; } });
     expect(storedToken()).toBe('');
     rememberToken('abc');
     expect(storedToken()).toBe('abc');

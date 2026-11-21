@@ -1,4 +1,5 @@
-// Admin sign-in. One small store (the session token and email live in sessionStorage, so a closed tab signs out) and one form used
+// Admin sign-in. One small store (the session token and email live in localStorage, so a refresh or a new tab stays signed in until the
+// server expires the session after 12 hours or you sign out) and one form used
 // wherever a write needs it (imports, cleaning, the review box, training). Reading the dashboard never needs a sign-in.
 import { useEffect, useSyncExternalStore, useState } from 'react';
 import { LogIn, LogOut } from 'lucide-react';
@@ -9,7 +10,7 @@ const EMAIL_KEY = 'datamend-admin-email';
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
-export const adminEmail = () => sessionStorage.getItem(EMAIL_KEY) ?? '';
+export const adminEmail = () => localStorage.getItem(EMAIL_KEY) ?? '';
 const snapshot = () => `${storedToken()}|${adminEmail()}`;
 
 export function useAdmin() {
@@ -17,18 +18,18 @@ export function useAdmin() {
   const [token, email] = snap.split('|');
   useEffect(() => {              // a session the server no longer knows (restart, expiry) is dropped, not trusted
     if (!token) return;
-    getMe(token).then((m) => { if (!m.signed_in) { rememberToken(''); sessionStorage.removeItem(EMAIL_KEY); emit(); } }).catch(() => undefined);
+    getMe(token).then((m) => { if (!m.signed_in) { rememberToken(''); localStorage.removeItem(EMAIL_KEY); emit(); } }).catch(() => undefined);
   }, [token]);
   return { token, email, signedIn: token.length > 0 };
 }
 
 export async function signIn(email: string, password: string) {
   const r = await login(email, password);
-  rememberToken(r.token); sessionStorage.setItem(EMAIL_KEY, r.email); emit();
+  rememberToken(r.token); localStorage.setItem(EMAIL_KEY, r.email); emit();
 }
 export async function signOut() {
   const t = storedToken();
-  rememberToken(''); sessionStorage.removeItem(EMAIL_KEY); emit();
+  rememberToken(''); localStorage.removeItem(EMAIL_KEY); emit();
   if (t) await logout(t).catch(() => undefined);
 }
 
