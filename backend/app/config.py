@@ -71,6 +71,12 @@ class Settings(BaseSettings):
     MQTT_PORT: int = 1883
     MQTT_USERNAME: str = ""
     MQTT_PASSWORD: str = ""
+    # Keras reconstruction scorer (separate service, ml-service/scorer). Empty URL: no scorer, the checks still run. The secret lives in .env only.
+    SCORER_URL: str = ""
+    SCORER_SECRET: str = ""
+    SCORER_TIMEOUT_SECONDS: float = 2.0
+    SCORER_FALSE_ALARM_BUDGET: float = 0.001          # assumed: 1 flag per 1,000 clean scores
+    SCORER_MIN_CLEAN_SCORES: int = 1000               # assumed: clean errors needed before a station/variable gets a threshold
     # The platform's own MCP endpoint for other people's agents (POST /api/mcp): read-only tools, a token per person made in Settings.
     MCP_AUDIT_LOG: str = "data/mcp_audit.jsonl"       # one JSON line per tool call (arguments capped, secrets redacted)
     MCP_RATE_PER_MINUTE: int = 120                    # tool calls per minute across all tokens
@@ -97,6 +103,14 @@ class Settings(BaseSettings):
     GEMINI_TIMEOUT_SECONDS: float = 90.0              # headroom for the slower gemini-3.5-flash (20 to 60 s); the lite default answers in about 5 s
     GEMINI_CALLS_PER_MINUTE: int = 10
     GEMINI_DAILY_CALL_BUDGET: int = 200
+
+    # The platform's own agent (backend/app/agent, PROTOTYPE of a sandboxed bounded agent). Provider "gemini" reuses GEMINI_API_KEY; "none" switches
+    # it off ("agent not connected": the rule-based baseline still explains). AGENT_MODEL empty: GEMINI_MODEL. Limits per turn are assumed config values.
+    AGENT_PROVIDER: str = "gemini"
+    AGENT_MODEL: str = ""
+    AGENT_MAX_TOOL_CALLS: int = 6
+    AGENT_TOKEN_BUDGET: int = 12000                   # assumed: the most INPUT tokens (estimated as characters / 4) one model call may be given, and the cap on output tokens
+    AGENT_TIMEOUT_SECONDS: float = 90.0               # the whole turn
 
     # An exported score file (docs/contracts/score-export-v1.schema.json, written by ml-service/qc/score_export.py). Empty = no trained STNet scores
     # in the evidence. The file is read-only data; a station is mapped to its nearest cell within half a grid cell (ASSUMED stand-in mapping).
