@@ -87,6 +87,12 @@ async def create_run_from_kaggle(body: KaggleRunRequest, session: AsyncSession =
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
     except intake.LinkUnreachable as e:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e))
+    try:
+        name, content, is_isd = intake.normalize_link_file(name, content)
+    except intake.LinkRejected as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
+    if is_isd:       # ISD depths are per-reading amounts in UTC: declared here, not left for the caller to guess
+        return await _validate_file(session, content, name, "reading", "per_reading", "UTC", None, body.synthetic)
     return await _validate_file(session, content, name, body.profile, body.accumulation_mode, body.timezone, body.interval_minutes, body.synthetic)
 
 

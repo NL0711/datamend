@@ -78,8 +78,8 @@ async def fetch(url: str, filename: Optional[str] = None, transport: Optional[ht
             except KaggleError as e:                      # the same file-choice rules and wording as a Kaggle dataset
                 raise S3Error(str(e).replace("dataset", "folder"))
             key = chosen.name
-        elif not key.lower().endswith((".csv", ".json")):
-            raise S3Error("That file is not a CSV or JSON file.")
+        elif not key.lower().endswith((".csv", ".json", ".gz")):
+            raise S3Error("That file is not a CSV, JSON or gzip file.")
         body = bytearray()
         async with client.stream("GET", f"https://{bucket}.s3.amazonaws.com/{quote(key)}") as res:
             if res.status_code >= 400:
