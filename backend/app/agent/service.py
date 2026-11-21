@@ -23,7 +23,7 @@ from backend.app.agent import events, live, policy
 from backend.app.agent.gemini_model import AgentNotConnected, GeminiAgentModel
 from backend.app.agent.graph import build_agent_graph, result_view
 from backend.app.agent.models import AgentEvent, AgentProposal, AgentTask
-from backend.app.agent.state import STATUS_ABSTAINED, new_state
+from backend.app.agent.state import STATUS_ABSTAINED, STATUS_NEEDS_CLARIFICATION, new_state
 from backend.app.config import settings
 from backend.app.db.database import async_session_factory
 from backend.app.stream import live_view
@@ -319,7 +319,7 @@ async def run_live_task(app: Any, station_id: str, request: str, *, model_factor
     return view
 
 
-async def run_task(app: Any, station_id: str, request: str, *, model_factory: Optional[Callable[[], Any]] = None) -> dict:
+async def run_task(app: Any, station_id: str, request: str, *, model_factory: Optional[Callable[[], Any]] = None, allow_live_fallback: bool = True) -> dict:
     """One agent turn for a station. Returns the view the UI shows. The graph runs in a worker thread; this function only wires and stores."""
     import uuid
 
@@ -328,8 +328,16 @@ async def run_task(app: Any, station_id: str, request: str, *, model_factory: Op
     loop = asyncio.get_running_loop()
     bridge = Bridge(loop)
     run_id, row_id = await pick_target(station_id)
-    if run_id is None:      # no uploaded-file run for this station: read its live feed instead of refusing with 'no evidence was read'
-        return await run_live_task(app, station_id, request, model_factory=model_factory)
+    if run_id is None:
+        if allow_live_fallback:      # no uploaded-file run for this station: read its live feed instead of refusing with 'no evidence was read'
+            return await run_live_task(app, station_id, request, model_factory=model_factory)
+        reason = f"no uploaded-file run exists for station {station_id}; import a file on the Import page, or choose the live feed"
+        await append_event(events.step_record(task_id=task_id, step=1, node="input", inputs=[{"station_id": station_id}], model_id=None, tool_calls=[], decision={"abstain": reason},
+                                              rejected=[], gate_result=None, outcome={"status": STATUS_NEEDS_CLARIFICATION, "detail": reason}, note=reason))
+        view = {"prototype": True, "note": PROTOTYPE_NOTE, "task_id": task_id, "status": STATUS_NEEDS_CLARIFICATION, "agent_connected": True, "abstain_reason": reason, "explanation": None,
+                "explanation_generated": False, "selected": None, "rejected_alternatives": [], "gate_result": None, "outcome": None, "tool_call_count": 0}
+        await _save(task_id, station_id, request, view)
+        return view
     try:
         model = (model_factory or build_model)()
     except AgentNotConnected as e:

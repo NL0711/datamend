@@ -54,7 +54,7 @@ export const PAGE_INFO: Record<PageId, PageInfo> = {
   },
   agent: {
     title: 'Agent',
-    what: 'Ask the agent to explain the selected station\'s results. It reads them through read-only tools and may only propose; a person accepts every proposal.',
+    what: 'Ask the agent to explain the selected station\'s results. Choose the live feed or the newest uploaded file; it reads them through read-only tools and writes an explanation. It never changes a verdict.',
     reads: 'both',
     readsDetail: 'runs, evidence and stream state, through read-only tools',
   },
@@ -100,7 +100,7 @@ export const RAIL_HINT: Record<PageId, string> = {
   events: 'The evidence behind each flag',
   explorer: 'Browse every stored reading of the selected station',
   review: 'Record your decision on each flagged reading',
-  agent: 'Ask the agent to explain the results (it only proposes)',
+  agent: 'Ask the agent to explain the results (it only explains)',
   injector: 'Put a deliberate fault into the simulator to test the checks',
   import: 'Upload a file or paste a link; it is checked on arrival',
   settings: 'Where live readings come from, rain-gauge feed, access tokens',

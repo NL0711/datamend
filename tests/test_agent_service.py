@@ -154,6 +154,15 @@ async def test_station_with_no_run_asks_for_clarification(async_client: AsyncCli
 
 
 @pytest.mark.asyncio
+async def test_file_scope_never_falls_back_to_the_live_feed(async_client: AsyncClient, monkeypatch):
+    monkeypatch.setattr(service, "build_model", lambda: FakeModel([]))
+    r = await async_client.post("/api/agent/tasks", json={"station_id": "KTLX", "request": "x", "scope": "file"}, headers=H)
+    out = r.json()
+    assert r.status_code == 200 and out["status"] == "needs_clarification" and out.get("scope") != "live"
+    assert "no uploaded-file run exists for station KTLX" in out["abstain_reason"]
+
+
+@pytest.mark.asyncio
 async def test_station_with_live_readings_but_no_run_is_commented_on_instead_of_refused(async_client: AsyncClient, monkeypatch):
     from backend.app.agent import service as agent_service
     called = {}

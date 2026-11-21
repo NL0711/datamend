@@ -426,7 +426,7 @@ export interface AgentEventRow {
 export async function fetchAgentStatus(): Promise<AgentStatus> {
   return handleResponse(await request(`${API_BASE_URL}/agent/status`));
 }
-export async function askAgent(stationId: string, text: string, scope: 'run' | 'live' = 'run'): Promise<AgentTaskResult> {
+export async function askAgent(stationId: string, text: string, scope: 'run' | 'file' | 'live' = 'run'): Promise<AgentTaskResult> {
   const res = await request(`${API_BASE_URL}/agent/tasks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
