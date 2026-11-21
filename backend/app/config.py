@@ -73,6 +73,12 @@ class Settings(BaseSettings):
     MQTT_PASSWORD: str = ""
     # Keras reconstruction scorer (separate service, ml-service/scorer). Empty URL: no scorer, the checks still run. The secret lives in .env only.
     STREAM_AUTOSTART_SIMULATOR: bool = True      # with no saved active source the simulator starts with the server (its readings are synthetic); False = nothing starts on its own
+    # Startup backfill of the simulator (stream/backfill.py): earlier SYNTHETIC readings pushed through the live processor so windows and thresholds are
+    # warm at once. READINGS per station: -1 = automatic (1300 when SCORER_URL is set, else 300), 0 = off. The 1300 is assumed: 288 for the window plus
+    # SCORER_MIN_CLEAN_SCORES (1000) clean scores plus a margin.
+    STREAM_BACKFILL_READINGS: int = -1
+    STREAM_BACKFILL_STATIONS: int = 6                 # at most this many simulator stations (the first ones)
+    STREAM_BACKFILL_TIMEOUT_SECONDS: float = 240.0    # the whole backfill; what is stored by then stays, the live simulator starts
     SCORER_URL: str = ""
     SCORER_SECRET: str = ""
     SCORER_TIMEOUT_SECONDS: float = 2.0

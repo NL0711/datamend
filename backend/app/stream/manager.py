@@ -108,6 +108,10 @@ class StreamManager:
             raise UnknownSource(f"no data source '{source_id}' is registered") from None
 
     @property
+    def processor(self) -> Processor:
+        return self._processor
+
+    @property
     def active(self) -> Optional[TelemetrySource]:
         return self._active
 

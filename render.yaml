@@ -48,6 +48,9 @@ services:
         sync: false           # e.g. https://datamend-scorer.onrender.com
       - key: SCORER_SECRET
         sync: false
+      # Startup backfill (free Render keeps no data across restarts): on start the simulator first generates earlier synthetic readings (default 1300 per
+      # station with a scorer, 300 without; 0 = off) and runs them through the checks and the scorer, then goes live. Optional overrides:
+      # STREAM_BACKFILL_READINGS, STREAM_BACKFILL_STATIONS, STREAM_BACKFILL_TIMEOUT_SECONDS.
 
   # The Keras reconstruction-error scorer (ml-service/scorer): ONNX Runtime only, no TensorFlow. model.onnx is committed (55 KB), so the image builds from a clean clone.
   # Free plan: it sleeps after idle and the first call after a sleep takes many seconds; the backend times out after 2 s, skips the scorer for 30 s and carries on.

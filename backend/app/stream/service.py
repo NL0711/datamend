@@ -17,7 +17,7 @@ from backend.app.scorer.service import SCORE_KIND, ModelScorer, flagged_variable
 from backend.app.scorer.service import compact as scorer_compact
 from backend.app.scorer.service import expand as scorer_expand
 from backend.app.scorer.window import WINDOW
-from backend.app.stream import frames
+from backend.app.stream import backfill, frames
 from backend.app.stream.manager import StreamManager, StreamStatus
 from backend.app.stream.models import StreamEvent, StreamReadingRow
 from backend.app.stream.scoring import NO_CHECKS, CheckOutcome, as_record, climate_sample, has_climate, score_reading
@@ -292,13 +292,17 @@ def source_list(manager: StreamManager) -> Dict[str, Any]:
             sources.append({"source_type": typ, "source_id": sid, "name": name, "description": f"NOT IMPLEMENTED. {note}", "status": "STOPPED", "is_active": False,
                             "is_available": False, "station_id": "", "is_stale": False, "packet_count": 0})
     return {"active_source": manager.active.source_type if manager.active else None, "active_source_id": manager.active.source_id if manager.active else None,
-            "sources": sources, "timestamp": frames.iso(utcnow())}
+            "sources": sources, "timestamp": frames.iso(utcnow()), "backfill": backfill.state.as_dict()}
 
 
 def active_source_status(manager: StreamManager) -> Optional[Dict[str, Any]]:
+    """The active source's entry, with the startup backfill state. While the backfill runs no source is active yet: the simulator's entry (not active) is returned."""
     if manager.active is None:
-        return None
-    return _source_entry(manager, manager.active, manager.status(), True)
+        if backfill.state.status != "running":
+            return None
+        sim = source_by_type(manager, "SIMULATED")
+        return None if sim is None else _source_entry(manager, sim, manager.status(), False) | {"backfill": backfill.state.as_dict()}
+    return _source_entry(manager, manager.active, manager.status(), True) | {"backfill": backfill.state.as_dict()}
 
 
 def source_by_type(manager: StreamManager, source_type: str) -> Optional[Any]:

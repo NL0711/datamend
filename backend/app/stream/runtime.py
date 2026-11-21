@@ -52,6 +52,8 @@ async def autostart() -> None:
 
 async def shutdown() -> None:
     global _manager
+    from backend.app.stream import backfill
+    await backfill.cancel()
     if _manager is not None:
         await _manager.shutdown()
         _manager = None

@@ -5,9 +5,11 @@ which no call is made, so a slow or dead scorer never stalls the stream; a score
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from contextlib import asynccontextmanager
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Sequence, Tuple
 
 import httpx
 
@@ -33,6 +35,52 @@ class ScorerClient:
         self._down_until = 0.0
         self.last_error: Optional[str] = None
         self.calls = 0
+        self._shared: Optional[httpx.AsyncClient] = None
+
+    @asynccontextmanager
+    async def bulk(self, timeout: Optional[float] = None, backoff_s: Optional[float] = None) -> AsyncIterator[None]:
+        """For a long run of calls: one shared connection, a longer timeout and a shorter back-off while it lasts; the settings are restored after."""
+        old_timeout, old_backoff = self.timeout, self.backoff_s
+        self.timeout = timeout if timeout is not None else old_timeout
+        self.backoff_s = backoff_s if backoff_s is not None else old_backoff
+        self._down_until = 0.0
+        async with httpx.AsyncClient(timeout=self.timeout, transport=self._transport) as http:
+            self._shared = http
+            try:
+                yield
+            finally:
+                self._shared = None
+                self.timeout, self.backoff_s = old_timeout, old_backoff
+
+    async def wake(self, max_wait_s: float = 60.0, pause_s: float = 3.0, sleep: Callable[[float], Awaitable[Any]] = asyncio.sleep) -> bool:
+        """GET /health until it answers 200 (a sleeping free-tier service takes many seconds), for about ``max_wait_s``. Never blocks forever."""
+        waited = 0.0
+        while True:
+            try:
+                async with httpx.AsyncClient(timeout=min(15.0, max(1.0, max_wait_s)), transport=self._transport) as http:
+                    if (await http.get(f"{self.url}/health")).status_code == 200:
+                        return True
+            except (httpx.HTTPError, ValueError):
+                pass
+            waited += pause_s            # counted, not read from a clock: pauses (plus bounded request time) add up to about max_wait_s
+            if waited >= max_wait_s:
+                return False
+            await sleep(pause_s)
+
+    async def _post_chunks(self, http: httpx.AsyncClient, windows: Sequence[Sequence[float]], errors: List[float], model: Dict[str, Any]) -> Tuple[List[float], Dict[str, Any]]:
+        for i in range(0, len(windows), MAX_WINDOWS):
+            chunk = [list(w) for w in windows[i:i + MAX_WINDOWS]]
+            self.calls += 1
+            resp = await http.post(f"{self.url}/score", json={"windows": chunk}, headers={"X-Scorer-Secret": self._secret})
+            if resp.status_code != 200:
+                raise self._fail(f"HTTP {resp.status_code}")
+            body = resp.json()
+            errs = body.get("errors")
+            if not isinstance(errs, list) or len(errs) != len(chunk) or not all(isinstance(e, (int, float)) and e == e and abs(e) != float("inf") for e in errs):
+                raise self._fail("malformed answer")
+            errors.extend(float(e) for e in errs)
+            model = body.get("model") or model
+        return errors, model
 
     def _fail(self, reason: str) -> "ScorerUnavailable":
         self._down_until = self._clock() + self.backoff_s
@@ -49,19 +97,11 @@ class ScorerClient:
         errors: List[float] = []
         model: Dict[str, Any] = {}
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, transport=self._transport) as http:
-                for i in range(0, len(windows), MAX_WINDOWS):
-                    chunk = [list(w) for w in windows[i:i + MAX_WINDOWS]]
-                    self.calls += 1
-                    resp = await http.post(f"{self.url}/score", json={"windows": chunk}, headers={"X-Scorer-Secret": self._secret})
-                    if resp.status_code != 200:
-                        raise self._fail(f"HTTP {resp.status_code}")
-                    body = resp.json()
-                    errs = body.get("errors")
-                    if not isinstance(errs, list) or len(errs) != len(chunk) or not all(isinstance(e, (int, float)) and e == e and abs(e) != float("inf") for e in errs):
-                        raise self._fail("malformed answer")
-                    errors.extend(float(e) for e in errs)
-                    model = body.get("model") or model
+            if self._shared is not None:         # a bulk run (the startup backfill) keeps one connection open instead of a handshake per call
+                errors, model = await self._post_chunks(self._shared, windows, errors, model)
+            else:
+                async with httpx.AsyncClient(timeout=self.timeout, transport=self._transport) as http:
+                    errors, model = await self._post_chunks(http, windows, errors, model)
         except ScorerUnavailable:
             raise
         except (httpx.HTTPError, ValueError) as exc:

@@ -104,6 +104,12 @@ async def autostart(manager: StreamManager) -> Optional[str]:
     source = eff.active_source or ("simulator" if settings.STREAM_AUTOSTART_SIMULATOR else None)    # no saved choice: the simulator, unless switched off
     if not source:
         return None
+    from backend.app.stream import backfill
+    if source == "simulator" and backfill.enabled():
+        backfill.start_in_background(manager, source)       # earlier synthetic readings first, as a background task so the server is up at once; the simulator starts after
+        return None
+    backfill.state.status = "skipped"
+    backfill.state.reason = "the simulator is not the starting source" if source != "simulator" else "disabled (STREAM_BACKFILL_READINGS is 0)"
     try:
         await manager.select(source)
     except StreamError as exc:

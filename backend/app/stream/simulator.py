@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence
 
 import numpy as np
@@ -48,6 +48,8 @@ class SimulatorSource:
         self._models: Dict[str, StationModel] = {}
         self._t0: Optional[datetime] = None
         self._fault_rng = np.random.default_rng([seed, 999])
+        self._resume = False
+        self._last_ts: Optional[datetime] = None
         self.reset()
 
     # ------------------------------------------------------------------ the TelemetrySource interface
@@ -62,7 +64,9 @@ class SimulatorSource:
     async def start(self, emit: Emit) -> None:
         if self._task is not None and not self._task.done():
             return
-        self.reset()
+        if not self._resume:             # after a history backfill the run continues from the models' state; otherwise a new run starts from the seed
+            self.reset()
+        self._resume = False
         self._state = "running"
         self._last_error = self._last_error_at = None
         self._task = asyncio.create_task(self._loop(emit))
@@ -118,11 +122,35 @@ class SimulatorSource:
         self._injections.clear()
         self.step_count = 0
         self._t0 = None
+        self._last_ts = None
+        self._resume = False
+
+    def generate_history(self, count: int, end: Optional[datetime] = None) -> List[List[StreamReading]]:
+        """``count`` earlier steps of the SAME seeded physics, fault-free, oldest first, one list of readings (a reading per active station) per step.
+        The timestamps are one interval apart and the last one is one interval before ``end`` (default: now). The run starts from the seed at the
+        first of them, and the next ``start`` CONTINUES from here (same noise state and time origin) instead of resetting, so live readings follow on."""
+        end = end or self._clock()
+        step = timedelta(seconds=self.interval_seconds)
+        self.reset()
+        steps = [self.tick(end - step * (count - i)) for i in range(count)]
+        self._resume = count > 0
+        return steps
+
+    def catch_up(self, until: Optional[datetime] = None) -> List[List[StreamReading]]:
+        """After ``generate_history`` and while its readings were processed, real time moved on: the steps from the last generated one up to one
+        interval before ``until`` (default: now), so the first live reading follows without a gap. Empty when none is due."""
+        until = until or self._clock()
+        step = timedelta(seconds=self.interval_seconds)
+        out: List[List[StreamReading]] = []
+        while self._last_ts is not None and self._last_ts + step * 2 <= until:
+            out.append(self.tick(self._last_ts + step))
+        return out
 
     # ------------------------------------------------------------------ production
     def tick(self, now: Optional[datetime] = None) -> List[StreamReading]:
         """One step: a reading per active station at ``now`` (UTC), with any injected fault applied. Deterministic for a given seed and time sequence."""
         now = now or self._clock()
+        self._last_ts = now
         if self._t0 is None:
             self._t0 = now
         elapsed_days = (now - self._t0).total_seconds() / 86400.0
