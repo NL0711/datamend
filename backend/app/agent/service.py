@@ -19,13 +19,14 @@ from typing import Any, Callable, Mapping, Optional
 from sqlalchemy import select
 
 from backend.app import mcp_gateway as gw
-from backend.app.agent import events, policy
+from backend.app.agent import events, live, policy
 from backend.app.agent.gemini_model import AgentNotConnected, GeminiAgentModel
 from backend.app.agent.graph import build_agent_graph, result_view
 from backend.app.agent.models import AgentEvent, AgentProposal, AgentTask
 from backend.app.agent.state import STATUS_ABSTAINED, new_state
 from backend.app.config import settings
 from backend.app.db.database import async_session_factory
+from backend.app.stream import live_view
 from backend.app.validation import narrate, review as review_svc, runs as runs_svc
 from backend.app.validation.checks import CATALOGUE
 from backend.app.validation.evidence import digest
@@ -76,6 +77,34 @@ class SqlEvidenceLookup:
             return digest(await narrate.evidence_for_row(s, run, row))
 
 
+class SqlSnapshotLookup:
+    """Gate lookup for a live snapshot: (station, cutoff id, window) -> the hash of those rows as stored NOW (append-only, so unchanged unless rows were deleted)."""
+    def __init__(self, bridge: Bridge) -> None:
+        self.bridge = bridge
+
+    def __call__(self, station_id: Any, cutoff_id: Any, window: Any) -> Optional[str]:
+        return self.bridge.run(self._hash(str(station_id), int(cutoff_id), int(window)))
+
+    @staticmethod
+    async def _hash(station_id: str, cutoff_id: int, window: int) -> Optional[str]:
+        async with async_session_factory() as s:
+            return await live_view.snapshot_digest(s, station_id, window, cutoff_id)
+
+
+class StreamSourceLookup:
+    """Gate lookup for the source state NOW, read straight from the stream manager (not through the model's tools)."""
+    def __init__(self, bridge: Bridge) -> None:
+        self.bridge = bridge
+
+    def __call__(self, station_id: Any) -> dict:
+        return self.bridge.run(self._state(str(station_id)))
+
+    @staticmethod
+    async def _state(station_id: str) -> dict:
+        from backend.app.stream import runtime
+        return live_view.source_state(runtime.get_manager(), station_id)
+
+
 # ------------------------------------------------------------------------------------------------ tools
 class McpToolBox:
     """ToolBox over the MCP server (`client.call_tool(name, args) -> {is_error, text, structured}`). Results are adapted for the graph:
@@ -108,6 +137,15 @@ class McpToolBox:
             station = ((evs[0].get("row") or {}).get("station_id") if evs else None) or self.station_id
             return {**data, "run_id": args.get("run_id"), "row_ref": args.get("row_id"), "station_id": station, "evidence_hash": data.get("evidence_hash"),
                     "source_status": "live", "checks": {e.get("check"): "ran" for e in evs if e.get("check")}}
+        if name in ("get_station_stream_v1", "list_stream_detections_v1") and isinstance(data, dict):
+            fs = data.get("feed_state")
+            checks: dict = {str(x.get("check")): "not run" for x in (data.get("checks_not_run") or []) if x.get("check")}
+            for d in data.get("detections") or []:
+                checks.update({str(c): "fired" for c in (d.get("checks_fired") or [])})
+                checks.update({str(x.get("check")): "not run" for x in (d.get("not_run") or []) if x.get("check") and str(x.get("check")) not in checks})
+            # the hash is the platform's hash of an immutable snapshot (readings up to a cutoff id), never of the moving feed
+            return {**data, "run_id": None, "row_ref": None, "station_id": data.get("station_id", args.get("station_id")), "evidence_hash": data.get("snapshot_hash"),
+                    "source_status": "live" if fs == "running" else str(fs), "checks": checks}
         return data if isinstance(data, dict) else {"value": data}
 
 
@@ -228,6 +266,57 @@ async def _save(task_id: str, station_id: str, request: str, view: dict) -> None
     async with async_session_factory() as s:
         s.add(AgentTask(task_id=task_id, station_id=station_id, request=request, status=str(view.get("status")), result=json.loads(json.dumps(view, default=str))))
         await s.commit()
+
+
+def live_known_checks() -> tuple:
+    from backend.app.validation import weather_checks
+    return tuple(CATALOGUE) + tuple(getattr(s, "name", "") for s in weather_checks.CATALOGUE_SPECS)
+
+
+async def run_live_task(app: Any, station_id: str, request: str, *, model_factory: Optional[Callable[[], Any]] = None,
+                        window: int = live.DEFAULT_WINDOW) -> dict:
+    """One agent turn that comments on the CURRENT LIVE FEED of a station (scope=live). Perception reads the feed through the read-only MCP tools;
+    the gate re-reads the same immutable window and the source state. With no provider a deterministic rule-based summary of the same evidence
+    is returned instead (marked generated, no model). The allowlist of actions is not involved: a live comment runs no action."""
+    import uuid
+
+    from fastapi.concurrency import run_in_threadpool
+    task_id = uuid.uuid4().hex
+    loop = asyncio.get_running_loop()
+    bridge = Bridge(loop)
+    connected, not_connected_reason = True, ""
+    try:
+        model: Any = (model_factory or build_model)()
+        if not hasattr(model, "comment"):
+            raise AgentNotConnected("the configured model cannot write a live comment")
+    except AgentNotConnected as e:
+        model, connected, not_connected_reason = live.BaselineLiveModel(), False, f"agent not connected: {e}"
+    server = gw.get_server(app, loop)
+    toolbox = McpToolBox(gw.InProcessMcpClient(server), station_id)
+    graph = live.build_live_graph(model, toolbox, SqlSnapshotLookup(bridge), StreamSourceLookup(bridge), SqlEventLog(bridge, (settings.GEMINI_API_KEY,)),
+                                  known_checks=live_known_checks())
+    state = live.new_live_state(request, station_id=station_id, window=window, max_tool_calls=settings.AGENT_MAX_TOOL_CALLS, task_id=task_id)
+    model_id = getattr(model, "model_id", None)
+    try:
+        out = await asyncio.wait_for(run_in_threadpool(graph.invoke, state), timeout=settings.AGENT_TIMEOUT_SECONDS)
+        view = {**live.result_live_view(out), "note": PROTOTYPE_NOTE, "agent_connected": connected, "model_id": model_id,
+                "baseline_explanation": live.baseline_text(out), "baseline_generator": "baseline-rules" if live.baseline_text(out) else None}
+        if not connected:
+            view["agent_not_connected_reason"] = not_connected_reason
+            if view["status"] == "completed":
+                view.update({"status": "agent_not_connected", "abstain_reason": not_connected_reason, "explanation": None, "explanation_generated": False, "comment": None,
+                             "baseline_explanation": view["baseline_explanation"]})
+            elif view["status"] in ("abstained", "needs_clarification"):
+                view["abstain_reason"] = f"{view['abstain_reason']} ({not_connected_reason})"
+    except asyncio.TimeoutError:
+        reason = f"timeout after {settings.AGENT_TIMEOUT_SECONDS:g} s; the turn stopped waiting (a step already running may still finish; its events are logged)"
+        await append_event(events.step_record(task_id=task_id, step=99, node="timeout", inputs=[], model_id=model_id, tool_calls=[], decision={"abstain": reason},
+                                              rejected=[], gate_result=None, outcome={"status": STATUS_ABSTAINED, "detail": reason}, note=reason))
+        view = {"prototype": True, "scope": "live", "note": PROTOTYPE_NOTE, "task_id": task_id, "status": STATUS_ABSTAINED, "agent_connected": connected, "abstain_reason": reason,
+                "explanation": None, "explanation_generated": False, "comment": None, "live": {}, "baseline_explanation": None, "baseline_generator": None, "selected": None,
+                "rejected_alternatives": [], "gate_result": None, "outcome": None, "tool_call_count": 0}
+    await _save(task_id, station_id, request, view)
+    return view
 
 
 async def run_task(app: Any, station_id: str, request: str, *, model_factory: Optional[Callable[[], Any]] = None) -> dict:

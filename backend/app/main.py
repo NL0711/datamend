@@ -26,6 +26,7 @@ from backend.app.api.places import router as places_router
 from backend.app.api.rainfall import router as rainfall_router
 from backend.app.api.settings import router as settings_router
 from backend.app.api.stream import router as stream_router, ws_router as stream_ws_router
+from backend.app.api.stream_live import router as stream_live_router
 from backend.app.api.validation import router as validation_router
 from backend.app.config import settings
 from backend.app.db.database import close_db, init_db
@@ -99,6 +100,7 @@ app.include_router(pipeline_import_router)
 app.include_router(pipeline_explore_router)
 app.include_router(settings_router)
 app.include_router(stream_router)
+app.include_router(stream_live_router)
 app.include_router(stream_ws_router)
 app.include_router(mcp_access_router)
 app.include_router(mcp_endpoint_router)

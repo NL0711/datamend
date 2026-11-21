@@ -15,6 +15,7 @@ from typing import Any, Mapping
 READ_ONLY_TOOLS = frozenset({
     "list_runs", "get_run_summary", "list_flagged_rows", "get_row_evidence", "get_evidence_v1", "get_row_context",
     "summarize_flag_patterns", "get_overview", "get_station_cycle", "get_review_summary", "get_row_reviews", "locate_place",
+    "get_station_stream_v1", "list_stream_detections_v1",          # the live feed of one station (stream-v1)
 })
 
 

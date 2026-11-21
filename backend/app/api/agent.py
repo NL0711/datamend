@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
@@ -29,6 +29,8 @@ router = APIRouter(prefix="/api/agent", tags=["agent"])
 class TaskRequest(BaseModel):
     station_id: str = Field(min_length=1, max_length=64)
     request: str = Field(min_length=1, max_length=1000)
+    scope: Literal["run", "live"] = "run"       # run: the newest stored run of the station (default); live: the current live feed of the station
+    window: Optional[int] = Field(None, ge=1, le=288)       # live only: how many of the newest readings to read (default 60)
 
 
 def _proposal(p: AgentProposal) -> Dict[str, Any]:
@@ -47,6 +49,9 @@ async def agent_status() -> Dict[str, Any]:
 async def create_task(body: TaskRequest, request: Request, session: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     if not gw.AVAILABLE:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "the MCP service files (mcp-service/) are not installed; the agent reads only through MCP")
+    if body.scope == "live":
+        view = await service.run_live_task(request.app, body.station_id.strip(), body.request.strip(), window=body.window or 60)
+        return {**view, "proposals": []}
     view = await service.run_task(request.app, body.station_id.strip(), body.request.strip())
     props = (await session.execute(select(AgentProposal).where(AgentProposal.task_id == view["task_id"]).order_by(AgentProposal.id))).scalars()
     return {**view, "proposals": [_proposal(p) for p in props]}

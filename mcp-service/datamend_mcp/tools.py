@@ -163,6 +163,17 @@ def _patterns(c: DataMendClient, a: Dict[str, Any]) -> Dict[str, Any]:
             "note": "counts of rows the platform flagged; a flag is a rule-based suspicion, not a confirmed fault, and no accuracy is implied"}
 
 
+def _station_stream(c: DataMendClient, a: Dict[str, Any]) -> Dict[str, Any]:
+    return c.get("/api/validation/stream/feed", {"station_id": a["station_id"], "window": a["window"], "up_to_id": a.get("up_to_id")})
+
+
+def _stream_detections(c: DataMendClient, a: Dict[str, Any]) -> Dict[str, Any]:
+    return c.get("/api/validation/stream/detections", {"station_id": a["station_id"], "limit": a["limit"], "window": a["window"], "up_to_id": a.get("up_to_id")})
+
+
+_UP_TO = {"type": "integer", "minimum": 1, "description": "Snapshot cutoff: read only readings with an id up to this (the snapshot.cutoff_id of an earlier answer). Omit for the newest."}
+_WINDOW = {"type": "integer", "minimum": 1, "maximum": 288, "default": 60, "description": "How many of the station's newest stored readings to read (at most 288)."}
+
 TOOLS: List[Tool] = [
     Tool("list_runs", "List validation runs", "List recent validation runs (newest first) with their headline numbers. Start here to find a run id.",
          _obj({"limit": {"type": "integer", "minimum": 1, "maximum": 50, "default": 10, "description": "How many runs to return."}}), _list_runs),
@@ -187,6 +198,16 @@ TOOLS: List[Tool] = [
     Tool("get_row_reviews", "Reviews of a row", "The human review decisions recorded for one row.", _obj({"run_id": _RUN, "row_id": _ROW}, ["run_id", "row_id"]), _row_reviews),
     Tool("locate_place", "Locate a place", "For a latitude and longitude in India: the RF25 grid cell, land or sea, and the client region. Stateless.",
          _obj({"lat": {"type": "number", "minimum": -90, "maximum": 90}, "lon": {"type": "number", "minimum": -180, "maximum": 180}}, ["lat", "lon"]), _locate),
+    Tool("get_station_stream_v1", "Live feed of a station (stream-v1)",
+         "The current live feed of one station: the source state (running, stale, disconnected or stopped), source id, cadence and last reading time, then the newest stored readings "
+         "(default 60, at most 288) with the raw values as stored, each reading's check verdict and uncalibrated rule score, counts by verdict, checks that did not run, the Keras model score "
+         "block when present (always not validated, never a verdict) and a snapshot cutoff plus hash so the same window can be read again unchanged.",
+         _obj({"station_id": _STATION, "window": _WINDOW, "up_to_id": _UP_TO}, ["station_id"]), _station_stream),
+    Tool("list_stream_detections_v1", "Live detections of a station (stream-v1)",
+         "The newest detections the checks raised on a station's live feed inside the same window: for each the verdict, rule score, the checks that fired with their evidence, the checks that "
+         "could not run with the reason, and the Keras model block when present (always not validated). Newest first, at most 50.",
+         _obj({"station_id": _STATION, "limit": {"type": "integer", "minimum": 1, "maximum": 50, "default": 20, "description": "How many detections to return."}, "window": _WINDOW, "up_to_id": _UP_TO},
+              ["station_id"]), _stream_detections),
 ]
 
 

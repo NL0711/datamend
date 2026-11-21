@@ -57,7 +57,7 @@ class ProtocolTests(Base):
 
     def test_tools_list_has_every_tool_read_only(self):
         tools = rpc(self.server, "tools/list")["result"]["tools"]
-        self.assertEqual(len(tools), 12)
+        self.assertEqual(len(tools), 14)
         self.assertTrue(all(t["annotations"]["readOnlyHint"] is True for t in tools))
         self.assertTrue(all(t["inputSchema"]["additionalProperties"] is False for t in tools))
 

@@ -142,7 +142,7 @@ async def test_the_mcp_lifecycle_initialize_list_and_notifications(async_client:
     assert note.status_code == 202 and note.content == b""
     tools = (await call(async_client, tok, rpc("tools/list"))).json()["result"]["tools"]
     names = {t["name"] for t in tools}
-    assert {"list_runs", "get_run_summary", "list_flagged_rows", "get_row_evidence", "get_overview"} <= names and len(names) == 12
+    assert {"list_runs", "get_run_summary", "list_flagged_rows", "get_row_evidence", "get_overview"} <= names and len(names) == 14
     assert all(t["annotations"]["readOnlyHint"] is True for t in tools)                                       # nothing here can change data
 
 
@@ -219,4 +219,4 @@ async def test_last_used_is_recorded_and_the_audit_log_names_the_call_but_not_th
 @pytest.mark.asyncio
 async def test_the_settings_view_lists_the_tools_and_says_it_is_read_only(async_client: AsyncClient):
     v = (await async_client.get("/api/settings/mcp", headers=H)).json()
-    assert v["available"] is True and v["read_only"] is True and v["endpoint_path"] == "/api/mcp" and len(v["tools"]) == 12 and v["active"] == 0
+    assert v["available"] is True and v["read_only"] is True and v["endpoint_path"] == "/api/mcp" and len(v["tools"]) == 14 and v["active"] == 0
