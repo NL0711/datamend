@@ -1,0 +1,7 @@
+weights/saved_model.pb
+weights/keras_metadata.pb
+weights/variables
+weights/history.json
+tests
+__pycache__
+.pytest_cache
