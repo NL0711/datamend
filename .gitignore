@@ -105,7 +105,10 @@ ml-service/*.nc
 
 
 # Scorer service: model weights are fetched at setup, not committed
-ml-service/scorer/weights/
+ml-service/scorer/weights/*
+# the converted ONNX file (55 KB) and its source record ARE committed so a fresh clone or Render can build the scorer image (owner decision 2026-11-21)
+!ml-service/scorer/weights/model.onnx
+!ml-service/scorer/weights/SOURCE.json
 
 # notebooks with credentials written into them
 *.local.ipynb

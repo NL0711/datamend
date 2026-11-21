@@ -42,3 +42,22 @@ services:
         sync: false
       - key: NARRATOR_TOKEN
         sync: false
+      # The Keras scorer (second service below). Set SCORER_URL to its public address and SCORER_SECRET to the SAME value as the scorer's.
+      # Without them the platform runs and the model score says "scorer not available" (the checks still run).
+      - key: SCORER_URL
+        sync: false           # e.g. https://datamend-scorer.onrender.com
+      - key: SCORER_SECRET
+        sync: false
+
+  # The Keras reconstruction-error scorer (ml-service/scorer): ONNX Runtime only, no TensorFlow. model.onnx is committed (55 KB), so the image builds from a clean clone.
+  # Free plan: it sleeps after idle and the first call after a sleep takes many seconds; the backend times out after 2 s, skips the scorer for 30 s and carries on.
+  - type: web
+    name: datamend-scorer
+    runtime: docker
+    dockerfilePath: ./ml-service/scorer/Dockerfile
+    dockerContext: ./ml-service/scorer
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: SCORER_SECRET
+        sync: false           # any long random string; the same value goes into the backend's SCORER_SECRET

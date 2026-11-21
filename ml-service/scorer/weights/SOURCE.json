@@ -1,0 +1,19 @@
+{
+  "repo": "keras-io/timeseries-anomaly-detection",
+  "revision": "57126012e02dcab3a653501f12cb599c4a51db7a",
+  "files": [
+    ".cache/huggingface/.gitignore",
+    ".cache/huggingface/download/README.md.metadata",
+    ".cache/huggingface/download/history.json.metadata",
+    ".cache/huggingface/download/keras_metadata.pb.metadata",
+    ".cache/huggingface/download/saved_model.pb.metadata",
+    ".cache/huggingface/download/variables/variables.data-00000-of-00001.metadata",
+    ".cache/huggingface/download/variables/variables.index.metadata",
+    "README.md",
+    "history.json",
+    "keras_metadata.pb",
+    "saved_model.pb",
+    "variables/variables.data-00000-of-00001",
+    "variables/variables.index"
+  ]
+}
