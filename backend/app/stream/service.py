@@ -13,6 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db import database
 from backend.app.rainfall.catalog import load_catalog
+from backend.app.scorer.service import SCORE_KIND, ModelScorer, flagged_variables
+from backend.app.scorer.service import compact as scorer_compact
+from backend.app.scorer.service import expand as scorer_expand
+from backend.app.scorer.window import WINDOW
 from backend.app.stream import frames
 from backend.app.stream.manager import StreamManager, StreamStatus
 from backend.app.stream.models import StreamEvent, StreamReadingRow
@@ -53,8 +57,16 @@ class ReadingProcessor:
             .order_by(desc(StreamReadingRow.timestamp)).limit(12))).scalars().all()
         return [as_record(StreamReading(r.station_id, aware(r.timestamp), r.source, rain_mm=r.rain_mm), r.id) for r in reversed(rows)]  # type: ignore[arg-type]
 
-    def __init__(self, climate: Optional[ClimateHistory] = None) -> None:
+    def __init__(self, climate: Optional[ClimateHistory] = None, scorer: Optional[ModelScorer] = None) -> None:
         self.climate = climate or ClimateHistory()      # bounded, causal rolling history of temperature, pressure and humidity per station
+        self.scorer = scorer or ModelScorer.from_settings()     # score provider only; absent (no SCORER_URL) the checks still run
+
+    async def _hydrate_scorer(self, session: AsyncSession, reading: StreamReading) -> None:
+        """First sight of a station: replay its stored earlier readings into the 288-value windows (oldest first)."""
+        rows = (await session.execute(
+            select(StreamReadingRow).where(StreamReadingRow.station_id == reading.station_id, StreamReadingRow.timestamp < reading.timestamp)
+            .order_by(desc(StreamReadingRow.timestamp)).limit(WINDOW))).scalars().all()
+        self.scorer.hydrate(reading.station_id, [{"temperature": r.temperature_c, "pressure": r.pressure_hpa, "humidity": r.humidity_pct} for r in reversed(rows)])
 
     async def _hydrate_climate(self, session: AsyncSession, reading: StreamReading) -> None:
         """First sight of a station in this process: load its stored earlier readings (a restart does not forget the context)."""
@@ -73,18 +85,35 @@ class ReadingProcessor:
             outcome = score_reading(reading, history, self.climate.recent(reading.station_id))
             if has_climate(reading) or reading.rain_mm is None:                 # a rain-only gauge keeps no temperature history
                 self.climate.add(reading.station_id, climate_sample(reading))   # after scoring: the checks never see the reading they judge
+            provider = None
+            if self.scorer.enabled:
+                if self.scorer.needs_hydration(reading.station_id):
+                    await self._hydrate_scorer(session, reading)
+                try:
+                    provider = await self.scorer.score(reading, outcome.status)      # after the checks: it never changes their verdict
+                except Exception:                                                       # a scorer fault must never stop the stream
+                    logger.exception("model scorer failed for %s", reading.station_id)
+            stored_provider = scorer_compact(provider)
             row = StreamReadingRow(station_id=reading.station_id, timestamp=reading.timestamp, temperature_c=reading.temperature_c,
                                    pressure_hpa=reading.pressure_hpa, humidity_pct=reading.humidity_pct, rain_mm=reading.rain_mm, source=reading.source,
-                                   injected_fault=reading.injected, check_status=outcome.status, rule_score=outcome.rule_score)
+                                   injected_fault=reading.injected, check_status=outcome.status, rule_score=outcome.rule_score, provider=stored_provider)
             session.add(row)
             await session.flush()
+            model_vars = flagged_variables(provider)
             if outcome.flagged:
                 session.add(StreamEvent(reading_id=row.id, station_id=reading.station_id, timestamp=reading.timestamp, variable=outcome.variable or "rain", verdict=outcome.status,
                                         rule_score=outcome.rule_score or 0.0, severity=outcome.severity or "low", classification=outcome.classification or "",
                                         is_fault=outcome.status == "SUSPECT", reason=outcome.reason or "", hits=outcome.hits, not_run=outcome.not_run,
-                                        source=reading.source))
+                                        source=reading.source, provider=stored_provider))
+            elif model_vars:     # the model alone: UNCERTAIN, never a fault; the rule score stays the checks' own
+                detail = "; ".join(f"{v} error {provider['variables'][v]['error']:.4g} above threshold {provider['variables'][v]['threshold']:.4g}" for v in model_vars)  # type: ignore[index]
+                session.add(StreamEvent(reading_id=row.id, station_id=reading.station_id, timestamp=reading.timestamp,
+                                        variable=model_vars[0] if len(model_vars) == 1 else "multiple", verdict="UNCERTAIN", rule_score=outcome.rule_score or 0.0,
+                                        severity="low", classification="model_flag", is_fault=False,
+                                        reason=f"model reconstruction error flag (not validated): {detail}", hits=[], not_run=outcome.not_run,
+                                        source=reading.source, provider=stored_provider))
             await session.commit()
-        return frames.observation_data(reading, outcome, stored=True)
+        return frames.observation_data(reading, outcome, stored=True, provider=provider)
 
 
 # ---------------------------------------------------------------------------------------------------- stations
@@ -134,7 +163,7 @@ async def get_station(session: AsyncSession, manager: StreamManager, station_id:
 def observation_dict(r: StreamReadingRow) -> Dict[str, Any]:
     return {"id": r.id, "timestamp": _iso(r.timestamp), "station_id": r.station_id, "temperature": r.temperature_c, "pressure": r.pressure_hpa,
             "humidity": r.humidity_pct, "rain_mm": r.rain_mm, "source": r.source, "injected_fault": r.injected_fault,
-            "validation_status": UI_STATUS.get(r.check_status, r.check_status), "check_status": r.check_status, "rule_score": r.rule_score}
+            "validation_status": UI_STATUS.get(r.check_status, r.check_status), "check_status": r.check_status, "rule_score": r.rule_score} | ({"provider": scorer_expand(r.provider), "provider_score_kind": SCORE_KIND} if r.provider else {})
 
 
 async def list_observations(session: AsyncSession, station_id: Optional[str], limit: int, page: int) -> Dict[str, Any]:
@@ -161,7 +190,7 @@ def anomaly_dict(e: StreamEvent) -> Dict[str, Any]:
             "anomaly_score": e.rule_score, "severity": e.severity.upper(), "anomaly_type": e.classification.split(", ")[0] if e.classification else None,
             "classification": e.classification, "is_fault": e.is_fault, "reason": e.reason, "raw_values": {}, "source_id": e.source,
             "variable": e.variable, "verdict": e.verdict, "score_kind": "uncalibrated rule score", "evidence": e.hits, "not_run": e.not_run,
-            "created_at": _iso(e.created_at)}
+            "created_at": _iso(e.created_at)} | ({"provider": scorer_expand(e.provider), "provider_score_kind": SCORE_KIND} if e.provider else {})
 
 
 async def list_anomalies(session: AsyncSession, station_id: Optional[str] = None, severity: Optional[str] = None, classification: Optional[str] = None,

@@ -36,6 +36,7 @@ class StreamReadingRow(Base):
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     check_status: Mapped[str] = mapped_column(String(12))            # NO_CHECKS | OK | UNCERTAIN | SUSPECT | NO_DATA
     rule_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)     # NULL when no check ran; the uncalibrated rule score, never a probability
+    provider: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)   # compact Keras scorer block (errors, status); NULL with no scorer
 
 
 class StreamEvent(Base):
@@ -56,4 +57,5 @@ class StreamEvent(Base):
     hits: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, default=list)       # evidence of every check that fired
     not_run: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, default=list)    # checks that could not run, with the reason
     source: Mapped[str] = mapped_column(String(32))
+    provider: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)   # compact Keras scorer block; classification model_flag is this alone
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)

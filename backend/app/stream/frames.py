@@ -17,7 +17,7 @@ def iso(dt) -> Optional[str]:
     return dt.isoformat() if dt is not None else None
 
 
-def observation_data(reading: StreamReading, outcome: Optional[CheckOutcome] = None, *, stored: bool = True) -> Dict[str, Any]:
+def observation_data(reading: StreamReading, outcome: Optional[CheckOutcome] = None, *, stored: bool = True, provider: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     outcome = outcome or CheckOutcome()
     data: Dict[str, Any] = {
         "timestamp": iso(reading.timestamp), "station_id": reading.station_id,
@@ -27,6 +27,9 @@ def observation_data(reading: StreamReading, outcome: Optional[CheckOutcome] = N
     if outcome.ran:
         data.update(anomaly_score=outcome.rule_score, is_anomaly=outcome.flagged, severity=(outcome.severity or "none").upper() if outcome.flagged else "NORMAL",
                     classification=outcome.classification or "no_check_fired", reason=outcome.reason, is_fault=outcome.status == "SUSPECT")
+    if provider is not None:      # a separate score: the model's reconstruction error, never mixed into anomaly_score or the verdict
+        data.update(provider=provider, provider_score_kind="model reconstruction error, not validated",
+                    model_flagged=any(v.get("flagged") for v in provider["variables"].values()))
     return data
 
 
