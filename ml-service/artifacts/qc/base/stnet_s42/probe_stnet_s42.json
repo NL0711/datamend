@@ -1,0 +1,44 @@
+{
+ "spike": {
+  "auc": 0.9993777138071297,
+  "n_pos_fit": 1855,
+  "n_pos_test": 5663,
+  "fit_year": 2013,
+  "test_year": 2014
+ },
+ "stuck": {
+  "auc": 0.9855093012772351,
+  "n_pos_fit": 6618,
+  "n_pos_test": 3025,
+  "fit_year": 2013,
+  "test_year": 2014
+ },
+ "scale": {
+  "auc": 0.9411694725028059,
+  "n_pos_fit": 2635,
+  "n_pos_test": 1485,
+  "fit_year": 2013,
+  "test_year": 2014
+ },
+ "phantom_rain": {
+  "auc": 0.9935532504258991,
+  "n_pos_fit": 5889,
+  "n_pos_test": 7598,
+  "fit_year": 2013,
+  "test_year": 2014
+ },
+ "zeroed": {
+  "auc": 0.8931724007561437,
+  "n_pos_fit": 1523,
+  "n_pos_test": 1150,
+  "fit_year": 2013,
+  "test_year": 2014
+ },
+ "drift": {
+  "auc": 0.9619866702025454,
+  "n_pos_fit": 6958,
+  "n_pos_test": 7343,
+  "fit_year": 2013,
+  "test_year": 2014
+ }
+}

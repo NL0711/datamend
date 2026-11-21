@@ -1,0 +1,94 @@
+# DataMend
+
+**A rainfall time-series data validation platform.** Submit a rainfall series (an uploaded file or a live rain-gauge feed); the platform runs layered checks on every reading, returns a verdict for each one with the evidence behind it, and produces a run report. Rainfall is the only parameter.
+
+- **Explanations:** a rule-based baseline explains each flag from its evidence. An external AI narrator (MCP-based, built by the AI implementation team) can be connected behind the same interface, and the dashboard has an "Ask the AI" chat that talks to it. The MCP server and narrator are in `mcp-service/` (see its README; tested on fake servers, not yet end to end against the running platform), and an interim Gemini layer answers when `GEMINI_API_KEY` is set and `NARRATOR_URL` is not. With neither set the chat says "AI narrator not connected" and answers nothing.
+- **Optional trained layer:** the model system in `ml-service/qc` scores rainfall on the IMD RF25 grid. Only the score-provider seam exists in the platform; **no trained score is connected**, and no trained model has run on real data.
+
+**Honest status.** Built and tested (generated data, mocked transports): the input contract (CSV and JSON, reject the file or flag the row), the check catalogue (8 reading and 4 daily checks, each declaring what it needs, with explicit "not run"), runs and reports (measured numbers only, no composite grade), JSON and CSV exports, the `evidence-v1` contract, the baseline explainer, the live Weather Union feed scored by the same catalogue, a stateless place lookup, the station network map (Weather Union gauges), the bulk-data pipeline (CWC ingest, proposals, audit sample, snapshots, model registry, label-fusion retraining), a single-admin sign-in, and the dashboard. Everything is rules, one statistic, a neighbour check and a small label-fusion re-weighting of the checks: **not a trained deep model**. Thresholds and weights are design choices, uncalibrated. There are no real quality-control labels for India, so no accuracy figure is claimed for real data; the sample files in `data/samples` are **synthetic**. Not verified: the Docker image has not been built here, the PostgreSQL/Timescale path and the Kaggle trigger have not been run against a live service, and a 200,000-row upload has not been timed. Not built: PDF export, Parquet input, unit conversion, the IMD sub-division lookup, user accounts beyond the one admin, retraining the RF25 STNet, scoring with a trained model on the server, the shadow run, the LLM proposer. See [TODO.md](TODO.md) for the slices and [docs/wayfinder/rainfall-validation-platform/SPEC.md](docs/wayfinder/rainfall-validation-platform/SPEC.md) for the spec, including what is not claimed.
+
+## What is in the repo
+
+| Path | What |
+|---|---|
+| `backend/` | FastAPI backend. `app/validation` (input contract, check catalogue, runs, evidence, explainers), `app/rainfall` (live Weather Union feed), `app/pipeline` (bulk ingest, proposals, audit, snapshots, registry, retraining, lineage), `app/places` (stateless place lookup), `app/api` (routes, sign-in). |
+| `frontend/` | React + Vite app: a home page, a sign-in page and the dashboard (Overview, Station network, Runs, Run view, Data explorer, Review queue, Data pipeline, Anomaly lab (synthetic faults), Locations, Live gauge feed, Settings). |
+| `ml-service/` | The optional model system (`ml-service/qc`) and its training code. See `ml-service/README.md`. Imports nothing from `backend/`. |
+| `data/samples/` | Two small **synthetic** uploads with injected faults (made by `scripts/make_synthetic_sample.py`). |
+| `docs/contracts/` | The `evidence-v1` JSON Schema with an example, and the proposed narrator request and response (awaiting the AI team's confirmation). |
+| `shared-docs/` | Documents for the team (Word files). |
+| `docs/` | Model specs (`qc-*.md`), the live-feed note, research, decision records (`docs/wayfinder`). |
+| `CONTEXT.md` | The glossary of terms. |
+
+## Run it
+
+Backend (Python 3.10 or newer):
+
+```powershell
+pip install -r requirements.txt
+copy .env.example .env     # optional: set WEATHER_UNION_API_KEY and WEATHER_UNION_CITY to enable the live feed
+python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+AI narrator (MCP), optional, in a second terminal: set `ADMIN_TOKEN` and `NARRATOR_ALLOW_PRIVATE=true` and `NARRATOR_URL="http://127.0.0.1:8790/narrate"` and `NARRATOR_TOKEN` in the backend's `.env`, then
+
+```powershell
+cd mcp-service
+$env:DATAMEND_ADMIN_TOKEN = "<the ADMIN_TOKEN>"; $env:NARRATOR_BEARER_TOKEN = "<the NARRATOR_TOKEN>"
+python -m datamend_mcp narrator
+```
+
+`python scripts/smoke_local.py` starts both on throwaway ports and a throwaway database, and checks every feature end to end (45 checks, including a real MCP client).
+
+**Weather data.** Settings (or `WEATHER_PROVIDER` in `.env`) chooses the live feed's provider: Weather Union (gauges, key required) or Open-Meteo (hourly model precipitation at the stations' coordinates; free without a key, an optional commercial key is the same "API key" box). Open-Meteo values are a model estimate, not a gauge, and are labelled so.
+
+**Agent access (MCP).** Settings, "Agent access", makes a token per person. Their agent connects to `https://<your host>/api/mcp` with `Authorization: Bearer <token>` and gets 12 read-only tools (runs, flagged rows, evidence). The page shows ready-to-paste commands for Claude Code, a remote MCP client and Claude Desktop (through `mcp-remote`). Not verified here against Claude Desktop itself; the protocol is checked with the project's own MCP client.
+
+**Sign-in.** With `REQUIRE_LOGIN=true` (the default) every `/api` route except `/api/auth/login`, `/me` and `/logout` needs a signed-in session, so nothing is readable without signing in. There is one admin account, set by `ADMIN_EMAIL` and `ADMIN_PASSWORD`. **The defaults (`admin@admin.com` / `admin`) are for local use only: anyone who knows them can sign in, so set your own values on any public deployment.** An empty `ADMIN_PASSWORD` switches sign-in off. Sessions last 12 hours and are stored in the runs database (the SHA-256 of the token only), so a restart or redeploy does not sign you out; failed attempts and wrong tokens are rate limited per client address (the TCP peer; `X-Forwarded-For` is not trusted, so behind a proxy run uvicorn with `--proxy-headers`); `/docs`, `/redoc` and `/openapi.json` also need the session (send `X-Admin-Token`), and `/` answers with the status only when signed out; there is no password reset. `ADMIN_TOKEN` (optional) is a second credential for scripts: send it as the `X-Admin-Token` header. Saved dashboard settings go to `data/runtime_settings.json` (git-ignored; it contains your key).
+
+**Web app routes** (hash routes, so a static host needs no rewrite): home at `/`, sign-in at `/#/login`, dashboard at `/#/app` (asks you to sign in first). To connect the live Weather Union feed: sign in, open Settings, enter your Weather Union key and a city, then Save and Test connection (or set the key and city in `.env`).
+
+**Train on AWS (optional, UNTESTED against live AWS; the tests inject a fake client).** Next to Kaggle, the Data pipeline page can run the same label-fusion training on ONE short-lived EC2 instance in your own AWS account (`pip install boto3`; the code imports it only when this target is used). Enter your access key id, secret (and session token if you have one), region and S3 bucket in the AWS account panel (kept in the browser tab only, sent as `X-Aws-Access-Key-Id`, `X-Aws-Secret-Access-Key`, `X-Aws-Session-Token`, `X-Aws-Region` and `X-Aws-Bucket` on each AWS request, never stored or logged by the server), pick a CPU instance type (`t3.small`, `t3.medium` default, `c6i.large`; `g4dn.xlarge` and `g5.xlarge` are allowed but the trainer does not use a GPU, so they only cost more, and AWS must approve your GPU quota first), a time cap of 1 to 120 minutes (default 30) and optionally spot, tick the consent box and press **Train on AWS**. Without your own account the server's `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (boto3's default chain), `AWS_REGION` and `AWS_TRAIN_BUCKET` are used if set. The platform uploads the snapshot to `datamend/train/<job id>/` in your bucket and starts an instance with no role, no key pair, no added security group rules, IMDSv2 required and shutdown behaviour terminate. The instance reaches S3 only through two presigned URLs valid for one hour; **they are inside the instance's user-data, so anyone who can read it in your account can use them until they expire**. The user-data's first command is `shutdown -h +<minutes>`, so even a hung job ends. When the result appears the platform registers a challenger (the gate still decides), terminates the instance if it is still up, and deletes the snapshot and result objects. Your credentials need these permissions: `ec2:RunInstances`, `ec2:DescribeInstances`, `ec2:TerminateInstances`, `ec2:CreateTags`, `ssm:GetParameter` (for the public Amazon Linux 2023 AMI parameter), and on the bucket `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` and `s3:ListBucket` (without it S3 answers 403 instead of 404 for a result that is not there yet; `HeadObject` is covered by `GetObject`). The account needs a default VPC with public IPs and the bucket should be in the same region. The AWS cost is yours: the platform enforces the time cap but cannot show AWS cost or credits. If the platform restarts mid-job the instance still ends by itself at its time cap, but the snapshot object stays in your bucket and the job stays `running` until someone presses Check now with the same account (an S3 lifecycle rule on `datamend/train/` is the backstop; instances carry the tags `datamend-managed=true` and `datamend-job=<id>` so you can find strays).
+
+For bulk data, sign in and open **Data pipeline**: upload a CWC hourly rainfall CSV (National Water Data Portal), press Check, review the proposed corrections, audit a random sample of days the checks called fine, freeze a training snapshot and register models trained offline (a promotion gate decides the champion). The small label-fusion model can be retrained on the server's CPU or as a private Kaggle notebook. **Train on Kaggle** can use your own free Kaggle account: enter your Kaggle username and API key in the Kaggle account panel (kept in the browser tab only, sent as `X-Kaggle-Username` and `X-Kaggle-Key` headers for each Kaggle request), tick the consent box, and the notebook is pushed to your account (private, CPU, no internet); without your own account the server's `KAGGLE_USERNAME` and `KAGGLE_KEY` are used if set. Limits: your key passes through the server's memory for the request and is never stored or logged; the snapshot (station-days and your labels) goes to a third party under your account; Kaggle's API cannot show your remaining quota or cancel a notebook; it is still untested against live Kaggle (the tests mock the command line). Scoring with a model on the server is not built; the CWC licence for storing derived flags is unconfirmed.
+
+**Bulk data.** Open **Data pipeline**: upload a CWC hourly rainfall CSV (National Water Data Portal; an ingest job reads it into an immutable raw store), press Check (hours are rolled up to rain-day totals and run through the daily checks), review the proposed corrections, audit a random sample of days the checks called fine, freeze a training snapshot, retrain the label-fusion model (on the server CPU, or as a private Kaggle notebook if `KAGGLE_USERNAME` and `KAGGLE_KEY` are set and `pip install kaggle` was run), or register a model trained elsewhere; a promotion gate decides the champion, and a lineage graph shows job, run, snapshot, training and model. NOT IMPLEMENTED: retraining the RF25 STNet, scoring with a model on the server, the shadow run, the LLM proposer. The CWC licence for storing derived flags is unconfirmed; the Kaggle trigger is untested against live Kaggle.
+
+**Import (S3 link or Kaggle).** `POST /api/pipeline/import` (admin) fetches a file by link and starts an ingest job per file; progress is on `/api/pipeline/jobs`. Accepted: `s3://bucket/key`, S3 https links and presigned URLs (public buckets need no credentials; private ones use the caller's `X-Aws-*` headers), or a Kaggle `owner/dataset`, a kaggle.com dataset link or `kernel:owner/notebook` (a public dataset needs no credentials; a private one answers 428 and the page asks for an API token, sent as `X-Kaggle-Token` for that request only, with `KAGGLE_API_TOKEN` as an optional server-side fallback). The import page is a single box that recognises the source from what you paste. Format: CWC hourly CSV (plain or gzip). NOAA ISD import was removed (owner decision, 2026-11-21). Only amazonaws.com and kaggle.com, public addresses, no cross-host redirects, 300 MB per file inside an archive of up to 1 GB. **UNTESTED against live S3**; the public Kaggle path was run once against a real public dataset (2026-11-20), the private-dataset token path only against fakes and a nonexistent dataset. The Station network page draws the India map with the Weather Union gauges.
+**Explore and clean (`/api/pipeline/explore/*`, `/clean/*`, `/assistant`, `/model-card`).** After import, explore the stored data as dynamic tables (stations, stored values, rain-day totals, gaps, station summary, flags): a declarative, allowlisted query, no SQL strings. Each dataset has a **variable profile** detected from its data (parameter, kind, whether zeros are reported, cadence, units, valid range, missing codes) and editable. Cleaning is a **policy** (ordered steps: duplicates, units, exclude impossible values, gap fill `none`/`linear`/`previous` with a cap of 1 to 6 steps) whose default comes from the profile: a continuous state (temperature, humidity, pressure, wind speed) is filled linearly for short gaps; rainfall is **left missing by default** even where zeros are reported; a dataset with no zero values (such as the CWC files) is never filled unless an explicit `override_reason` is recorded, because a missing hour may be a dry hour. Filling needs a gap between two reported values (no extrapolation) and is labelled imputed; raw observations are never changed, and accepted proposals only enter a check run made with `use_clean`. The assistant is **rule based** (AI narrator not connected unless `NARRATOR_URL` is set); it advises and never changes data. Limits: profile detection and the cleaning defaults are tested on **generated data only**; validation verdicts exist for rainfall only, so another parameter is explored and cleaned but gets none; unit conversion is NOT IMPLEMENTED; the maximum gap of 3 steps is an assumed design choice; the plausible ranges of non-rainfall parameters are assumed.
+
+
+**Database.** `DATABASE_URL` defaults to a local SQLite file ("demo storage, resets on restart" on a free host; download a run's JSON export to keep it). It also accepts the string a host hands out (`postgres://...?sslmode=require`), which is converted to `postgresql+asyncpg://`. Tiger Cloud (TimescaleDB on PostgreSQL) is the persistent store: a read-only check on 2026-11-20 of the owner's `DATABASE_URL` found PostgreSQL 18 with the `timescaledb` extension, all 19 tables, and `pipeline_observations` as a hypertable (94 rows from one imported file, measured before the NOAA ISD format was removed). The Render service only uses it if `DATABASE_URL` is set in the Render dashboard; `render.yaml` defaults to SQLite, and `GET /api/pipeline/status` now reports `database` (engine, persistent, hypertable) so the running server says which one it uses. Tables are created at start-up and migrations are in `alembic` (`alembic upgrade head`). The compression policy of the Timescale step (`pipeline/store.py`) was not checked. Architecture figure: `docs/architecture/datamend-architecture.svg` and `.png`.
+
+Open `http://localhost:8000/docs`. Runs are under `/api/validation`, the import step under `/api/pipeline/import`, the live feed under `/api/rainfall` (503 until a key and a city are set), the place lookup under `/api/places`, the pipeline under `/api/pipeline`, sign-in under `/api/auth`.
+
+Frontend:
+
+```powershell
+cd frontend
+npm install
+npm run dev      # http://localhost:5199 (proxies /api to the backend on port 8000)
+npm test         # unit tests of the dashboard helpers and API client
+npm run build
+```
+
+Try it without any data of your own: sign in (`/#/login`), in the dashboard open Runs, choose `data/samples/synthetic_readings_with_faults.csv`, profile `reading`, accumulation mode `cumulative`, interval `15`, tick "synthetic". Or with Docker (`docker compose up --build`, then `http://localhost:5173`; not verified in this environment).
+
+Tests (generated data and mocked transports; no network, no API quota, a throwaway database):
+
+```powershell
+python -m pytest tests -q
+```
+
+## Deploy
+
+- **Frontend:** Vercel, branch `frontend`, root directory `frontend`. The dashboard calls relative `/api/...` paths; `frontend/vercel.json` rewrites them to the Render backend (`https://datamend-backend.onrender.com`), so no environment variable or CORS setting is needed. If the backend URL changes, change the one `destination` in that file. A free Render backend that has been asleep can take about a minute to answer the first request.
+- **Backend:** Render, Docker (`Dockerfile.backend`, settings in `render.yaml`). The free plan has 512 MB RAM, no persistent disk (SQLite resets on restart) and sleeps after 15 minutes idle; for persistence point `DATABASE_URL` at Tiger Cloud or another PostgreSQL. **Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the Render dashboard** (`render.yaml` does not set them, so the public defaults would apply). The browser reaches the backend through Vercel's rewrite (same origin), so `CORS_ORIGINS` only matters for direct calls. Measured, not on the Render image: the idle app uses about 79 MiB of working set on Windows with Python 3.11.
+
+## Documents
+
+- [docs/wayfinder/rainfall-validation-platform/SPEC.md](docs/wayfinder/rainfall-validation-platform/SPEC.md): the platform spec and the "Not claimed" list.
+- [shared-docs/DATAMEND_ARCHITECTURE.docx](shared-docs/DATAMEND_ARCHITECTURE.docx): architecture of the platform and the model system (written before the build; the spec above is newer where they differ).
+- [shared-docs/DATAMEND_AI_INTEGRATION_GUIDE.docx](shared-docs/DATAMEND_AI_INTEGRATION_GUIDE.docx) and [docs/contracts](docs/contracts): the contract for the AI narrator.
+- [docs/RAINFALL_LIVE_FEED.md](docs/RAINFALL_LIVE_FEED.md): the live gauge feed.
+- [docs/qc-system-spec.md](docs/qc-system-spec.md), [docs/qc-evaluation-protocol.md](docs/qc-evaluation-protocol.md): the model system.

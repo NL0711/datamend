@@ -1,0 +1,132 @@
+/* One system for the whole dashboard: white ground, thin borders, one accent (teal), generous space, a quiet rain touch in the page header.
+   Rules kept from the taste skill: one radius scale, one button look, one card look, a visible focus ring, hover and press feedback on every
+   control, 44px touch targets on touch screens, readable contrast, and motion that stops under prefers-reduced-motion. No violet. */
+
+:root {
+  --ink: #0F172A;
+  --ink-2: #475569;
+  --line: #E2E8F0;
+  --ground: #FFFFFF;
+  --soft: #F8FAFC;
+  --accent: #0E7490;
+  --accent-ink: #0B5E75;
+  --rain: #7DD3FC;
+  --r-control: 8px;           /* buttons, inputs, badges */
+  --r-panel: 12px;            /* cards and panels */
+}
+
+body { background: var(--ground); color: var(--ink); }
+
+.rain-app { background: var(--ground); }
+
+/* ---- panels: one card look ----------------------------------------------------------------------------------------- */
+.rain-panel {
+  background: var(--ground);
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+}
+
+/* ---- one radius scale ---------------------------------------------------------------------------------------------- */
+.rain-app .rounded { border-radius: var(--r-control); }
+.rain-app .rounded-lg { border-radius: var(--r-panel); }
+
+/* ---- controls: every one answers the pointer ----------------------------------------------------------------------- */
+.rain-app button, .rain-app select, .rain-app input, .rain-app textarea {
+  transition: transform 0.12s ease, background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease, color 0.16s ease;
+}
+.rain-app button:not(:disabled) { cursor: pointer; }
+.rain-app button:not(:disabled):hover { filter: brightness(0.96); }
+.rain-app button:not(:disabled):active { transform: translateY(1px); filter: brightness(0.92); }
+.rain-app select:hover, .rain-app input:not([type='checkbox']):not(:disabled):hover { border-color: #94A3B8; }
+.rain-app input:not([type='checkbox']):focus, .rain-app select:focus, .rain-app textarea:focus {
+  border-color: var(--accent); box-shadow: 0 0 0 3px rgba(14, 116, 144, 0.18); outline: none;
+}
+.rain-app :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.rain-app li[class*='cursor-pointer'], .rain-app tr[class*='cursor-pointer'] { transition: background-color 0.15s ease; }
+.rain-app a { text-underline-offset: 3px; }
+
+@media (pointer: coarse) {
+  .rain-app button, .rain-app select, .rain-app input:not([type='checkbox']) { min-height: 44px; }
+}
+
+/* ---- the rail: white, a thin edge, plain items ---------------------------------------------------------------------- */
+.rain-nav { background: var(--ground); border-bottom: 1px solid var(--line); color: var(--ink-2); }
+@media (min-width: 768px) { .rain-nav { border-bottom: 0; border-right: 1px solid var(--line); } }
+.rain-nav-group { padding: 1rem 0.75rem 0.35rem; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #64748B; }
+.rain-nav-item {
+  display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.5rem 0.75rem;
+  border-radius: var(--r-control); font-size: 0.8125rem; font-weight: 500; text-align: left; color: var(--ink-2); white-space: nowrap;
+}
+.rain-nav-item:hover { background: var(--soft); color: var(--ink); }
+.rain-nav-item[aria-current='page'] { background: #ECFEFF; color: var(--accent-ink); font-weight: 600; }
+.rain-nav-item svg { flex: none; }
+.rain-nav-item[aria-current='step'] { background: #ECFEFF; color: var(--accent-ink); font-weight: 600; }
+/* numbered steps: a small round number that becomes a teal check once the step has data; they scroll sideways on narrow screens */
+.rain-step { width: auto; }
+@media (min-width: 768px) { .rain-step { width: 100%; padding: 0.6rem 0.75rem; font-size: 0.875rem; } }
+.rain-step-dot {
+  flex: none; width: 1.35rem; height: 1.35rem; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.6875rem; font-weight: 700; background: #E2E8F0; color: var(--ink-2);
+}
+.rain-step-dot.is-done { background: var(--accent); color: #fff; }
+.rain-nav-item[aria-current='step'] .rain-step-dot:not(.is-done) { background: var(--accent-ink); color: #fff; }
+
+/* ---- the page header: a big title, one plain line, and a faint rain touch on the right ---------------------------- */
+.rain-head { position: relative; overflow: hidden; padding-bottom: 1.25rem; border-bottom: 1px solid var(--line); }
+.rain-layer { position: absolute; top: -40%; bottom: 0; right: -4%; width: 38%; transform: rotate(9deg); pointer-events: none; opacity: 0.5;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 60%); mask-image: linear-gradient(90deg, transparent, #000 60%); }
+.rain-layer::before, .rain-layer::after { content: ''; position: absolute; inset: 0; background-repeat: no-repeat; }
+.rain-layer::before {
+  background-image:
+    linear-gradient(to bottom, rgba(125, 211, 252, 0), rgba(125, 211, 252, 0.9)),
+    linear-gradient(to bottom, rgba(125, 211, 252, 0), rgba(125, 211, 252, 0.9)),
+    linear-gradient(to bottom, rgba(125, 211, 252, 0), rgba(125, 211, 252, 0.9)),
+    linear-gradient(to bottom, rgba(125, 211, 252, 0), rgba(125, 211, 252, 0.9));
+  background-size: 1px 18px, 1px 14px, 1px 22px, 1px 16px;
+  background-position: 20px 6px, 70px 40px, 120px 18px, 170px 52px;
+  animation: rain-far 2.4s linear infinite;
+}
+.rain-layer::after {
+  background-image:
+    linear-gradient(to bottom, rgba(14, 116, 144, 0), rgba(14, 116, 144, 0.35)),
+    linear-gradient(to bottom, rgba(14, 116, 144, 0), rgba(14, 116, 144, 0.35)),
+    linear-gradient(to bottom, rgba(14, 116, 144, 0), rgba(14, 116, 144, 0.35));
+  background-size: 1px 26px, 1px 30px, 1px 24px;
+  background-position: 45px 20px, 95px 70px, 145px 36px;
+  animation: rain-near 1.6s linear infinite;
+}
+@keyframes rain-far { to { background-position: 20px 106px, 70px 140px, 120px 118px, 170px 152px; } }
+@keyframes rain-near { to { background-position: 45px 120px, 95px 170px, 145px 136px; } }
+
+/* ---- the call-budget style meter: a slim bar ------------------------------------------------------------------------ */
+.rain-meter { height: 6px; border-radius: 9999px; background: #E2E8F0; overflow: hidden; }
+.rain-meter > span { display: block; height: 100%; border-radius: 9999px; background: #0284C7; }
+
+/* ---- the home page ---------------------------------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+.landing section[id] { scroll-margin-top: 56px; }
+.landing a, .landing li { transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
+.landing a:active { transform: translateY(1px); }
+.landing a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) { .landing a, .landing li { transition: none; } .landing li:hover { transform: none !important; } }
+
+/* ---- the dashboard has one accent (teal): the older pages say sky, which maps to it here ------------------------------------- */
+.rain-app .bg-sky-600, .rain-app .hover\:bg-sky-600:hover { background-color: var(--accent); }
+.rain-app .border-sky-600 { border-color: var(--accent); }
+.rain-app .text-sky-600, .rain-app .text-sky-700, .rain-app .text-sky-800 { color: var(--accent-ink); }
+.rain-app .bg-sky-50 { background-color: #ECFEFF; }
+.rain-app .bg-sky-400 { background-color: #22A3B8; }
+.rain-app .border-sky-200, .rain-app .border-sky-300 { border-color: #A5E3EC; }
+.rain-app .focus\:ring-sky-200:focus { --tw-ring-color: #A5E3EC; }
+
+/* ---- scrollbars ------------------------------------------------------------------------------------------------------ */
+::-webkit-scrollbar-track { background: #F1F5F9; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+/* ---- motion off for anyone who asks -------------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .rain-layer::before, .rain-layer::after { animation: none; }
+  .rain-app button, .rain-app select, .rain-app input, .rain-app textarea { transition: none; }
+  .rain-app button:not(:disabled):active { transform: none; }
+}

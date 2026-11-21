@@ -1,0 +1,111 @@
+{
+ "name": "untrained",
+ "started": "2026-11-19T14:12:28",
+ "wall_seconds": 169.63227701187134,
+ "meta": {
+  "run": "base",
+  "profile": "single-gpu",
+  "seed": null,
+  "config_digest": "b5af58ff5130c309"
+ },
+ "environment": {
+  "python": "3.13.16",
+  "platform": "Linux 6.18.55+",
+  "numpy": "2.1.3",
+  "cpu_count": 4,
+  "torch": "2.11.0+cu130",
+  "cuda": "13.0",
+  "cuda_available": true,
+  "gpu_names": [
+   "Tesla T4",
+   "Tesla T4"
+  ],
+  "ram_total_gb": 31.3,
+  "git_commit": "70fe33267c062364e01069a66ae9d742fa7c5eb5"
+ },
+ "gpu": {
+  "name": "Tesla T4",
+  "source": "nvml",
+  "samples": 167,
+  "available": true,
+  "energy_wh": 1.1485930555555555,
+  "energy_method": "NVML total-energy counter",
+  "avg_power_w": 24.523856287425144,
+  "max_power_w": 26.97,
+  "avg_util_pct": 0.0,
+  "max_util_pct": 0.0,
+  "avg_mem_used_mb": 540.9719311377246,
+  "max_mem_used_mb": 553.1875,
+  "avg_temp_c": 47.712574850299404,
+  "max_temp_c": 53.0,
+  "avg_sm_mhz": 551.497005988024,
+  "max_sm_mhz": 690.0
+ },
+ "cpu": {
+  "process_cpu_seconds": 170.078939015,
+  "avg_cpu_percent": 25.968862275449098,
+  "max_cpu_percent": 40.0,
+  "avg_rss_mb": 1214.6431278068862,
+  "max_rss_mb": 3447.96875,
+  "energy_wh": "NOT AVAILABLE: no readable RAPL counters (Windows, container or no permission); not estimated"
+ },
+ "spans": {
+  "data.make_block": {
+   "count": 21,
+   "total_s": 0.7410337924957275,
+   "mean_ms": 35.2873234521775,
+   "p50_ms": 48.61259460449219,
+   "p95_ms": 53.34591865539551,
+   "p99_ms": 53.36461067199707,
+   "max_ms": 53.36928367614746,
+   "units": 0.0,
+   "unit": "",
+   "units_per_s": null,
+   "gpu_energy_wh_approx": 0.005344943290072143,
+   "gpu_energy_mwh_per_unit_approx": null
+  },
+  "score.rules": {
+   "count": 7,
+   "total_s": 1.0054099559783936,
+   "mean_ms": 143.6299937111991,
+   "p50_ms": 141.63827896118164,
+   "p95_ms": 155.66461086273193,
+   "p99_ms": 158.78947734832764,
+   "max_ms": 159.57069396972656,
+   "units": 12692948.0,
+   "unit": "cell-days",
+   "units_per_s": 12624649.203566046,
+   "gpu_energy_wh_approx": 0.0070282564656585856,
+   "gpu_energy_mwh_per_unit_approx": 5.537134845001008e-07
+  },
+  "score.slow": {
+   "count": 7,
+   "total_s": 118.43493032455444,
+   "mean_ms": 16919.275760650635,
+   "p50_ms": 16969.19059753418,
+   "p95_ms": 16976.45444869995,
+   "p99_ms": 16976.47985458374,
+   "max_ms": 16976.486206054688,
+   "units": 12692948.0,
+   "unit": "cell-days",
+   "units_per_s": 107172.33475982754,
+   "gpu_energy_wh_approx": 0.8718220845818184,
+   "gpu_energy_mwh_per_unit_approx": 6.868554764281856e-05
+  },
+  "score.neighbour_baseline": {
+   "count": 7,
+   "total_s": 18.864678859710693,
+   "mean_ms": 2694.954122815813,
+   "p50_ms": 2697.007894515991,
+   "p95_ms": 2724.1884231567383,
+   "p99_ms": 2728.3358764648438,
+   "max_ms": 2729.37273979187,
+   "units": 12692948.0,
+   "unit": "cell-days",
+   "units_per_s": 672841.9865714405,
+   "gpu_energy_wh_approx": 0.14113372331406007,
+   "gpu_energy_mwh_per_unit_approx": 1.1119065745330404e-05
+  }
+ },
+ "metrics": {}
+}

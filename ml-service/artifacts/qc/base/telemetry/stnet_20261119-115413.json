@@ -1,0 +1,205 @@
+{
+ "name": "stnet",
+ "started": "2026-11-19T11:53:51",
+ "wall_seconds": 21.530489206314087,
+ "meta": {
+  "run": "base",
+  "profile": "single-gpu",
+  "seed": null,
+  "config_digest": "b5af58ff5130c309"
+ },
+ "environment": {
+  "python": "3.10.11",
+  "platform": "Windows 10",
+  "numpy": "1.26.4",
+  "cpu_count": 4,
+  "torch": "2.5.1+cu121",
+  "cuda": "12.1",
+  "cuda_available": true,
+  "gpu_names": [
+   "NVIDIA RTXA6000-12Q"
+  ],
+  "ram_total_gb": 23.4,
+  "git_commit": "9af31d81383bf2b28999683a8abbc961d8d825fa+dirty"
+ },
+ "gpu": {
+  "name": "NVIDIA RTXA6000-12Q",
+  "source": "nvml",
+  "samples": 19,
+  "available": true,
+  "energy_wh": "NOT AVAILABLE",
+  "energy_method": "NOT AVAILABLE: the GPU reports no power (common on virtual GPUs); install nvidia-ml-py for the NVML counter",
+  "avg_power_w": "NOT AVAILABLE",
+  "max_power_w": "NOT AVAILABLE",
+  "avg_util_pct": 25.736842105263158,
+  "max_util_pct": 54.0,
+  "avg_mem_used_mb": 6302.812088815789,
+  "max_mem_used_mb": 10567.64453125,
+  "avg_temp_c": 0.0,
+  "max_temp_c": 0.0,
+  "avg_sm_mhz": 2100.0,
+  "max_sm_mhz": 2100.0
+ },
+ "cpu": {
+  "process_cpu_seconds": 19.0,
+  "avg_cpu_percent": 50.17894736842105,
+  "max_cpu_percent": 81.2,
+  "avg_rss_mb": 1364.62109375,
+  "max_rss_mb": 1827.4765625,
+  "energy_wh": "NOT AVAILABLE: no readable RAPL counters (Windows, container or no permission); not estimated"
+ },
+ "spans": {
+  "stnet.data.year_data": {
+   "count": 8,
+   "total_s": 4.600079774856567,
+   "mean_ms": 575.0099718570709,
+   "p50_ms": 560.2453947067261,
+   "p95_ms": 654.3111562728882,
+   "p99_ms": 668.4066724777222,
+   "max_ms": 671.9305515289307,
+   "units": 0.0,
+   "unit": "",
+   "units_per_s": null,
+   "gpu_energy_wh_approx": null,
+   "gpu_energy_mwh_per_unit_approx": null
+  },
+  "stnet.train.stage1_year_visit": {
+   "count": 5,
+   "total_s": 3.5380890369415283,
+   "mean_ms": 707.6178073883057,
+   "p50_ms": 580.5127620697021,
+   "p95_ms": 994.025182723999,
+   "p99_ms": 1035.0719356536865,
+   "max_ms": 1045.3336238861084,
+   "units": 800.0,
+   "unit": "frames",
+   "units_per_s": 226.11075969177796,
+   "gpu_energy_wh_approx": null,
+   "gpu_energy_mwh_per_unit_approx": null
+  },
+  "stnet.infer.features": {
+   "count": 285,
+   "total_s": 1.3786122798919678,
+   "mean_ms": 4.837236069796378,
+   "p50_ms": 4.998207092285156,
+   "p95_ms": 5.513572692871094,
+   "p99_ms": 6.001749038696289,
+   "max_ms": 7.00068473815918,
+   "units": 2276.0,
+   "unit": "days",
+   "units_per_s": 1650.9355336500805,
+   "gpu_energy_wh_approx": null,
+   "gpu_energy_mwh_per_unit_approx": null
+  },
+  "stnet.infer.network": {
+   "count": 285,
+   "total_s": 4.542714834213257,
+   "mean_ms": 15.939350295485111,
+   "p50_ms": 15.51961898803711,
+   "p95_ms": 19.999408721923828,
+   "p99_ms": 22.9990291595459,
+   "max_ms": 33.00738334655762,
+   "units": 2276.0,
+   "unit": "days",
+   "units_per_s": 501.0219842237083,
+   "gpu_energy_wh_approx": null,
+   "gpu_energy_mwh_per_unit_approx": null
+  },
+  "stnet.train.stage2_year_visit": {
+   "count": 3,
+   "total_s": 4.06367564201355,
+   "mean_ms": 1354.5585473378499,
+   "p50_ms": 1260.0452899932861,
+   "p95_ms": 1543.1691884994507,
+   "p99_ms": 1568.3357572555542,
+   "max_ms": 1574.62739944458,
+   "units": 9216.0,
+   "unit": "cell-sequences",
+   "units_per_s": 2267.89754199808,
+   "gpu_energy_wh_approx": null,
+   "gpu_energy_mwh_per_unit_approx": null
+  },
+  "stnet.probe": {
+   "count": 1,
+   "total_s": 2.916999340057373,
+   "mean_ms": 2916.999340057373,
+   "p50_ms": 2916.999340057373,
+   "p95_ms": 2916.999340057373,
+   "p99_ms": 2916.999340057373,
+   "max_ms": 2916.999340057373,
+   "units": 0.0,
+   "unit": "",
+   "units_per_s": null,
+   "gpu_energy_wh_approx": null,
+   "gpu_energy_mwh_per_unit_approx": null
+  }
+ },
+ "metrics": {
+  "model.stnet.parameters": {
+   "unit": "count",
+   "n": 1,
+   "last": 1761769.0,
+   "mean": 1761769.0,
+   "max": 1761769.0,
+   "values": [
+    1761769.0
+   ]
+  },
+  "model.stnet_long.parameters": {
+   "unit": "count",
+   "n": 1,
+   "last": 24263.0,
+   "mean": 24263.0,
+   "max": 24263.0,
+   "values": [
+    24263.0
+   ]
+  },
+  "model.stnet.size_mb": {
+   "unit": "MB",
+   "n": 1,
+   "last": 6.81317138671875,
+   "mean": 6.81317138671875,
+   "max": 6.81317138671875,
+   "values": [
+    6.81317138671875
+   ]
+  },
+  "model.stnet.flops_per_day_full_grid": {
+   "unit": "FLOPs",
+   "n": 1,
+   "last": 8225595360.0,
+   "mean": 8225595360.0,
+   "max": 8225595360.0,
+   "values": [
+    8225595360.0
+   ]
+  },
+  "gpu_peak_allocated_mb.stnet.stage1": {
+   "unit": "MB",
+   "n": 5,
+   "last": 1650.80029296875,
+   "mean": 1650.9193359375,
+   "max": 1652.56591796875,
+   "values": [
+    1652.56591796875,
+    1649.98779296875,
+    1650.5048828125,
+    1650.73779296875,
+    1650.80029296875
+   ]
+  },
+  "gpu_peak_allocated_mb.stnet.stage2": {
+   "unit": "MB",
+   "n": 3,
+   "last": 4456.42919921875,
+   "mean": 4459.527018229167,
+   "max": 4465.72265625,
+   "values": [
+    4465.72265625,
+    4456.42919921875,
+    4456.42919921875
+   ]
+  }
+ }
+}

@@ -1,0 +1,44 @@
+# Render Blueprint for the DataMend backend (Docker web service + persistent disk for SQLite).
+# The frontend is deployed separately on Vercel (see frontend/vercel.json).
+services:
+  - type: web
+    name: datamend-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile.backend
+    dockerContext: .
+    plan: free                # 512 MB RAM; measured ~305 MiB idle locally. No persistent disk on free: SQLite resets on every restart/redeploy/spin-down.
+    healthCheckPath: /           # /docs is behind the sign-in when REQUIRE_LOGIN is on; / always answers (status only when signed out)
+    envVars:
+      - key: ENVIRONMENT
+        value: production     # the server logs a warning at start-up while this is set and ADMIN_PASSWORD is still the public default
+      - key: DEBUG
+        value: "False"
+      - key: DATABASE_URL
+        value: sqlite+aiosqlite:////tmp/datamend.db   # ephemeral ("demo storage, resets on restart"). For persistence set DATABASE_URL in the dashboard to a Postgres/Timescale string (Tiger Cloud, Render Postgres, Supabase); a postgres:// string is accepted as given. The Timescale step is untested.
+      - key: RUNTIME_SETTINGS_PATH
+        value: /tmp/runtime_settings.json             # settings saved from the dashboard; also lost on restart on the free plan
+      - key: CORS_ORIGINS
+        sync: false           # set in the dashboard, JSON list: ["https://<your-app>.vercel.app"]
+      # Secrets: set these in the Render dashboard only (sync: false keeps the values out of this file and out of git).
+      - key: WEATHER_UNION_API_KEY
+        sync: false
+      - key: WEATHER_UNION_CITY
+        sync: false           # e.g. Mumbai; the feed stays off until both the key and a city are set
+      # The dashboard needs a sign-in (REQUIRE_LOGIN is on by default). Without these two the PUBLIC defaults admin@admin.com / admin apply:
+      # set both here, with a long password.
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: REQUIRE_LOGIN
+        value: "true"
+      - key: ADMIN_TOKEN
+        sync: false           # optional: a long random string for scripts (X-Admin-Token); the dashboard itself uses the sign-in above
+      - key: KAGGLE_USERNAME
+        sync: false           # optional: lets the server start Kaggle retraining notebooks on your account
+      - key: KAGGLE_KEY
+        sync: false
+      - key: NARRATOR_URL
+        sync: false
+      - key: NARRATOR_TOKEN
+        sync: false

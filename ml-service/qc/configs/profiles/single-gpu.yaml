@@ -1,0 +1,11 @@
+# One machine with a single GPU (or CPU only). Experiments run one after another.
+compute:
+  devices: [auto]          # auto = cuda:0 if available, else cpu
+  parallel_experiments: 1
+  num_workers: 4
+  batch_size: 4096
+  amp: true                # mixed precision on GPU; ignored on CPU
+  # Budget caps. Provisional until the timing run has been done on this machine.
+  max_hours_per_run: 2.0
+  max_hours_total: 60.0    # NOT enforced yet: nothing reads it
+  session_hours: null      # NOT enforced yet: nothing reads it

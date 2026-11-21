@@ -1,0 +1,2 @@
+# The DataMend MCP service uses the Python standard library only (Python 3.10+). Nothing to install.
+# Tests: python -m unittest discover -s tests -t .      (pytest also works: python -m pytest tests -q)

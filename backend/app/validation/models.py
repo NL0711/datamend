@@ -1,0 +1,143 @@
+"""Tables of the validation platform (spec section 5): validation_runs, validation_results, validation_check_hits.
+
+Written to work on SQLite now and PostgreSQL later: only generic column types (JSON, not a dialect type). On the Render free tier
+SQLite resets on restart, so the API labels storage "demo storage, resets on restart"; the JSON export is the durable copy.
+"""
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
+from backend.app.db.database import Base
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+class ValidationRun(Base):
+    __tablename__ = "validation_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
+    profile: Mapped[str] = mapped_column(String(16))                 # reading | daily
+    source: Mapped[str] = mapped_column(String(16))                  # upload | live
+    label: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)   # file name, or "live <rain day>"
+    input_sha256: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    n_rows: Mapped[int] = mapped_column(Integer, default=0)
+    n_stations: Mapped[int] = mapped_column(Integer, default=0)
+    settings: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)      # thresholds, accumulation mode, radius, interval
+    platform_version: Mapped[str] = mapped_column(String(32))
+    git_commit: Mapped[str] = mapped_column(String(64))              # "unknown" when the build has no git metadata
+    duration_ms: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="completed")     # completed | failed | open (live)
+    error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    not_run: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, default=list)
+    renamed_headers: Mapped[Dict[str, str]] = mapped_column(JSON, default=dict)
+    issue_counts: Mapped[Dict[str, int]] = mapped_column(JSON, default=dict)
+    report: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    rain_day: Mapped[Optional[str]] = mapped_column(String(10), nullable=True, index=True)   # live runs: the date the rain day ends
+    synthetic: Mapped[bool] = mapped_column(Boolean, default=False)  # the uploader declared the data synthetic
+
+
+class ValidationResult(Base):
+    __tablename__ = "validation_results"
+    __table_args__ = (Index("ix_vr_run_score", "run_id", "rule_score"), Index("ix_vr_run_station", "run_id", "station_id", "time_key"))
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(Integer, ForeignKey("validation_runs.id", ondelete="CASCADE"), index=True)
+    position: Mapped[int] = mapped_column(Integer)                   # order of the row in the input
+    row_ref: Mapped[str] = mapped_column(String(64))
+    station_id: Mapped[str] = mapped_column(String(64))
+    time_key: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)   # ISO UTC timestamp, or the day; sorts as text
+    intensity: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    accumulation: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    mm: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    verdict: Mapped[str] = mapped_column(String(12), index=True)
+    rule_score: Mapped[float] = mapped_column(Float, default=0.0)
+    severity: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)
+    original_row: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)   # the input row, untouched
+    issues: Mapped[List[Dict[str, str]]] = mapped_column(JSON, default=list)   # input-integrity issues from the parser
+
+
+class AdminSession(Base):
+    """A signed-in admin session kept in the database, so a restart or redeploy does not sign the admin out. Only the SHA-256 of the token is
+    stored (a leaked database does not hand out working sessions). api/auth.py keeps an in-memory cache in front of this table."""
+    __tablename__ = "admin_sessions"
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    expires_at: Mapped[float] = mapped_column(Float, index=True)      # epoch seconds
+
+
+class McpToken(Base):
+    """An access token for the platform's own MCP endpoint (POST /api/mcp), made in Settings for one person's agent. Only the SHA-256 of the token
+    is stored; the token itself is shown once, when it is made. Revoking sets ``revoked_at``; a revoked token never works again."""
+    __tablename__ = "mcp_tokens"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    label: Mapped[str] = mapped_column(String(80))
+    prefix: Mapped[str] = mapped_column(String(16))                    # the first characters, to tell tokens apart in the list
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class Review(Base):
+    """A reviewer's decision on a flagged row (spec: the admin review loop). Stored SEPARATELY from the evidence and never changes a
+    verdict, rule score or evidence. Not ground truth: it is one person's judgement on the rows they chose to review. Keyed by (run, row_ref)
+    so it survives a live run re-scoring its rows. There are no accounts: ``reviewer`` is a free-text label, and writing needs the admin token."""
+    __tablename__ = "reviews"
+    __table_args__ = (Index("ix_reviews_run_row", "run_id", "row_ref"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(Integer, ForeignKey("validation_runs.id", ondelete="CASCADE"), index=True)
+    row_ref: Mapped[str] = mapped_column(String(64))
+    station_id: Mapped[str] = mapped_column(String(64))
+    decision: Mapped[str] = mapped_column(String(20))        # confirmed_fault | false_alarm | genuine_extreme | needs_followup
+    note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    reviewer: Mapped[Optional[str]] = mapped_column(String(60), nullable=True)
+    verdict_at_review: Mapped[str] = mapped_column(String(12))   # the verdict the reviewer saw (it cannot change, but a live row can be re-scored)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class Explanation(Base):
+    """An explanation of a flag, stored SEPARATELY from the evidence and always marked generated (spec section 6).
+
+    generator is 'baseline-rules' (a template filled from the evidence) or 'mcp-narrator' (the AI team's service). A chat turn has a
+    question. Nothing here can change a verdict, score or evidence."""
+    __tablename__ = "explanations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(Integer, ForeignKey("validation_runs.id", ondelete="CASCADE"), index=True)
+    result_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)     # informational only: a live run replaces its result rows
+    row_ref: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)   # the stable link to a row (spec: run, row_ref, check)
+    check: Mapped[Optional[str]] = mapped_column(String(48), nullable=True)
+    kind: Mapped[str] = mapped_column(String(8), default="explain")          # explain | chat
+    question: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    text: Mapped[str] = mapped_column(Text)
+    contributions: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, default=list)
+    generator: Mapped[str] = mapped_column(String(24))
+    model_id: Mapped[str] = mapped_column(String(96))
+    confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)   # the narrator's own number, if it sent one
+    generated: Mapped[bool] = mapped_column(Boolean, default=True)
+    # What was explained, kept so an explanation can always be audited against the exact evidence it saw (idea from the rf pull request): the
+    # SHA-256 of that evidence payload and a copy of it. None on rows made before this was added.
+    evidence_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    evidence_snapshot: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class ValidationCheckHit(Base):
+    __tablename__ = "validation_check_hits"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(Integer, ForeignKey("validation_runs.id", ondelete="CASCADE"), index=True)
+    result_id: Mapped[int] = mapped_column(Integer, ForeignKey("validation_results.id", ondelete="CASCADE"), index=True)
+    check: Mapped[str] = mapped_column(String(48), index=True)
+    layer: Mapped[str] = mapped_column(String(16))
+    kind: Mapped[str] = mapped_column(String(12))
+    weight: Mapped[float] = mapped_column(Float)
+    reason: Mapped[str] = mapped_column(Text)
+    evidence: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)

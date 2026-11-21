@@ -1,0 +1,13 @@
+{
+ "config_digest": "b5af58ff5130c309",
+ "seed": 0,
+ "git_commit": "487d59dd4a7c08ef90ec2d33041b6d70a640d0bc",
+ "started": "2026-11-18T14:39:58",
+ "profile": "single-gpu",
+ "split_manifest_hash": "a079504cc9e89c1b",
+ "components": [
+  "rules",
+  "slow",
+  "neighbour_baseline"
+ ]
+}

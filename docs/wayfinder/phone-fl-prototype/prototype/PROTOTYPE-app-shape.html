@@ -1,0 +1,141 @@
+<!doctype html>
+<!--
+  PROTOTYPE, THROWAWAY (wayfinder ticket t09, docs/wayfinder/phone-fl-prototype).
+  Question: what should the Flutter app look like? Three structurally different variants of the same screens:
+    A  Feed-first   one scrolling screen, training strip pinned at the bottom
+    B  Radius-first rings around "you", gauges placed by distance, detail in a bottom sheet
+    C  Tabs         Alerts | Unverified | Training as three separate screens
+  ALL DATA BELOW IS MOCK (synthetic). Nothing is fetched. No Flutter code. Open this file in a browser; arrows or the bar switch variants.
+-->
+<html lang="en"><head><meta charset="utf-8"><title>PROTOTYPE - app shape (mock data)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body{font-family:system-ui,Segoe UI,Roboto,sans-serif;background:#1c1f24;margin:0;padding:14px 0 90px;color:#222}
+  .phone{width:360px;height:660px;margin:0 auto;background:#f4f5f7;border-radius:22px;overflow:hidden;position:relative;display:flex;flex-direction:column;box-shadow:0 8px 30px #0008}
+  .top{background:#0b3d5c;color:#fff;padding:10px 14px;font-size:15px;font-weight:600}
+  .proto{background:#fff3cd;color:#664d03;font-size:11px;padding:5px 12px;border-bottom:1px solid #e6d28a}
+  .body{flex:1;overflow:auto;padding:10px 12px}
+  .card{background:#fff;border-radius:10px;padding:10px 12px;margin-bottom:9px;box-shadow:0 1px 2px #0002;font-size:13px}
+  .card h4{margin:0 0 3px;font-size:14px}
+  .pill{display:inline-block;font-size:10px;border-radius:9px;padding:1px 7px;margin-right:4px;font-weight:600}
+  .sus{background:#f8d7da;color:#842029}.unc{background:#e2e3e5;color:#41464b}.gen{background:#cff4fc;color:#055160}.mock{background:#e0cffc;color:#3d1a78}
+  .muted{color:#667;font-size:12px}.row{display:flex;justify-content:space-between;align-items:center}
+  button.link{border:0;background:none;color:#0b5ed7;padding:0;font-size:12px;cursor:pointer}
+  .detail{margin-top:7px;padding-top:7px;border-top:1px dashed #ccc;font-size:12px}
+  .gen-box{background:#e8f6fb;border-left:3px solid #0aa2c0;padding:6px 8px;margin-top:6px}
+  .empty{text-align:center;color:#556;padding:30px 12px;font-size:13px}
+  .bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:#111;color:#fff;border-radius:24px;padding:8px 14px;display:flex;gap:10px;align-items:center;font-size:13px;box-shadow:0 2px 12px #000a;z-index:9}
+  .bar button,.bar select{background:#333;color:#fff;border:0;border-radius:12px;padding:4px 10px;cursor:pointer;font-size:13px}
+  .strip{background:#fff;border-top:1px solid #ddd;padding:7px 12px;font-size:12px}
+  .tabs{display:flex;background:#fff;border-top:1px solid #ddd}.tabs div{flex:1;text-align:center;padding:10px 0;font-size:13px;cursor:pointer}
+  .tabs .on{color:#0b5ed7;font-weight:700;border-top:2px solid #0b5ed7}
+  .perm{padding:22px 18px;font-size:14px}.perm .big{font-size:18px;font-weight:700;margin-bottom:10px}
+  .btn{display:block;width:100%;border:0;border-radius:8px;padding:11px;margin-top:10px;font-size:14px;cursor:pointer}
+  .btn.p{background:#0b5ed7;color:#fff}.btn.s{background:#e3e6ea}
+  svg text{font-size:10px}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:16px 16px 0 0;padding:12px;box-shadow:0 -4px 14px #0004;max-height:62%;overflow:auto;font-size:13px}
+</style></head><body>
+<div id="app"></div>
+<div class="bar"><button id="prev">&larr;</button><span id="vlabel"></span><button id="next">&rarr;</button>
+  <select id="state"></select><button id="first">first run</button></div>
+<script>
+// ---------- MOCK DATA (synthetic) ----------
+const NOW = "mock 14:05 IST";
+const ALERTS = [
+  {id:1, place:"Andheri West", km:2.9, sev:"high", score:0.82, check:"frozen_value (mock name)", reason:"Same reading for 9 polls in a row while neighbours changed.",
+   ev:[["observed","0.8 (measured)"],["repeat count","9 polls (measured)"],["threshold","6 polls (assumed)"],["neighbours used","3 within 10 km (measured)"],["time basis","received (not observed)"],["units","UNCONFIRMED"]],
+   exp:"This gauge reported the same value 9 times running, more than the 6-poll limit the platform assumes, so its recent readings may be stuck. This says the data may be wrong; it says nothing about the weather."},
+  {id:2, place:"Malad West", km:6.1, sev:"medium", score:0.51, check:"negative_step (mock name)", reason:"Counter went down between two polls.",
+   ev:[["previous","3.2 (measured)"],["latest","2.9 (measured)"],["time basis","received (not observed)"],["units","UNCONFIRMED"]],
+   exp:"The accumulation counter fell between two polls. A cumulative counter should not decrease unless it reset, so the latest reading may be unreliable."}
+];
+const UNVERIFIED = [
+  {id:3, place:"Powai", km:7.4, check:"heavy_no_neighbour (mock name)", reason:"Heavy value with no neighbour able to confirm it. Not judged faulty."}
+];
+const STATES = {ok:"ok", no_gauges_in_range:"no gauges in range", no_open_run:"no open run today", feed_off:"feed off", stale:"stale feed", waking:"service waking"};
+const TRAIN = {version:7, devices:3, windows:42, positives:0, lastUpload:"mock yesterday 02:10", status:"NOT EVALUATED: too few positives"};
+
+// ---------- state ----------
+const S = {variant:(location.hash.match(/variant=(\w)/)||[])[1]||"A", state:"ok", firstRun:false, open:null, tab:"alerts", sheet:null};
+const V = {A:"Feed-first", B:"Radius-first", C:"Tabs"};
+const $ = s=>document.querySelector(s);
+const stSel=$("#state"); for(const k in STATES){stSel.innerHTML+=`<option value="${k}">${STATES[k]}</option>`}
+
+// ---------- shared pieces ----------
+const banner = `<div class="proto">PROTOTYPE &middot; <span class="pill mock">MOCK DATA</span> Mumbai only, 9 gauges &middot; time basis: received &middot; units UNCONFIRMED</div>`;
+function stateBox(){
+  const m={no_gauges_in_range:"No gauges within 10 km of you. This prototype covers Mumbai only.",
+    no_open_run:"No live run is open today. Nothing to show yet.",feed_off:"The live feed is switched off on the server.",
+    stale:`Last poll is older than two poll intervals (as of ${NOW}). Alerts below may be out of date.`,
+    waking:"Service waking up (free tier). Retrying in a few seconds..."};
+  return m[S.state] ? `<div class="card empty">${m[S.state]}</div>` : "";
+}
+const hasData=()=>S.state==="ok"||S.state==="stale";
+function alertCard(a){
+  const o=S.open===a.id;
+  return `<div class="card"><div class="row"><h4>${a.place}</h4><span class="muted">${a.km} km</span></div>
+   <span class="pill sus">SUSPECT ${a.sev}</span><span class="muted">rule score ${a.score} (uncalibrated)</span>
+   <div style="margin:4px 0">${a.reason}</div>
+   <button class="link" onclick="tog(${a.id})">${o?"Hide":"Show"} evidence and explanation</button>
+   ${o?`<div class="detail">${a.ev.map(e=>`<div class="row"><span>${e[0]}</span><span>${e[1]}</span></div>`).join("")}
+     <div class="gen-box"><span class="pill gen">generated</span> baseline explainer<br>${a.exp}</div></div>`:""}</div>`;
+}
+function uncCard(u){return `<div class="card"><div class="row"><h4>${u.place}</h4><span class="muted">${u.km} km</span></div>
+  <span class="pill unc">UNCERTAIN, unverified</span><div style="margin:4px 0">${u.reason}</div></div>`}
+const alertsHtml=()=>hasData()?ALERTS.map(alertCard).join(""):stateBox();
+const uncHtml=()=>hasData()?UNVERIFIED.map(uncCard).join(""):stateBox();
+const trainHtml=()=>`<div class="card"><h4>On-device training <span class="pill mock">PROTOTYPE</span></h4>
+  <div class="row"><span>Status</span><b>${TRAIN.status}</b></div>
+  <div class="row"><span>Phones contributing</span><span>${TRAIN.devices} (a handful, not a population)</span></div>
+  <div class="row"><span>Model version</span><span>${TRAIN.version}</span></div>
+  <div class="row"><span>Labelled windows on this phone</span><span>${TRAIN.windows} (${TRAIN.positives} rain-soon)</span></div>
+  <div class="row"><span>Last upload</span><span>${TRAIN.lastUpload}</span></div>
+  <div class="muted" style="margin-top:6px">Collects pressure only while this app is open. Training and upload run in the background when charging, idle and on Wi-Fi. Only model updates and result counts leave this phone, never readings or location. This does not use secure aggregation or differential privacy.</div></div>`;
+const permHtml=()=>`<div class="perm"><div class="big">Allow location and pressure?</div>
+  To show gauges near you, this app uses your approximate location (rounded to about 1 km, not stored).
+  <div class="card" style="margin-top:12px;background:#fff3cd">While the app is open it also reads this phone's barometer and, in the background, trains a small model and sends only model updates. <b>Prototype, not evaluated.</b></div>
+  <button class="btn p" onclick="S.firstRun=false;draw()">Allow (Android will ask)</button>
+  <button class="btn s" onclick="S.firstRun=false;draw()">Pick a place manually</button></div>`;
+
+// ---------- variants ----------
+function A(){return `<div class="top">Gauge alerts near you</div>${banner}
+  <div class="body">${S.state==="ok"||S.state==="stale"?stateBoxStale():""}<div class="muted" style="margin:0 2px 6px">ALERTS (SUSPECT)</div>${alertsHtml()}
+  <div class="muted" style="margin:10px 2px 6px">UNVERIFIED (not alerts)</div>${uncHtml()}</div>
+  <div class="strip"><b>Training:</b> ${TRAIN.status} &middot; ${TRAIN.devices} phones &middot; v${TRAIN.version} <button class="link" onclick="S.sheet='t';draw()">details</button></div>
+  ${S.sheet==="t"?`<div class="sheet">${trainHtml()}<button class="btn s" onclick="S.sheet=null;draw()">Close</button></div>`:""}`}
+const stateBoxStale=()=>S.state==="stale"?stateBox():"";
+
+function B(){
+  const pts=[...ALERTS.map(a=>({...a,t:"a"})),...UNVERIFIED.map(u=>({...u,t:"u"}))];
+  const ang={1:200,2:300,3:60};
+  const dots=hasData()?pts.map(p=>{const r=p.km/10*120,x=160+r*Math.cos(ang[p.id]*Math.PI/180),y=160+r*Math.sin(ang[p.id]*Math.PI/180);
+    return `<g style="cursor:pointer" onclick="S.sheet=${p.id};draw()"><circle cx="${x}" cy="${y}" r="9" fill="${p.t==="a"?"#dc3545":"#adb5bd"}"/><text x="${x+11}" y="${y+3}">${p.place}</text></g>`}).join(""):"";
+  const sel=pts.find(p=>p.id===S.sheet);
+  return `<div class="top">Around you (10 km)</div>${banner}
+  <div class="body">${S.state!=="ok"?stateBox():""}
+   <svg viewBox="0 0 320 320" width="100%"><circle cx="160" cy="160" r="120" fill="#eaf1f7" stroke="#9ab"/><circle cx="160" cy="160" r="60" fill="none" stroke="#9ab" stroke-dasharray="3"/>
+    <circle cx="160" cy="160" r="6" fill="#0b5ed7"/><text x="168" y="164">you</text>${dots}</svg>
+   <div class="muted">red = SUSPECT alert &middot; grey = unverified &middot; tap a dot. Rings: 5 and 10 km (assumed radius).</div>
+   <div class="card" style="margin-top:8px"><b>Training:</b> ${TRAIN.status}<br><span class="muted">${TRAIN.devices} phones &middot; v${TRAIN.version} &middot; prototype</span></div></div>
+  ${sel?`<div class="sheet">${sel.t==="a"?alertCard(sel):uncCard(sel)}<button class="btn s" onclick="S.sheet=null;draw()">Close</button></div>`:""}`}
+
+function C(){
+  const body=S.tab==="alerts"?alertsHtml():S.tab==="unv"?uncHtml():trainHtml();
+  return `<div class="top">${{alerts:"Alerts",unv:"Unverified",train:"Training"}[S.tab]}</div>${banner}<div class="body">${body}</div>
+  <div class="tabs">${[["alerts","Alerts ("+(hasData()?ALERTS.length:0)+")"],["unv","Unverified ("+(hasData()?UNVERIFIED.length:0)+")"],["train","Training"]]
+   .map(t=>`<div class="${S.tab===t[0]?"on":""}" onclick="S.tab='${t[0]}';draw()">${t[1]}</div>`).join("")}</div>`}
+
+// ---------- wiring ----------
+function tog(id){S.open=S.open===id?null:id;draw()}
+function draw(){
+  $("#app").innerHTML=`<div class="phone">${S.firstRun?permHtml():({A,B,C}[S.variant])()}</div>`;
+  $("#vlabel").textContent=`${S.variant} (${V[S.variant]})`; stSel.value=S.state; location.hash=`variant=${S.variant}`;
+}
+const keys=["A","B","C"];
+function move(d){S.variant=keys[(keys.indexOf(S.variant)+d+3)%3];S.sheet=null;draw()}
+$("#prev").onclick=()=>move(-1);$("#next").onclick=()=>move(1);
+$("#first").onclick=()=>{S.firstRun=true;draw()};
+stSel.onchange=e=>{S.state=e.target.value;draw()};
+addEventListener("keydown",e=>{if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;if(e.key==="ArrowLeft")move(-1);if(e.key==="ArrowRight")move(1)});
+draw();
+</script></body></html>

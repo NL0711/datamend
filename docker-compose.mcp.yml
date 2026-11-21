@@ -1,0 +1,36 @@
+# Adds the AI narrator (and the MCP server it uses) to the DataMend stack and connects the platform's NARRATOR_URL to it.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.mcp.yml up --build
+#
+# Put these in .env first (see mcp-service/.env.example):
+#   NARRATOR_BEARER_TOKEN   a long random string; the platform sends the same value as NARRATOR_TOKEN
+#   DATAMEND_ADMIN_TOKEN    the platform's ADMIN_TOKEN (so the MCP server can read through the platform's sign-in)
+#   ANTHROPIC_API_KEY       optional; without it the narrator runs in grounded mode (no language model)
+# NOT RUN in the environment where this was written (no Docker daemon there).
+services:
+  backend:
+    environment:
+      - NARRATOR_URL=http://mcp-narrator:8790/narrate
+      - NARRATOR_TOKEN=${NARRATOR_BEARER_TOKEN:?set NARRATOR_BEARER_TOKEN in .env}
+    depends_on:
+      - mcp-narrator
+
+  mcp-narrator:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: datamend-mcp-narrator
+    restart: unless-stopped
+    environment:
+      - DATAMEND_BASE_URL=http://backend:8000
+      - DATAMEND_ADMIN_TOKEN=${DATAMEND_ADMIN_TOKEN:-}
+      - NARRATOR_BEARER_TOKEN=${NARRATOR_BEARER_TOKEN:?set NARRATOR_BEARER_TOKEN in .env}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - NARRATOR_LLM_MODEL=${NARRATOR_LLM_MODEL:-claude-sonnet-5-5}
+    volumes:
+      - mcp_data:/app/data
+    networks:
+      - datamend-net
+
+volumes:
+  mcp_data:

@@ -1,0 +1,51 @@
+# DataMend rainfall validation platform: backend (FastAPI) + frontend (nginx serving the built SPA).
+#
+#   docker compose up --build        then open http://localhost:5173
+#
+# Storage is SQLite inside the backend container ("demo storage, resets on restart" unless you mount a volume); the JSON export of a run
+# is the durable copy. PostgreSQL (including TimescaleDB, for example on Tiger Cloud) is NOT part of this stack. Set DATABASE_URL to a
+# Postgres string (a postgres:// string is accepted as given) to use one: table creation was checked against a Tiger Cloud service, but
+# the Timescale hypertable and compression step is untested and there are no schema migrations.
+# Configuration comes from .env (copy .env.example). The live feed and the AI narrator stay off unless you set their variables.
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+    container_name: datamend-backend
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "8000:8000"
+    volumes:
+      - datamend_data:/app/data
+    environment:
+      # Overrides DATABASE_URL from .env (a copied .env.example has a relative path that would bypass the volume). To use another
+      # database in Docker, set COMPOSE_DATABASE_URL in your shell.
+      - DATABASE_URL=${COMPOSE_DATABASE_URL:-sqlite+aiosqlite:////app/data/datamend.db}
+    networks:
+      - datamend-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: datamend-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - datamend-net
+
+volumes:
+  datamend_data:
+
+networks:
+  datamend-net:
+    driver: bridge

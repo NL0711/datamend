@@ -1,0 +1,42 @@
+# DataMend Python dependencies: the rainfall validation platform (backend/).
+# Target Python 3.10+ (tested on 3.13 locally; the Docker image uses 3.11).
+# The trained-model layer (ml-service/, optional, offline) has its own requirements: ml-service/requirements-train.txt.
+
+# Web and API framework
+fastapi>=0.110.0,<0.116.0
+uvicorn[standard]>=0.28.0,<0.35.0
+pydantic>=2.6.0,<3.0.0
+pydantic-settings>=2.7.0,<3.0.0
+python-multipart>=0.0.9,<0.1.0
+httpx>=0.27.0,<0.29.0         # the Weather Union client and the narrator client
+
+# Database and async ORM (SQLite now, PostgreSQL later)
+sqlalchemy>=2.0.28,<2.1.0
+aiosqlite>=0.20.0,<0.21.0
+alembic>=1.13,<2.0                  # schema migrations: `alembic upgrade head` (alembic.ini, backend/migrations)
+asyncpg>=0.29.0,<0.31.0       # only used with a postgresql+asyncpg:// DATABASE_URL (the persistence decision is open)
+
+# Numerics (the climatology check fits a gamma upper tail)
+numpy>=1.26.0,<2.0.0
+scipy>=1.12.0,<2.0.0
+
+# Optional retraining on Kaggle (pipeline/kaggle_trigger.py runs the `kaggle` command line when KAGGLE_USERNAME and KAGGLE_KEY are set)
+kaggle>=1.6.0                 # untested against live Kaggle; the tests mock the command line
+
+# Optional retraining on AWS (pipeline/aws_trigger.py imports boto3 only when the AWS target is used)
+boto3>=1.34.0                 # optional: the AWS training target and PRIVATE S3 imports (public S3 imports use plain HTTPS without it); untested against live AWS
+
+# Own agent (slice S6, backend/app/agent/): LangGraph graph, Gemini adapter, MCP adapter. Installed together with the lines above on Python 3.11 (`pip check` clean, 2026-11-21);
+# the Gemini adapter and the MCP adapter are import-checked only, no live call. Not measured: memory against a 512 MB host.
+langgraph==1.2.24
+langgraph-checkpoint==4.3.2
+langchain-core==1.8.4
+langchain-google-genai==4.5.2
+langchain-mcp-adapters==0.3.2
+google-genai==3.6.1
+mcp==1.30.0
+
+# Testing
+pytest>=8.0.0,<9.0.0
+pytest-asyncio>=0.23.0,<0.25.0
+jsonschema>=4.18.0,<5.0.0     # tests validate the evidence-v1 contract against its JSON Schema

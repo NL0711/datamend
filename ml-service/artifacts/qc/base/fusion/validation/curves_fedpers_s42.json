@@ -1,0 +1,735 @@
+{
+ "label_tier": "synthetic faults",
+ "years": [
+  2016,
+  2017
+ ],
+ "budgets": [
+  0.1,
+  0.2,
+  0.5,
+  1.0,
+  2.0,
+  5.0,
+  10.0,
+  20.0,
+  50.0
+ ],
+ "scores": {
+  "rules": [
+   {
+    "budget": 0.1,
+    "threshold": 1.0,
+    "fault_recall": 0.0,
+    "protected_flagged": 0.0,
+    "false_per_1000_in_benchmark": 0.0
+   },
+   {
+    "budget": 0.2,
+    "threshold": 1.0,
+    "fault_recall": 0.0,
+    "protected_flagged": 0.0,
+    "false_per_1000_in_benchmark": 0.0
+   },
+   {
+    "budget": 0.5,
+    "threshold": 0.6455338001251221,
+    "fault_recall": 0.42147226613512956,
+    "protected_flagged": 0.046929722157366335,
+    "false_per_1000_in_benchmark": 0.569866299759135
+   },
+   {
+    "budget": 1.0,
+    "threshold": 0.3784257769584656,
+    "fault_recall": 0.42875799023987904,
+    "protected_flagged": 0.1449918281578333,
+    "false_per_1000_in_benchmark": 1.0840560070130674
+   },
+   {
+    "budget": 2.0,
+    "threshold": 0.1799284815788269,
+    "fault_recall": 0.43631864732971337,
+    "protected_flagged": 0.36002801774457155,
+    "false_per_1000_in_benchmark": 2.09460435594737
+   },
+   {
+    "budget": 5.0,
+    "threshold": 0.0,
+    "fault_recall": 0.445357069214379,
+    "protected_flagged": 0.7434041559654447,
+    "false_per_1000_in_benchmark": 4.84131625287071
+   },
+   {
+    "budget": 10.0,
+    "threshold": 0.0,
+    "fault_recall": 0.445357069214379,
+    "protected_flagged": 0.7434041559654447,
+    "false_per_1000_in_benchmark": 4.84131625287071
+   },
+   {
+    "budget": 20.0,
+    "threshold": 0.0,
+    "fault_recall": 0.445357069214379,
+    "protected_flagged": 0.7434041559654447,
+    "false_per_1000_in_benchmark": 4.84131625287071
+   },
+   {
+    "budget": 50.0,
+    "threshold": 0.0,
+    "fault_recall": 0.445357069214379,
+    "protected_flagged": 0.7434041559654447,
+    "false_per_1000_in_benchmark": 4.84131625287071
+   }
+  ],
+  "slow": [
+   {
+    "budget": 0.1,
+    "threshold": 15.936907768249512,
+    "fault_recall": 0.06275345384562513,
+    "protected_flagged": 0.001634368433341116,
+    "false_per_1000_in_benchmark": 2.203774145173258
+   },
+   {
+    "budget": 0.2,
+    "threshold": 13.80188274383545,
+    "fault_recall": 0.07079524365935803,
+    "protected_flagged": 0.0023348120476301658,
+    "false_per_1000_in_benchmark": 2.692854800905236
+   },
+   {
+    "budget": 0.5,
+    "threshold": 11.263436317443848,
+    "fault_recall": 0.08182692968588906,
+    "protected_flagged": 0.0037356992762082653,
+    "false_per_1000_in_benchmark": 3.53637337232393
+   },
+   {
+    "budget": 1.0,
+    "threshold": 9.46210765838623,
+    "fault_recall": 0.0909684514399615,
+    "protected_flagged": 0.005136586504786365,
+    "false_per_1000_in_benchmark": 4.645538430858951
+   },
+   {
+    "budget": 2.0,
+    "threshold": 7.550373077392578,
+    "fault_recall": 0.10626159873530827,
+    "protected_flagged": 0.009339248190520663,
+    "false_per_1000_in_benchmark": 6.467946112336441
+   },
+   {
+    "budget": 5.0,
+    "threshold": 5.248282432556152,
+    "fault_recall": 0.13612619424015396,
+    "protected_flagged": 0.020312864814382443,
+    "false_per_1000_in_benchmark": 10.763049519780292
+   },
+   {
+    "budget": 10.0,
+    "threshold": 3.9455370903015137,
+    "fault_recall": 0.16471922468898206,
+    "protected_flagged": 0.04039224842400187,
+    "false_per_1000_in_benchmark": 16.935145503314576
+   },
+   {
+    "budget": 20.0,
+    "threshold": 2.9831769466400146,
+    "fault_recall": 0.19430888720874287,
+    "protected_flagged": 0.07611487275274341,
+    "false_per_1000_in_benchmark": 28.677448032451085
+   },
+   {
+    "budget": 50.0,
+    "threshold": 2.108034610748291,
+    "fault_recall": 0.24496528971063303,
+    "protected_flagged": 0.17861312164370768,
+    "false_per_1000_in_benchmark": 60.872346673760276
+   }
+  ],
+  "neighbour_baseline": [
+   {
+    "budget": 0.1,
+    "threshold": 2.2773325443267822,
+    "fault_recall": 0.02233830503814695,
+    "protected_flagged": 0.002101330842867149,
+    "false_per_1000_in_benchmark": 0.09388601873426362
+   },
+   {
+    "budget": 0.2,
+    "threshold": 2.0769753456115723,
+    "fault_recall": 0.027458931885352946,
+    "protected_flagged": 0.0025682932523931824,
+    "false_per_1000_in_benchmark": 0.1921388290375628
+   },
+   {
+    "budget": 0.5,
+    "threshold": 1.803309679031372,
+    "fault_recall": 0.0389030173895113,
+    "protected_flagged": 0.003268736866682232,
+    "false_per_1000_in_benchmark": 0.4814387704861658
+   },
+   {
+    "budget": 1.0,
+    "threshold": 1.6061338186264038,
+    "fault_recall": 0.06698054849130525,
+    "protected_flagged": 0.003969180480971282,
+    "false_per_1000_in_benchmark": 0.9705194262181438
+   },
+   {
+    "budget": 2.0,
+    "threshold": 1.4170931577682495,
+    "fault_recall": 0.09248058285792839,
+    "protected_flagged": 0.008405323371468596,
+    "false_per_1000_in_benchmark": 1.9457695433027429
+   },
+   {
+    "budget": 5.0,
+    "threshold": 1.1845332384109497,
+    "fault_recall": 0.12890920338167572,
+    "protected_flagged": 0.042026616857342984,
+    "false_per_1000_in_benchmark": 4.90063183835011
+   },
+   {
+    "budget": 10.0,
+    "threshold": 1.0205315351486206,
+    "fault_recall": 0.16502852429720255,
+    "protected_flagged": 0.09969647443380808,
+    "false_per_1000_in_benchmark": 9.855484672015745
+   },
+   {
+    "budget": 20.0,
+    "threshold": 0.8553656339645386,
+    "fault_recall": 0.21661282562375422,
+    "protected_flagged": 0.2211067009105767,
+    "false_per_1000_in_benchmark": 19.771740526700565
+   },
+   {
+    "budget": 50.0,
+    "threshold": 0.632614254951477,
+    "fault_recall": 0.3069626778472747,
+    "protected_flagged": 0.5031519962643007,
+    "false_per_1000_in_benchmark": 49.672981896373855
+   }
+  ],
+  "fedpers_spatial_s42": [
+   {
+    "budget": 0.1,
+    "threshold": 27.089580535888672,
+    "fault_recall": 0.012784383806447178,
+    "protected_flagged": 0.0025682932523931824,
+    "false_per_1000_in_benchmark": 0.09643331381620102
+   },
+   {
+    "budget": 0.2,
+    "threshold": 21.276784896850586,
+    "fault_recall": 0.01532751391848237,
+    "protected_flagged": 0.003268736866682232,
+    "false_per_1000_in_benchmark": 0.1950500234169198
+   },
+   {
+    "budget": 0.5,
+    "threshold": 15.341168403625488,
+    "fault_recall": 0.022132105299333286,
+    "protected_flagged": 0.006537473733364464,
+    "false_per_1000_in_benchmark": 0.48871675643455836
+   },
+   {
+    "budget": 1.0,
+    "threshold": 11.833776473999023,
+    "fault_recall": 0.031892226269846724,
+    "protected_flagged": 0.018678496381041326,
+    "false_per_1000_in_benchmark": 0.9792530093562148
+   },
+   {
+    "budget": 2.0,
+    "threshold": 9.142731666564941,
+    "fault_recall": 0.04618874149426078,
+    "protected_flagged": 0.037823955171608685,
+    "false_per_1000_in_benchmark": 1.95814211941501
+   },
+   {
+    "budget": 5.0,
+    "threshold": 6.568243980407715,
+    "fault_recall": 0.07299470754003712,
+    "protected_flagged": 0.10086388045762316,
+    "false_per_1000_in_benchmark": 4.905362529216565
+   },
+   {
+    "budget": 10.0,
+    "threshold": 5.078977584838867,
+    "fault_recall": 0.09870094164547391,
+    "protected_flagged": 0.17931356525799674,
+    "false_per_1000_in_benchmark": 9.846751088877673
+   },
+   {
+    "budget": 20.0,
+    "threshold": 3.8428165912628174,
+    "fault_recall": 0.1520035741288061,
+    "protected_flagged": 0.30212467896334344,
+    "false_per_1000_in_benchmark": 19.752817763234745
+   },
+   {
+    "budget": 50.0,
+    "threshold": 2.5292532444000244,
+    "fault_recall": 0.3114303388549041,
+    "protected_flagged": 0.5682932523931824,
+    "false_per_1000_in_benchmark": 49.70828012822356
+   }
+  ],
+  "fedpers_temporal_s42": [
+   {
+    "budget": 0.1,
+    "threshold": 11.47991943359375,
+    "fault_recall": 0.004605127500171833,
+    "protected_flagged": 0.08942330142423535,
+    "false_per_1000_in_benchmark": 0.1004362060878169
+   },
+   {
+    "budget": 0.2,
+    "threshold": 10.241013526916504,
+    "fault_recall": 0.0060485256718674826,
+    "protected_flagged": 0.1452253093625963,
+    "false_per_1000_in_benchmark": 0.20014461358079458
+   },
+   {
+    "budget": 0.5,
+    "threshold": 8.851861000061035,
+    "fault_recall": 0.008797855522716337,
+    "protected_flagged": 0.23021246789633434,
+    "false_per_1000_in_benchmark": 0.4974503395726294
+   },
+   {
+    "budget": 1.0,
+    "threshold": 7.834942817687988,
+    "fault_recall": 0.010791119664581758,
+    "protected_flagged": 0.32874153630632735,
+    "false_per_1000_in_benchmark": 0.9912616861710625
+   },
+   {
+    "budget": 2.0,
+    "threshold": 6.817218780517578,
+    "fault_recall": 0.014502714963227713,
+    "protected_flagged": 0.4436142890497315,
+    "false_per_1000_in_benchmark": 1.982523372342125
+   },
+   {
+    "budget": 5.0,
+    "threshold": 5.583903789520264,
+    "fault_recall": 0.02515636813526703,
+    "protected_flagged": 0.5977118841933224,
+    "false_per_1000_in_benchmark": 4.954852833665634
+   },
+   {
+    "budget": 10.0,
+    "threshold": 4.687413692474365,
+    "fault_recall": 0.03862808440442642,
+    "protected_flagged": 0.747139855241653,
+    "false_per_1000_in_benchmark": 9.90715837224933
+   },
+   {
+    "budget": 20.0,
+    "threshold": 3.7699098587036133,
+    "fault_recall": 0.06897381263317066,
+    "protected_flagged": 0.8797571795470465,
+    "false_per_1000_in_benchmark": 19.835422903749002
+   },
+   {
+    "budget": 50.0,
+    "threshold": 2.6310536861419678,
+    "fault_recall": 0.19008179256306276,
+    "protected_flagged": 0.9824889096427738,
+    "false_per_1000_in_benchmark": 49.50595211885824
+   }
+  ],
+  "fusion_logistic@fedpers_s42": [
+   {
+    "budget": 0.1,
+    "threshold": 1.4781389236450195,
+    "fault_recall": 0.07306344078630833,
+    "protected_flagged": 0.01914545879056736,
+    "false_per_1000_in_benchmark": 0.10189180327749542
+   },
+   {
+    "budget": 0.2,
+    "threshold": 0.778393030166626,
+    "fault_recall": 0.13265516530345728,
+    "protected_flagged": 0.031053000233481204,
+    "false_per_1000_in_benchmark": 0.20014461358079458
+   },
+   {
+    "budget": 0.5,
+    "threshold": -0.4440166652202606,
+    "fault_recall": 0.3525671867482301,
+    "protected_flagged": 0.07191221106700911,
+    "false_per_1000_in_benchmark": 0.5047283255210219
+   },
+   {
+    "budget": 1.0,
+    "threshold": -1.3957599401474,
+    "fault_recall": 0.43085435425115126,
+    "protected_flagged": 0.13868783562923184,
+    "false_per_1000_in_benchmark": 1.056035761111756
+   },
+   {
+    "budget": 2.0,
+    "threshold": -2.168855667114258,
+    "fault_recall": 0.43820881160217195,
+    "protected_flagged": 0.21130049031053,
+    "false_per_1000_in_benchmark": 2.0538476346363717
+   },
+   {
+    "budget": 5.0,
+    "threshold": -2.864626884460449,
+    "fault_recall": 0.45635438861777444,
+    "protected_flagged": 0.30025682932523934,
+    "false_per_1000_in_benchmark": 4.999248547950828
+   },
+   {
+    "budget": 10.0,
+    "threshold": -3.2722554206848145,
+    "fault_recall": 0.47315966733108805,
+    "protected_flagged": 0.3789399953303759,
+    "false_per_1000_in_benchmark": 9.939545409719678
+   },
+   {
+    "budget": 20.0,
+    "threshold": -3.6753005981445312,
+    "fault_recall": 0.4960822049625404,
+    "protected_flagged": 0.4772355825356059,
+    "false_per_1000_in_benchmark": 19.88272981241355
+   },
+   {
+    "budget": 50.0,
+    "threshold": -4.230867862701416,
+    "fault_recall": 0.5610351226888446,
+    "protected_flagged": 0.6121877188886294,
+    "false_per_1000_in_benchmark": 49.857114940868186
+   }
+  ],
+  "fusion_mean@fedpers_s42": [
+   {
+    "budget": 0.1,
+    "threshold": 4.7748894691467285,
+    "fault_recall": 0.06467798474121933,
+    "protected_flagged": 0.02521597011440579,
+    "false_per_1000_in_benchmark": 0.11208098360524495
+   },
+   {
+    "budget": 0.2,
+    "threshold": 4.288122653961182,
+    "fault_recall": 0.09141521754072444,
+    "protected_flagged": 0.04576231613355125,
+    "false_per_1000_in_benchmark": 0.23471504683565908
+   },
+   {
+    "budget": 0.5,
+    "threshold": 3.3995635509490967,
+    "fault_recall": 0.20585607258230806,
+    "protected_flagged": 0.12281111370534673,
+    "false_per_1000_in_benchmark": 0.5731413934359116
+   },
+   {
+    "budget": 1.0,
+    "threshold": 2.6948883533477783,
+    "fault_recall": 0.36425183861433774,
+    "protected_flagged": 0.23908475367732898,
+    "false_per_1000_in_benchmark": 1.1033426697763076
+   },
+   {
+    "budget": 2.0,
+    "threshold": 2.1405205726623535,
+    "fault_recall": 0.4311636538593718,
+    "protected_flagged": 0.3957506420733131,
+    "false_per_1000_in_benchmark": 2.212871627608749
+   },
+   {
+    "budget": 5.0,
+    "threshold": 1.6614465713500977,
+    "fault_recall": 0.48178568973812635,
+    "protected_flagged": 0.5792668690170442,
+    "false_per_1000_in_benchmark": 5.542186299700911
+   },
+   {
+    "budget": 10.0,
+    "threshold": 1.38505220413208,
+    "fault_recall": 0.5045707608770362,
+    "protected_flagged": 0.7121176745272005,
+    "false_per_1000_in_benchmark": 11.074183419074073
+   },
+   {
+    "budget": 20.0,
+    "threshold": 1.1434454917907715,
+    "fault_recall": 0.540346415561207,
+    "protected_flagged": 0.8370301190754145,
+    "false_per_1000_in_benchmark": 21.849605514966633
+   },
+   {
+    "budget": 50.0,
+    "threshold": 0.8481834530830383,
+    "fault_recall": 0.6126194240153963,
+    "protected_flagged": 0.9540042026616857,
+    "false_per_1000_in_benchmark": 53.0132135473886
+   }
+  ],
+  "fusion_or@fedpers_s42": [
+   {
+    "budget": 0.1,
+    "threshold": 4.4658684730529785,
+    "fault_recall": 0.05663619492748642,
+    "protected_flagged": 0.04039224842400187,
+    "false_per_1000_in_benchmark": 1.7845621545458483
+   },
+   {
+    "budget": 0.2,
+    "threshold": 4.169434070587158,
+    "fault_recall": 0.0649185511031686,
+    "protected_flagged": 0.06654214335745973,
+    "false_per_1000_in_benchmark": 2.109524227141575
+   },
+   {
+    "budget": 0.5,
+    "threshold": 3.7696502208709717,
+    "fault_recall": 0.07863083373427728,
+    "protected_flagged": 0.1295820686434742,
+    "false_per_1000_in_benchmark": 2.882446334860861
+   },
+   {
+    "budget": 1.0,
+    "threshold": 3.576124668121338,
+    "fault_recall": 0.0896625197608083,
+    "protected_flagged": 0.17441045995797338,
+    "false_per_1000_in_benchmark": 3.621525807920123
+   },
+   {
+    "budget": 2.0,
+    "threshold": 3.2698233127593994,
+    "fault_recall": 0.4521272939720943,
+    "protected_flagged": 0.267102498248891,
+    "false_per_1000_in_benchmark": 5.07493960181411
+   },
+   {
+    "budget": 5.0,
+    "threshold": 2.8617563247680664,
+    "fault_recall": 0.4668705752972713,
+    "protected_flagged": 0.4676628531403222,
+    "false_per_1000_in_benchmark": 9.026158173196414
+   },
+   {
+    "budget": 10.0,
+    "threshold": 2.5514419078826904,
+    "fault_recall": 0.48573785139872155,
+    "protected_flagged": 0.6833994863413495,
+    "false_per_1000_in_benchmark": 14.908954215282096
+   },
+   {
+    "budget": 20.0,
+    "threshold": 2.21779203414917,
+    "fault_recall": 0.5097601209705135,
+    "protected_flagged": 0.8669157132850805,
+    "false_per_1000_in_benchmark": 25.90599098330321
+   },
+   {
+    "budget": 50.0,
+    "threshold": 1.7547098398208618,
+    "fault_recall": 0.5668087153756272,
+    "protected_flagged": 0.9526033154331076,
+    "false_per_1000_in_benchmark": 57.85089080728512
+   }
+  ],
+  "fusion_boosted@fedpers_s42": [
+   {
+    "budget": 0.1,
+    "threshold": -0.44735679030418396,
+    "fault_recall": 0.41631727266478796,
+    "protected_flagged": 0.005603548914312398,
+    "false_per_1000_in_benchmark": 0.10916978922588794
+   },
+   {
+    "budget": 0.2,
+    "threshold": -1.5321528911590576,
+    "fault_recall": 0.4417829404082755,
+    "protected_flagged": 0.012841466261965912,
+    "false_per_1000_in_benchmark": 0.24635982435308712
+   },
+   {
+    "budget": 0.5,
+    "threshold": -2.193988800048828,
+    "fault_recall": 0.462746580520998,
+    "protected_flagged": 0.027083819752509924,
+    "false_per_1000_in_benchmark": 0.6277262880488557
+   },
+   {
+    "budget": 1.0,
+    "threshold": -2.4767613410949707,
+    "fault_recall": 0.47309093408481684,
+    "protected_flagged": 0.03618958673826757,
+    "false_per_1000_in_benchmark": 1.1753947306653936
+   },
+   {
+    "budget": 2.0,
+    "threshold": -2.9782893657684326,
+    "fault_recall": 0.4862189841226201,
+    "protected_flagged": 0.06303992528601447,
+    "false_per_1000_in_benchmark": 2.330774999972707
+   },
+   {
+    "budget": 5.0,
+    "threshold": -3.3457095623016357,
+    "fault_recall": 0.5041583613994088,
+    "protected_flagged": 0.12164370768153164,
+    "false_per_1000_in_benchmark": 5.470134238811825
+   },
+   {
+    "budget": 10.0,
+    "threshold": -3.729672431945801,
+    "fault_recall": 0.5262217334524709,
+    "protected_flagged": 0.23348120476301656,
+    "false_per_1000_in_benchmark": 10.76559681486223
+   },
+   {
+    "budget": 20.0,
+    "threshold": -3.8635904788970947,
+    "fault_recall": 0.554814763901299,
+    "protected_flagged": 0.5036189586738268,
+    "false_per_1000_in_benchmark": 20.804850632074885
+   },
+   {
+    "budget": 50.0,
+    "threshold": -4.030857086181641,
+    "fault_recall": 0.622173345247096,
+    "protected_flagged": 0.6182582302124678,
+    "false_per_1000_in_benchmark": 50.82690656849149
+   }
+  ],
+  "fusion_per_client@fedpers_s42": [
+   {
+    "budget": 0.1,
+    "threshold": 1.6469027996063232,
+    "fault_recall": 0.07876830022681972,
+    "protected_flagged": 0.01704412794770021,
+    "false_per_1000_in_benchmark": 0.11171708430782533
+   },
+   {
+    "budget": 0.2,
+    "threshold": 0.8121442198753357,
+    "fault_recall": 0.16495979105093134,
+    "protected_flagged": 0.035956105533504555,
+    "false_per_1000_in_benchmark": 0.21397278688274035
+   },
+   {
+    "budget": 0.5,
+    "threshold": -0.47438642382621765,
+    "fault_recall": 0.3479964258711939,
+    "protected_flagged": 0.0789166472098996,
+    "false_per_1000_in_benchmark": 0.5243788875816817
+   },
+   {
+    "budget": 1.0,
+    "threshold": -1.4731297492980957,
+    "fault_recall": 0.4254244277957248,
+    "protected_flagged": 0.14289049731496614,
+    "false_per_1000_in_benchmark": 1.04257148710723
+   },
+   {
+    "budget": 2.0,
+    "threshold": -2.168609380722046,
+    "fault_recall": 0.43504708227369576,
+    "protected_flagged": 0.21060004669624094,
+    "false_per_1000_in_benchmark": 2.0483891451750775
+   },
+   {
+    "budget": 5.0,
+    "threshold": -2.8030219078063965,
+    "fault_recall": 0.4485187985428552,
+    "protected_flagged": 0.295820686434742,
+    "false_per_1000_in_benchmark": 5.0214464050934255
+   },
+   {
+    "budget": 10.0,
+    "threshold": -3.2240357398986816,
+    "fault_recall": 0.4629527802598117,
+    "protected_flagged": 0.36983422834461827,
+    "false_per_1000_in_benchmark": 9.987580116979068
+   },
+   {
+    "budget": 20.0,
+    "threshold": -3.635546922683716,
+    "fault_recall": 0.4874218159323665,
+    "protected_flagged": 0.4620593042260098,
+    "false_per_1000_in_benchmark": 19.939862002108434
+   },
+   {
+    "budget": 50.0,
+    "threshold": -4.189872741699219,
+    "fault_recall": 0.550931335486975,
+    "protected_flagged": 0.5928087788932991,
+    "false_per_1000_in_benchmark": 49.96519303220182
+   }
+  ],
+  "fusion_logistic_fed@fedpers_s42": [
+   {
+    "budget": 0.1,
+    "threshold": 1.6196810007095337,
+    "fault_recall": 0.07526290466698742,
+    "protected_flagged": 0.018911977585804342,
+    "false_per_1000_in_benchmark": 0.10152790398007579
+   },
+   {
+    "budget": 0.2,
+    "threshold": 0.8993134498596191,
+    "fault_recall": 0.13609182761701835,
+    "protected_flagged": 0.029885594209666123,
+    "false_per_1000_in_benchmark": 0.2008724121756338
+   },
+   {
+    "budget": 0.5,
+    "threshold": -0.33505818247795105,
+    "fault_recall": 0.3530826860952643,
+    "protected_flagged": 0.06934391781461592,
+    "false_per_1000_in_benchmark": 0.5050922248184416
+   },
+   {
+    "budget": 1.0,
+    "threshold": -1.3980543613433838,
+    "fault_recall": 0.43095745412055814,
+    "protected_flagged": 0.14008872285780993,
+    "false_per_1000_in_benchmark": 1.0567635597065954
+   },
+   {
+    "budget": 2.0,
+    "threshold": -2.2121148109436035,
+    "fault_recall": 0.438827410818613,
+    "protected_flagged": 0.2155031519962643,
+    "false_per_1000_in_benchmark": 2.0542115339337914
+   },
+   {
+    "budget": 5.0,
+    "threshold": -2.9273343086242676,
+    "fault_recall": 0.45704172108048663,
+    "protected_flagged": 0.3056268970347887,
+    "false_per_1000_in_benchmark": 5.006162634601801
+   },
+   {
+    "budget": 10.0,
+    "threshold": -3.3416783809661865,
+    "fault_recall": 0.4735377001855798,
+    "protected_flagged": 0.3826756946065842,
+    "false_per_1000_in_benchmark": 9.943548301991292
+   },
+   {
+    "budget": 20.0,
+    "threshold": -3.751155376434326,
+    "fault_recall": 0.4964602378170321,
+    "protected_flagged": 0.479570394583236,
+    "false_per_1000_in_benchmark": 19.895102388525817
+   },
+   {
+    "budget": 50.0,
+    "threshold": -4.314063549041748,
+    "fault_recall": 0.5640593855247783,
+    "protected_flagged": 0.6142890497314966,
+    "false_per_1000_in_benchmark": 49.872762610657226
+   }
+  ]
+ }
+}

@@ -1,0 +1,54 @@
+{
+ "name": "ceiling",
+ "started": "2026-11-19T16:52:15",
+ "wall_seconds": 5.435083627700806,
+ "meta": {
+  "run": "base",
+  "profile": "single-gpu",
+  "seed": 42,
+  "config_digest": "b5af58ff5130c309"
+ },
+ "environment": {
+  "python": "3.13.16",
+  "platform": "Linux 6.18.55+",
+  "numpy": "2.1.3",
+  "cpu_count": 4,
+  "torch": "2.11.0+cu130",
+  "cuda": "13.0",
+  "cuda_available": true,
+  "gpu_names": [
+   "Tesla T4",
+   "Tesla T4"
+  ],
+  "ram_total_gb": 31.3,
+  "git_commit": "70fe33267c062364e01069a66ae9d742fa7c5eb5"
+ },
+ "gpu": {
+  "name": "Tesla T4",
+  "source": "nvml",
+  "samples": 4,
+  "available": true,
+  "energy_wh": 0.015535555555555556,
+  "energy_method": "NVML total-energy counter",
+  "avg_power_w": 10.467500000000001,
+  "max_power_w": 11.034,
+  "avg_util_pct": 0.0,
+  "max_util_pct": 0.0,
+  "avg_mem_used_mb": 451.1875,
+  "max_mem_used_mb": 451.1875,
+  "avg_temp_c": 47.0,
+  "max_temp_c": 47.0,
+  "avg_sm_mhz": 300.0,
+  "max_sm_mhz": 300.0
+ },
+ "cpu": {
+  "process_cpu_seconds": 5.472451182,
+  "avg_cpu_percent": 30.075,
+  "max_cpu_percent": 42.9,
+  "avg_rss_mb": 726.3154296875,
+  "max_rss_mb": 846.83984375,
+  "energy_wh": "NOT AVAILABLE: no readable RAPL counters (Windows, container or no permission); not estimated"
+ },
+ "spans": {},
+ "metrics": {}
+}

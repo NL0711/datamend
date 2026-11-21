@@ -1,0 +1,15 @@
+# DataMend narrator + MCP service (mcp-service/). Standard library only, so no pip install step.
+# Build from the repository root:  docker build -f Dockerfile.mcp -t datamend-mcp .
+# NOT BUILT in the environment where this was written (no Docker daemon there).
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY mcp-service/ ./mcp-service/
+RUN useradd --create-home --uid 10001 mcp && mkdir -p /app/data && chown -R mcp /app/data
+USER mcp
+WORKDIR /app/mcp-service
+ENV PYTHONUNBUFFERED=1 NARRATOR_HOST=0.0.0.0 MCP_AUDIT_LOG=/app/data/mcp_audit.jsonl
+
+EXPOSE 8790
+HEALTHCHECK --interval=30s --timeout=5s CMD python -c "import urllib.request,os;urllib.request.urlopen('http://127.0.0.1:%s/health' % os.environ.get('NARRATOR_PORT','8790'),timeout=4)"
+CMD ["python", "-m", "datamend_mcp", "narrator"]

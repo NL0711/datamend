@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamend.local/contracts/evidence-v1.schema.json",
+  "title": "DataMend evidence payload, version 1",
+  "description": "The evidence behind ONE fired check on ONE row of a validation run. Read-only. Every number carries a basis: measured (read from the input), assumed (for example a unit taken on trust, or a design-choice threshold) or derived (computed by the platform from measured values). Additive changes only within v1; a breaking change becomes v2 and both are served during a transition.",
+  "type": "object",
+  "required": ["schema", "run", "row", "check", "layer", "kind", "profile", "time_basis", "reason"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "evidence-v1"},
+    "run": {
+      "type": "object",
+      "required": ["id", "profile", "source", "synthetic"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "integer"},
+        "profile": {"enum": ["reading", "daily"]},
+        "source": {"enum": ["upload", "live", "replay", "pipeline"]},
+        "synthetic": {"type": "boolean", "description": "true when the uploader declared the data synthetic"}
+      }
+    },
+    "row": {
+      "type": "object",
+      "required": ["id", "row_ref", "station_id", "verdict", "rule_score"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "integer"},
+        "row_ref": {"type": "string"},
+        "station_id": {"type": "string"},
+        "time": {"type": ["string", "null"], "description": "ISO 8601 UTC timestamp, or the rain day (date it ends) for the daily profile"},
+        "verdict": {"enum": ["OK", "SUSPECT", "UNCERTAIN", "NO_DATA"]},
+        "rule_score": {"type": "number", "minimum": 0, "maximum": 1, "description": "uncalibrated fixed-weight ordering of suspicion, never a probability"},
+        "severity": {"enum": ["high", "medium", "low", null]}
+      }
+    },
+    "check": {"type": "string"},
+    "layer": {"enum": ["rule", "statistic", "neighbour", "integrity"]},
+    "kind": {"enum": ["fault", "uncertain", "info"], "description": "fault -> SUSPECT, uncertain -> UNCERTAIN, info -> no verdict change"},
+    "weight": {"type": "number", "minimum": 0, "maximum": 1},
+    "profile": {"enum": ["reading", "daily", "both"]},
+    "time_basis": {"enum": ["observed", "received"], "description": "received = the time this platform received a live reading; gap and neighbour comparisons are weaker"},
+    "reason": {"type": "string", "description": "one plain sentence"},
+    "observed": {"$ref": "#/$defs/observed"},
+    "threshold": {"$ref": "#/$defs/threshold"},
+    "window": {
+      "type": "array",
+      "maxItems": 24,
+      "description": "the readings or days looked at, at most the last 24 readings or 14 days",
+      "items": {"type": "object", "required": ["basis"], "properties": {"basis": {"enum": ["measured", "assumed", "derived"]}}}
+    },
+    "window_truncated": {"type": "boolean"},
+    "neighbours": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["station_id", "distance_km", "wet", "basis"],
+        "additionalProperties": false,
+        "properties": {
+          "station_id": {"type": "string"},
+          "distance_km": {"type": "number", "minimum": 0},
+          "wet": {"type": "boolean"},
+          "basis": {"enum": ["measured", "assumed", "derived"]}
+        }
+      }
+    },
+    "history": {
+      "type": "object",
+      "required": ["n_wet_days", "basis"],
+      "additionalProperties": false,
+      "properties": {"n_wet_days": {"type": "integer", "minimum": 0}, "basis": {"enum": ["derived"]}}
+    },
+    "tail_probability": {
+      "type": "object",
+      "required": ["value", "basis"],
+      "additionalProperties": false,
+      "properties": {"value": {"type": "number", "minimum": 0, "maximum": 1}, "basis": {"enum": ["derived"]}}
+    },
+    "issue": {"type": "string", "description": "input-integrity issue code (duplicate rows)"},
+    "limitations": {"type": "array", "items": {"type": "string"}, "description": "additive in v1 (2026-11-20): fixed sentences on what must not be over-read in this evidence; chosen by facts of the run, never by a model"},
+    "not_run": {"type": "array", "items": {"type": "string"}, "description": "additive in v1 (2026-11-20): checks of the run that did not run for this station, each as 'check: reason'"},
+    "provider": {
+      "type": "object",
+      "description": "ONLY present when a trained model scored the row; never produced by the rule-based baseline and never invented. Additive in v1 (2026-11-20): a label-fusion model scored on the server (label_tier reviewer_labels, with score and flagged), or an exported STNet score file (label_tier synthetic, with fault_scores).",
+      "required": ["calibrated", "label_tier"],
+      "additionalProperties": false,
+      "properties": {
+        "model_id": {"type": "string"},
+        "model_kind": {"enum": ["label_fusion", "stnet"]},
+        "score": {"type": "number", "description": "the model's own number, uncalibrated; never a probability of a fault"},
+        "flagged": {"type": "boolean", "description": "score reached the threshold fixed on the training data's clean days"},
+        "fault_scores": {"type": "object", "additionalProperties": {"type": "number"}, "description": "per fault kind: spike, stuck, scale, phantom_rain, zeroed, drift"},
+        "ensemble_disagreement": {"type": "number", "description": "only when the provider has one; STNet does not"},
+        "calibrated": {"type": "boolean"},
+        "label_tier": {"enum": ["synthetic", "reviewer_labels"]}
+      }
+    },
+    "truncated": {"type": "boolean", "description": "true when the payload was cut to stay under 64 KB"},
+    "next": {"type": "string", "description": "path that returns the full row record when truncated"}
+  },
+  "$defs": {
+    "observed": {
+      "type": "object",
+      "required": ["value", "unit", "basis"],
+      "additionalProperties": false,
+      "properties": {"value": {"type": "number"}, "unit": {"type": "string"}, "basis": {"enum": ["measured", "assumed", "derived"]}}
+    },
+    "threshold": {
+      "type": "object",
+      "required": ["value", "why", "basis"],
+      "additionalProperties": false,
+      "properties": {"value": {"type": ["number", "string"]}, "why": {"type": "string"}, "basis": {"enum": ["measured", "assumed", "derived"]}}
+    }
+  }
+}

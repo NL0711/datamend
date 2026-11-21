@@ -1,0 +1,9 @@
+# Agent skeleton (slice S6). Versions installed and tested on 2026-11-21 in a fresh Python 3.13 venv (pip resolved the rest). Not merged into requirements.txt yet.
+# Not measured: the backend's memory with these installed against Render's free 512 MB (open item of S6).
+langgraph==1.2.24
+langgraph-checkpoint==4.3.2
+langchain-core==1.8.4
+langchain-google-genai==4.5.2
+langchain-mcp-adapters==0.3.2
+google-genai==3.6.1
+mcp==1.30.0

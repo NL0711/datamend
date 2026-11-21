@@ -1,0 +1,113 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.mypy_cache/
+.pytest_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Raw log of live rain-gauge readings (Weather Union)
+data/weather_union_raw.jsonl
+data/mcp_audit.jsonl
+
+# NOAA ISD files for the replay: non-US ISD must not be redistributed (WMO Resolution 40)
+data/isd/
+
+# Settings saved from the dashboard (contain the Weather Union key and the narrator token)
+data/runtime_settings.json
+data/runtime_settings.json.tmp
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+skyguard.db*
+backend/app/skyguard.db*
+
+# Claude Code agent worktrees (never commit these)
+.claude/worktrees/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ml-service training: raw data and run outputs stay out of git (upload data as a Kaggle dataset)
+# Only the folder skeleton (README.md and .gitkeep files) under ml-service/data is tracked.
+ml-service/data/**
+!ml-service/data/**/
+!ml-service/data/README.md
+!ml-service/data/**/.gitkeep
+# Run outputs: only the small result files (tables, json reports, curve images) are tracked so results can be pulled and read.
+# Stored scores, model checkpoints and arrays stay out. Later rules win, so the exclusions come last.
+ml-service/artifacts/**
+!ml-service/artifacts/**/
+!ml-service/artifacts/**/*.md
+!ml-service/artifacts/**/*.json
+!ml-service/artifacts/**/*.png
+ml-service/artifacts/**/scores/**
+ml-service/artifacts/**/checkpoints/**
+ml-service/artifacts/**/*.pt
+ml-service/artifacts/**/*.npz
+ml-service/artifacts/**/*.npy
+ml-service/*.nc
+*.nc
+
+
+# notebooks with credentials written into them
+*.local.ipynb
+
+# GRIB downloads (kept out of git)
+*.grib
+*.grib.part
+*.idx

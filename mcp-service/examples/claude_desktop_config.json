@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "datamend": {
+      "command": "python",
+      "args": ["-m", "datamend_mcp", "serve", "--transport", "stdio"],
+      "cwd": "C:\\path\\to\\datamend\\mcp-service",
+      "env": {
+        "DATAMEND_BASE_URL": "http://localhost:8000",
+        "DATAMEND_ADMIN_TOKEN": "paste-the-platform-ADMIN_TOKEN-here"
+      }
+    }
+  }
+}

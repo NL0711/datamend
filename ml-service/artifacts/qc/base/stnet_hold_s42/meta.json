@@ -1,0 +1,41 @@
+{
+ "config_digest": "b5af58ff5130c309",
+ "seed": 42,
+ "git_commit": "70fe33267c062364e01069a66ae9d742fa7c5eb5",
+ "started": "2026-11-19T14:15:23",
+ "profile": "single-gpu",
+ "split_manifest_hash": "a079504cc9e89c1b",
+ "component": "stnet_hold",
+ "stnet": {
+  "width": 32,
+  "c_feat": 16,
+  "long_hidden": 64,
+  "use_gru": true,
+  "use_long": true,
+  "use_disc": true,
+  "use_robust": true,
+  "holdout_kinds": [
+   "zeroed",
+   "scale",
+   "drift"
+  ],
+  "epochs": 4,
+  "steps": 200,
+  "batch": 2,
+  "window": 16,
+  "burn": 6,
+  "crop": 48,
+  "long_epochs": 1,
+  "long_steps": 30,
+  "long_cells": 1024,
+  "long_years": 3,
+  "long_skip": true,
+  "probe": true,
+  "lr": 0.001,
+  "pos_weight": 10.0,
+  "protected_weight": 3.0,
+  "ambiguous_weight": 2.0,
+  "p_disc": 0.5,
+  "prefix": "stnet_hold"
+ }
+}

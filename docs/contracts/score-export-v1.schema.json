@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "score-export-v1",
+  "title": "Score export, schema 1: manifest of a .npz written by ml-service/qc/score_export.py",
+  "description": "The .npz holds this manifest as a JSON string plus arrays: periods (P ISO dates), lat and lon (n cells), scores (P x n float32, higher is more suspicious, NaN where not valid) and optional fault_<kind> arrays of the same shape. Scores of the trained models are validated on SYNTHETIC faults only. The station-to-cell mapping is not part of the file.",
+  "type": "object",
+  "required": ["schema", "scale", "model_id", "config_digest", "label_tier", "n_periods", "n_cells", "calibrated"],
+  "additionalProperties": true,
+  "properties": {
+    "schema": {"const": "score-export-v1"},
+    "scale": {"enum": ["daily", "monthly", "seasonal", "yearly"]},
+    "model_id": {"type": "string"},
+    "config_digest": {"type": "string"},
+    "label_tier": {"enum": ["synthetic"]},
+    "n_periods": {"type": "integer", "minimum": 0},
+    "n_cells": {"type": "integer", "minimum": 0},
+    "period_first": {"type": ["string", "null"]},
+    "period_last": {"type": ["string", "null"]},
+    "threshold": {"type": ["number", "null"], "description": "only with false_alarm_budget_per_1000"},
+    "false_alarm_budget_per_1000": {"type": ["number", "null"]},
+    "calibrated": {"type": "boolean", "description": "true only when a threshold was fixed under a clean-period false-alarm budget"},
+    "fault_kinds": {"type": "array", "items": {"enum": ["spike", "stuck", "scale", "phantom_rain", "zeroed", "drift"]}},
+    "test_years_included": {"type": "boolean", "description": "true only for the single test pass"},
+    "sha256": {"type": "string", "description": "added to the returned manifest after writing; not stored inside the file"}
+  }
+}
