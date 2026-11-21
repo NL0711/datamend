@@ -12,7 +12,7 @@ from backend.app.rainfall.gauges import gauge_file
 from backend.app.rainfall.history import build_feed_history
 from backend.app.rainfall.providers import OpenMeteoProvider, RainProvider, WeatherUnionProvider
 from backend.app.rainfall.service import RainfallService, pick_cluster
-from backend.app.rainfall.weather_union import CallBudget, WeatherUnionClient
+from backend.app.rainfall.weather_union import CallBudget, WeatherUnionClient, shared_budget
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/rainfall", tags=["rainfall"])
@@ -30,7 +30,7 @@ def build_provider(eff) -> Optional[RainProvider]:
         return OpenMeteoProvider(eff.weather_union_api_key, settings.OPEN_METEO_BASE_URL, settings.OPEN_METEO_CUSTOMER_BASE_URL,
                                  CallBudget(settings.OPEN_METEO_DAILY_CALL_BUDGET))
     return WeatherUnionProvider(WeatherUnionClient(eff.weather_union_api_key, settings.WEATHER_UNION_BASE_URL,
-                                                   CallBudget(settings.WEATHER_UNION_DAILY_CALL_BUDGET)))
+                                                   shared_budget(settings.WEATHER_UNION_DAILY_CALL_BUDGET)))
 
 
 def build_service_from_settings() -> Optional[RainfallService]:

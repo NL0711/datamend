@@ -66,6 +66,18 @@ class UnknownStation(StreamError):
     """The station is not one the simulator produces."""
 
 
+class SourceNotRunning(StreamError):
+    """A packet was injected into a source that is not the running source (a virtual packet needs the ESP32 source selected and running)."""
+
+
+class SourceCallFailed(StreamError):
+    """A one-off call to a source's API (the Open-Meteo preview) failed; nothing was invented in its place."""
+
+
+class BadPacket(StreamError):
+    """A telemetry packet (MQTT or virtual) is malformed: not a JSON object, a wrong type, a bad time, or no value at all."""
+
+
 class SimulatorNotRunning(StreamError):
     """An injection was asked for while the simulator is not running, so there is no stream to disturb."""
 

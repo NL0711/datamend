@@ -25,7 +25,13 @@ from backend.app.rainfall.providers import provider_info
 # weather_union_api_key is THE weather API key, weather_union_city the station cluster, and so on.
 FIELDS = ("weather_provider", "weather_union_api_key", "weather_union_city", "weather_union_poll_interval_seconds", "weather_union_accumulation_mode",
           "narrator_url", "narrator_token")
-SECRETS = ("weather_union_api_key", "narrator_token")
+# Telemetry stream settings (slice S3b); their defaults, validation and effective view live in stream_settings.py. They share this file and its rules.
+STREAM_FIELDS = ("stream_active_source", "stream_station_mode", "stream_city", "stream_station_cap", "stream_station_ids",
+                 "stream_simulator_interval_seconds", "stream_open_meteo_interval_seconds", "stream_weather_union_interval_seconds",
+                 "stream_esp32_interval_seconds", "stream_esp32_station_ids", "stream_esp32_latitude", "stream_esp32_longitude",
+                 "stream_mqtt_host", "stream_mqtt_port", "stream_mqtt_topic_prefix", "stream_mqtt_username", "stream_mqtt_password", "stream_mqtt_tls",
+                 "stream_external_point")
+SECRETS = ("weather_union_api_key", "narrator_token", "stream_mqtt_password")
 PROVIDERS = ("weather_union", "open_meteo")
 KEY_REQUIRED = {"weather_union": True, "open_meteo": False}
 ACCUMULATION_MODES = ("cumulative", "per_reading")
@@ -43,7 +49,7 @@ def load_overrides() -> Dict[str, Any]:
         doc = json.loads(_path().read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
-    return {k: v for k, v in doc.items() if k in FIELDS} if isinstance(doc, dict) else {}
+    return {k: v for k, v in doc.items() if k in FIELDS or k in STREAM_FIELDS} if isinstance(doc, dict) else {}
 
 
 def _write(doc: Dict[str, Any]) -> None:
@@ -98,6 +104,7 @@ def feed_enabled(e: Effective) -> bool:
 
 def public_view(eff: Optional[Effective] = None) -> Dict[str, Any]:
     """What the API may show: no secret value, ever."""
+    from backend.app import stream_settings
     e = eff or effective()
     return {
         "providers": provider_info(),
@@ -117,6 +124,7 @@ def public_view(eff: Optional[Effective] = None) -> Dict[str, Any]:
         # the interim LLM layer: environment only, so only whether a key is set and which model, never the key
         "gemini": {"key_set": bool(settings.GEMINI_API_KEY.strip()), "model": settings.GEMINI_MODEL,
                    "active": bool(settings.GEMINI_API_KEY.strip()) and not e.narrator_url.strip()},
+        "stream": stream_settings.public_view(),
     }
 
 
@@ -138,12 +146,12 @@ def _check_secret(name: str, v: str) -> str:
     return v
 
 
-def _blocked_address(host: str) -> Optional[str]:
+def _blocked_address(host: str, what: str = "narrator") -> Optional[str]:
     """Why the host must not be called from the server (private, loopback, link-local, reserved...), or None when it is public."""
     try:
         infos = socket.getaddrinfo(host, None)
     except OSError:
-        raise SettingsError(f"the narrator host {host!r} does not resolve")
+        raise SettingsError(f"the {what} host {host!r} does not resolve")
     for info in infos:
         ip = ipaddress.ip_address(info[4][0].split("%")[0])
         if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
@@ -173,13 +181,16 @@ def validate_update(raw: Dict[str, Any], clear: List[str]) -> Dict[str, Any]:
     """-> the overrides to merge. `raw` holds only the fields the caller sent (None means not sent); `clear` removes overrides."""
     out: Dict[str, Any] = {}
     for f in clear:
-        if f not in FIELDS:
+        if f not in FIELDS and f not in STREAM_FIELDS:
             raise SettingsError(f"unknown setting {f!r}")
         out[f] = None
     for f, v in raw.items():
         if v is None:
             continue
-        if f == "weather_provider":
+        if f in STREAM_FIELDS:
+            from backend.app import stream_settings
+            out[f] = stream_settings.validate_field(f, v)
+        elif f == "weather_provider":
             if v not in PROVIDERS:
                 raise SettingsError(f"the weather provider must be one of: {', '.join(PROVIDERS)}")
             out[f] = v

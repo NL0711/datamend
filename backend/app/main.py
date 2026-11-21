@@ -54,6 +54,12 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Rainfall feed start skipped: %s", exc)
 
+    from backend.app.stream import runtime as stream_runtime_start
+    try:
+        await stream_runtime_start.autostart()           # only starts a source that was saved as the active one in Settings
+    except Exception as exc:
+        logger.warning("Stream autostart skipped: %s", exc)
+
     yield
 
     logger.info("Shutting down %s services...", settings.PROJECT_NAME)

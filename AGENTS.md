@@ -50,7 +50,7 @@ Do not claim that basic ML anomaly detection, spatial or temporal QC, persistenc
 - The old T/P/RH checks (WMO bounds, rate-of-change, frozen sensor, Magnus-Tetens dew-point consistency) may be reimplemented from the original app's design as new code in the check catalogue. Do not copy back its Isolation Forest, Random Forest, GRU or SHAP stack: the anomaly model is the Keras one in section 7.
 - Raw data is never overwritten; any corrected value is stored separately.
 - Validate inputs: missing values, duplicate and out-of-order timestamps, impossible values, frozen values, malformed rows. File-level problems reject the file; row-level problems keep the row with a flag and a reason.
-- NOAA ISD is removed from the project (owner decision, 2026-11-21): no ISD import, replay, station list or adapter, and no ISD data in the repository. Do not add it back.
+- NOAA ISD (owner decisions, 2026-11-21): the ISD replay, the NOAA/IMD synoptic station list and any ISD station source stay removed. ISD hourly files may be imported again as a FILE FORMAT only (through the Import step from an upload, an Amazon S3 link or a Kaggle link), as a reader that produces ordinary rainfall readings: no station list, no replay, no ISD data in the repository.
 - Secrets: the app reads API keys and tokens from `.env` or the settings store, and they are never committed or written into tracked files, logs or docs. Prototype posture (owner, 2026-11-21): the owner may paste keys in chat, and an agent may use one for a call the owner asked for.
 - Prototype posture (owner, 2026-11-21): speed over ceremony. This is a prototype built for demonstration; test the area you changed, skip audits and long write-ups, and keep going rather than stopping for approval on routine choices.
 

@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.pipeline.models import ModelVersion
 from backend.app.validation import checks, narrate
+from backend.app.validation import weather_checks as wx    # registers the temperature, pressure and humidity checks in the catalogue
 
 NEIGHBOUR_NOTE = (f"needs {checks.MIN_NEIGHBOURS}+ stations with coordinates within {checks.NEIGHBOUR_RADIUS_KM:g} km; fires when at least "
                   f"{checks.NEIGHBOUR_AGREE:.0%} of them disagree")
@@ -30,6 +31,20 @@ THRESHOLD_NOTES = {
                                f"same day of year (needs {checks.CLIM_MIN_WET} earlier wet days); wet day = at least {checks.WET_DAY_MM:g} mm"),
     "duplicate_row": "the same station and time appears twice",
 }
+# temperature, pressure and humidity checks of the stream (all thresholds assumed, uncalibrated): the notes come from the module's own constants
+THRESHOLD_NOTES.update({
+    "corrupt_value": "a non-finite number or a sentinel such as 9999.9 or -999",
+    "value_out_of_range": f"temperature outside {wx.HARD_BOUNDS['temperature']}, station pressure outside {wx.HARD_BOUNDS['pressure']} hPa, humidity outside {wx.HARD_BOUNDS['humidity']} %",
+    "extreme_value": f"temperature outside {wx.EXTREME_TEMPERATURE} C: unconfirmed, UNCERTAIN only",
+    "rate_of_change": "step between readings above a floor plus an allowance per minute of elapsed time (per variable)",
+    "frozen_value": f"{wx.FROZEN_N} identical readings in a row spanning at least {wx.FROZEN_MIN_SPAN_S:g} s (not humidity at saturation)",
+    "spike_vs_history": f"deviation from the station's recent robust level above {wx.SPIKE_K:g} robust sigmas and a physical minimum; UNCERTAIN when other variables move with it at a steady dew point",
+    "level_shift": f"mean of the last 3 readings away from an earlier baseline ({wx.SHIFT_N - wx.SHIFT_RECENT_EXCLUDE} readings) by more than a limit that grows with elapsed time",
+    "dewpoint_above_temperature": f"Magnus-Tetens dew point derived from temperature and humidity above the temperature by more than {wx.DEWPOINT_ABOVE_TEMPERATURE_C:g} C",
+    "dewpoint_jump": f"derived dew point changes by more than {wx.DEWPOINT_STEP_C:g} C plus {wx.DEWPOINT_PER_MIN:g} C per minute",
+    "dropout": f"a variable missing now that the station reported within its last {wx.DROPOUT_LOOKBACK} readings (never-reported variables are 'not run')",
+    "reporting_gap": f"time since the previous reading above {wx.GAP_FACTOR:g} times the station's own cadence (and {wx.GAP_ABS_MIN_S:g} s)",
+})
 
 FLAGS_HOW = [
     "Fixed rules come first: impossible values, repeated values and similar integrity checks fire when a value breaks a stated limit.",

@@ -8,7 +8,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Sequence
 
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db import database
@@ -16,9 +16,10 @@ from backend.app.rainfall.catalog import load_catalog
 from backend.app.stream import frames
 from backend.app.stream.manager import StreamManager, StreamStatus
 from backend.app.stream.models import StreamEvent, StreamReadingRow
-from backend.app.stream.scoring import NO_CHECKS, CheckOutcome, as_record, score_reading
+from backend.app.stream.scoring import NO_CHECKS, CheckOutcome, as_record, climate_sample, has_climate, score_reading
+from backend.app.validation.weather_checks import HISTORY_MAX, ClimateHistory, ClimateSample
 from backend.app.stream.simulator import SimulatorSource
-from backend.app.stream.types import SimulatorNotRunning, StreamReading, UnknownSource, UnknownStation, utcnow
+from backend.app.stream.types import (SimulatorNotRunning, SourceCallFailed, SourceNotRunning, StreamReading, UnknownSource, UnknownStation, utcnow)
 from backend.app.validation.records import Reading
 
 logger = logging.getLogger(__name__)
@@ -52,17 +53,33 @@ class ReadingProcessor:
             .order_by(desc(StreamReadingRow.timestamp)).limit(12))).scalars().all()
         return [as_record(StreamReading(r.station_id, aware(r.timestamp), r.source, rain_mm=r.rain_mm), r.id) for r in reversed(rows)]  # type: ignore[arg-type]
 
+    def __init__(self, climate: Optional[ClimateHistory] = None) -> None:
+        self.climate = climate or ClimateHistory()      # bounded, causal rolling history of temperature, pressure and humidity per station
+
+    async def _hydrate_climate(self, session: AsyncSession, reading: StreamReading) -> None:
+        """First sight of a station in this process: load its stored earlier readings (a restart does not forget the context)."""
+        rows = (await session.execute(
+            select(StreamReadingRow).where(StreamReadingRow.station_id == reading.station_id, StreamReadingRow.timestamp < reading.timestamp,
+                                           or_(StreamReadingRow.temperature_c.is_not(None), StreamReadingRow.pressure_hpa.is_not(None),
+                                               StreamReadingRow.humidity_pct.is_not(None)))
+            .order_by(desc(StreamReadingRow.timestamp)).limit(HISTORY_MAX))).scalars().all()
+        self.climate.seed(reading.station_id, [ClimateSample(aware(r.timestamp), r.temperature_c, r.pressure_hpa, r.humidity_pct) for r in reversed(rows)])  # type: ignore[arg-type]
+
     async def __call__(self, reading: StreamReading) -> Dict[str, Any]:
         async with database.async_session_factory() as session:
             history = await self._history(session, reading) if reading.rain_mm is not None else []
-            outcome = score_reading(reading, history)
+            if reading.station_id not in self.climate:
+                await self._hydrate_climate(session, reading)
+            outcome = score_reading(reading, history, self.climate.recent(reading.station_id))
+            if has_climate(reading) or reading.rain_mm is None:                 # a rain-only gauge keeps no temperature history
+                self.climate.add(reading.station_id, climate_sample(reading))   # after scoring: the checks never see the reading they judge
             row = StreamReadingRow(station_id=reading.station_id, timestamp=reading.timestamp, temperature_c=reading.temperature_c,
                                    pressure_hpa=reading.pressure_hpa, humidity_pct=reading.humidity_pct, rain_mm=reading.rain_mm, source=reading.source,
                                    injected_fault=reading.injected, check_status=outcome.status, rule_score=outcome.rule_score)
             session.add(row)
             await session.flush()
             if outcome.flagged:
-                session.add(StreamEvent(reading_id=row.id, station_id=reading.station_id, timestamp=reading.timestamp, variable="rain", verdict=outcome.status,
+                session.add(StreamEvent(reading_id=row.id, station_id=reading.station_id, timestamp=reading.timestamp, variable=outcome.variable or "rain", verdict=outcome.status,
                                         rule_score=outcome.rule_score or 0.0, severity=outcome.severity or "low", classification=outcome.classification or "",
                                         is_fault=outcome.status == "SUSPECT", reason=outcome.reason or "", hits=outcome.hits, not_run=outcome.not_run,
                                         source=reading.source))
@@ -81,8 +98,7 @@ def station_directory(manager: StreamManager) -> List[Dict[str, Any]]:
     for src in manager.sources():
         for st in src.stations():
             if st.station_id in seen:
-                logger.warning("station %s of source %s is already in the list and is skipped", st.station_id, src.source_id)
-                continue
+                continue         # a source polling a catalogue gauge or a simulator station: it is in the list once
             seen.add(st.station_id)
             out.append({"station_id": st.station_id, "name": st.name, "latitude": st.latitude, "longitude": st.longitude, "elevation": st.elevation})
     return out
@@ -131,6 +147,14 @@ async def list_observations(session: AsyncSession, station_id: Optional[str], li
     return {"items": [observation_dict(r) for r in rows], "total": (await session.execute(n)).scalar_one()}
 
 
+def raw_values(r: Optional[StreamReadingRow]) -> Dict[str, Any]:
+    """The values the source sent, as stored; a variable it did not send is left out."""
+    if r is None:
+        return {}
+    named = {"temperature": r.temperature_c, "pressure": r.pressure_hpa, "humidity": r.humidity_pct, "rain_mm": r.rain_mm}
+    return {k: v for k, v in named.items() if v is not None}
+
+
 def anomaly_dict(e: StreamEvent) -> Dict[str, Any]:
     """The dashboard's AnomalyEvent. Fields the platform has no honest value for (confidence, explanation, tier scores) are left out."""
     return {"id": e.id, "observation_id": e.reading_id, "station_id": e.station_id, "timestamp": _iso(e.timestamp), "is_anomaly": True,
@@ -159,8 +183,7 @@ async def list_anomalies(session: AsyncSession, station_id: Optional[str] = None
     items = []
     for e in rows:
         d = anomaly_dict(e)
-        reading = await session.get(StreamReadingRow, e.reading_id)
-        d["raw_values"] = {"rain_mm": reading.rain_mm} if reading is not None else {}
+        d["raw_values"] = raw_values(await session.get(StreamReadingRow, e.reading_id))
         items.append(d)
     return {"items": items, "total": total}
 
@@ -174,9 +197,10 @@ async def anomaly_stats(session: AsyncSession, hours: int) -> Dict[str, Any]:
         by_sev[e.severity.upper()] = by_sev.get(e.severity.upper(), 0) + 1
         for c in (e.classification.split(", ") if e.classification else []):
             by_cls[c] = by_cls.get(c, 0) + 1
-    # genuine-extreme versus fault discrimination exists only where checks exist; there is none for the stream yet, so no extreme is ever counted
+    # a genuine-extreme candidate: a deviation several variables made together with a steady dew point (weather_checks.py), never a fault
+    extremes = sum(1 for e in rows if any((h.get("evidence") or {}).get("corroboration", {}).get("coherent") for h in (e.hits or [])))
     return {"period_hours": hours, "total_anomalies": len(rows), "by_severity": by_sev, "by_classification": by_cls,
-            "sensor_faults": sum(1 for e in rows if e.is_fault), "meteorological_extremes": 0}
+            "sensor_faults": sum(1 for e in rows if e.is_fault), "meteorological_extremes": extremes}
 
 
 async def anomaly_detail(session: AsyncSession, manager: StreamManager, event_id: int) -> Optional[Dict[str, Any]]:
@@ -186,7 +210,7 @@ async def anomaly_detail(session: AsyncSession, manager: StreamManager, event_id
     reading = await session.get(StreamReadingRow, e.reading_id)
     d = anomaly_dict(e)
     d["observation"] = observation_dict(reading) if reading is not None else None
-    d["raw_values"] = {"rain_mm": reading.rain_mm} if reading is not None else {}
+    d["raw_values"] = raw_values(reading)
     d["station"] = await get_station(session, manager, e.station_id)
     return d
 
@@ -206,6 +230,17 @@ def _source_entry(manager: StreamManager, src: Any, st: StreamStatus, active: bo
         "is_active": active, "is_available": True, "station_id": "ALL", "is_stale": active and st.state == "stale", "packet_count": st.packet_count if active else 0,
         "polling_interval_seconds": own.expected_interval_s, "metadata": {"station_ids": [s.station_id for s in src.stations()]},
     }
+    sts = list(src.stations())
+    if len(sts) == 1:
+        entry["coordinates"] = {"latitude": sts[0].latitude, "longitude": sts[0].longitude}
+    if hasattr(src, "extra_metadata"):
+        entry["metadata"].update(src.extra_metadata())
+    if src.source_id in ("open_meteo", "weather_union"):
+        from backend.app import stream_settings
+        from backend.app.stream import control
+        eff = stream_settings.effective()
+        point = src.source_id == "open_meteo" and eff.external_point
+        entry["metadata"]["station_set"] = {"mode": "point", "station_id": eff.external_point["station_id"]} if point else control.station_set_view(eff)
     if active:
         if st.last_reading_at:
             entry["last_received_at"] = frames.iso(st.last_reading_at)
@@ -247,6 +282,55 @@ async def select_source(manager: StreamManager, source_type: str) -> Dict[str, A
         raise UnknownSource(f"the data source type '{source_type}' is not implemented")
     await manager.select(src.source_id)
     return _source_entry(manager, src, manager.status(), True)
+
+
+# ---------------------------------------------------------------------------------------------------- the real sources: virtual packet, external point
+async def virtual_packet(manager: StreamManager, payload: Any) -> Dict[str, Any]:
+    """Inject one reading as source ``esp32``. The ESP32 source must be the selected, running source. NOT verified on a real device."""
+    src = manager.source("esp32")
+    if manager.active is not src or src.status().state == "stopped":
+        raise SourceNotRunning("the ESP32 source is not the running source; select it (POST /api/data-sources/select, PHYSICAL_AWS) first")
+    r = await src.inject_packet(payload)             # type: ignore[attr-defined]
+    return {"accepted": True, "source": "esp32", "virtual": True, "verified_on_real_device": False, "station_id": r.station_id,
+            "timestamp": frames.iso(r.timestamp), "temperature": r.temperature_c, "pressure": r.pressure_hpa, "humidity": r.humidity_pct, "rain_mm": r.rain_mm,
+            "message": "A virtual packet was stored as an esp32 reading. It is not evidence about a real device."}
+
+
+async def external_preview(manager: StreamManager) -> Dict[str, Any]:
+    """ONE live Open-Meteo call for the first station of the Open-Meteo station set; nothing is stored. Model estimate, not a measurement."""
+    from backend.app.rainfall.weather_union import BudgetExhausted
+    import httpx
+    src = manager.source("open_meteo")
+    sts = list(src.stations())[:1]                  # type: ignore[attr-defined]
+    if not sts:
+        raise SourceCallFailed(src._config_error or "no stations are configured for Open-Meteo")      # type: ignore[attr-defined]
+    try:
+        readings, notes = await src.fetch_current(sts)                                                  # type: ignore[attr-defined]
+    except (httpx.HTTPError, BudgetExhausted, ValueError) as exc:
+        raise SourceCallFailed(f"Open-Meteo could not be read: {exc}") from exc
+    finally:
+        if src.status().state == "stopped":
+            await src.release()                                                                         # type: ignore[attr-defined]
+    if not readings:
+        raise SourceCallFailed("Open-Meteo answered with no current values: " + "; ".join(notes))
+    r, st = readings[0], sts[0]
+    return {"success": True, "provider": "open-meteo", "telemetry": {
+        "station_id": st.station_id, "station_name": st.name, "latitude": st.latitude, "longitude": st.longitude, "timestamp": frames.iso(r.timestamp),
+        "temperature": r.temperature_c, "pressure": r.pressure_hpa, "humidity": r.humidity_pct, "source": "open_meteo", "model_estimate": True}}
+
+
+async def configure_external(manager: StreamManager, point: Dict[str, Any]) -> Dict[str, Any]:
+    """Save the external point (the dashboard's city presets) and restart Open-Meteo with it if it is the running source. Raises SettingsError."""
+    from backend.app import runtime_settings as rs
+    from backend.app.stream import control
+    valid = rs.validate_update({"stream_external_point": point}, [])
+    rs.save_update(valid)
+    error = await control.apply_changes(manager, valid)
+    src = manager.source("open_meteo")
+    entry = _source_entry(manager, src, manager.status(), manager.active is src)
+    if error:
+        entry["start_error"] = error
+    return entry
 
 
 # ---------------------------------------------------------------------------------------------------- simulator control

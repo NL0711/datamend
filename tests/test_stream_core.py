@@ -171,11 +171,18 @@ def test_a_status_frame_has_no_station_id_so_the_dashboard_client_cannot_mistake
 
 
 # ---------------------------------------------------------------------------------------------------- checks honesty
-def test_temperature_pressure_humidity_get_no_checks_no_score_no_verdict():
-    out = score_reading(reading(temperature_c=20.0, pressure_hpa=1010.0, humidity_pct=50.0))
-    assert out.status == NO_CHECKS and out.rule_score is None and out.severity is None and out.hits == [] and not out.ran and not out.flagged
-    assert {n["check"] for n in out.not_run} == {"temperature", "pressure", "humidity"} and all("S4" in n["reason"] for n in out.not_run)
+def test_temperature_pressure_humidity_get_a_verdict_and_say_which_checks_could_not_run_yet():
+    out = score_reading(reading(temperature_c=20.0, pressure_hpa=1010.0, humidity_pct=50.0))      # first reading of a station: no history
+    assert out.status == "OK" and out.rule_score == 0.0 and out.hits == [] and out.ran and not out.flagged        # S4: the checks exist now
+    assert {"rate_of_change", "spike_vs_history", "frozen_value", "level_shift"} <= {n["check"] for n in out.not_run}
+    assert all(n["reason"] for n in out.not_run)
     data = frames.observation_data(reading(temperature_c=20.0), out)
+    assert data["validation_status"] == "OK" and data["checks_run"] is True and data["is_anomaly"] is False
+    bad = score_reading(reading(temperature_c=9999.9))
+    assert bad.status == "SUSPECT" and bad.hits[0]["check"] == "corrupt_value"
+    nothing = score_reading(reading())
+    assert nothing.status == NO_CHECKS and nothing.rule_score is None and not nothing.ran                 # no variable at all: still nothing said
+    data = frames.observation_data(reading(), nothing)
     assert data["validation_status"] == NO_CHECKS and data["checks_run"] is False
     assert not {"anomaly_score", "is_anomaly", "severity", "classification", "reason"} & set(data)
 

@@ -60,6 +60,20 @@ class CallBudget:
         return self.limit - self.used
 
 
+_shared_budget: Optional[CallBudget] = None
+
+
+def shared_budget(limit: int = 900) -> CallBudget:
+    """THE process-wide counter of the one Weather Union key: the rain feed and the telemetry stream source both count against it, and a restart
+    of either does not reset it within the day (the key allows 1000 calls a day in total)."""
+    global _shared_budget
+    if _shared_budget is None:
+        _shared_budget = CallBudget(limit)
+    else:
+        _shared_budget.limit = limit
+    return _shared_budget
+
+
 @dataclass(frozen=True)
 class RainObservation:
     station_id: str

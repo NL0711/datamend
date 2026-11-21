@@ -16,7 +16,7 @@ from datetime import timedelta
 from typing import Any, Dict, List, Literal, Optional
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,8 +25,9 @@ from backend.app.api.settings import require_admin
 from backend.app.config import settings
 from backend.app.db.database import get_db
 from backend.app.stream import frames, runtime, service
-from backend.app.stream.types import (BadSimulatorConfig, SimulatorBusy, SimulatorNotRunning, SourceStartFailed, StreamError, UnknownSource, UnknownStation,
-                                      utcnow)
+from backend.app import runtime_settings as rs
+from backend.app.stream.types import (BadPacket, BadSimulatorConfig, SimulatorBusy, SimulatorNotRunning, SourceCallFailed, SourceNotRunning, SourceStartFailed,
+                                      StreamError, UnknownSource, UnknownStation, utcnow)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["stream"])
@@ -37,9 +38,9 @@ SESSION_COOKIE = auth_api.SESSION_COOKIE
 def _http(e: StreamError) -> HTTPException:
     """The one place a stream error becomes an HTTP answer."""
     code = (status.HTTP_404_NOT_FOUND if isinstance(e, UnknownStation) else
-            status.HTTP_409_CONFLICT if isinstance(e, (SimulatorNotRunning, SimulatorBusy)) else
-            status.HTTP_422_UNPROCESSABLE_ENTITY if isinstance(e, BadSimulatorConfig) else
-            status.HTTP_502_BAD_GATEWAY if isinstance(e, SourceStartFailed) else
+            status.HTTP_409_CONFLICT if isinstance(e, (SimulatorNotRunning, SimulatorBusy, SourceNotRunning)) else
+            status.HTTP_422_UNPROCESSABLE_ENTITY if isinstance(e, (BadSimulatorConfig, BadPacket)) else
+            status.HTTP_502_BAD_GATEWAY if isinstance(e, (SourceStartFailed, SourceCallFailed)) else
             status.HTTP_404_NOT_FOUND if isinstance(e, UnknownSource) else status.HTTP_400_BAD_REQUEST)
     return HTTPException(code, str(e))
 
@@ -127,6 +128,42 @@ async def select_data_source(body: SelectSource) -> Dict[str, Any]:
         return await service.select_source(runtime.get_manager(), body.source_type)
     except UnknownSource as e:
         raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, str(e))
+    except StreamError as e:
+        raise _http(e)
+
+
+class ExternalConfig(BaseModel):
+    latitude: float = Field(ge=-90.0, le=90.0)
+    longitude: float = Field(ge=-180.0, le=180.0)
+    station_id: Optional[str] = Field(None, max_length=64)
+    station_name: Optional[str] = Field(None, max_length=80)
+
+
+@router.post("/data-sources/external/configure", dependencies=[Depends(require_admin)])
+async def configure_external(body: ExternalConfig) -> Dict[str, Any]:
+    """Set the point Open-Meteo is polled at (a custom station); restarts Open-Meteo with it if it is the running source."""
+    try:
+        return await service.configure_external(runtime.get_manager(), body.model_dump())
+    except rs.SettingsError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
+    except StreamError as e:
+        raise _http(e)
+
+
+@router.get("/data-sources/external/preview", dependencies=[Depends(require_admin)])
+async def preview_external() -> Dict[str, Any]:
+    """ONE live Open-Meteo call for the first station of its station set, to look at before selecting it. Nothing is stored. Model estimate."""
+    try:
+        return await service.external_preview(runtime.get_manager())
+    except StreamError as e:
+        raise _http(e)
+
+
+@router.post("/data-sources/physical/virtual-packet", dependencies=[Depends(require_admin)])
+async def virtual_packet(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+    """Inject ONE reading as source esp32, as if the device had sent it. NOT a test of real hardware (none exists)."""
+    try:
+        return await service.virtual_packet(runtime.get_manager(), body)
     except StreamError as e:
         raise _http(e)
 

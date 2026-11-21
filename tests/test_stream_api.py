@@ -148,7 +148,8 @@ async def test_start_stream_store_inject_and_stop(async_client: AsyncClient, man
     assert obs["total"] >= 3 and len(obs["items"]) <= 5
     first = obs["items"][0]
     assert first["source"] == "simulator" and first["station_id"] == "KTLX" and isinstance(first["temperature"], float)
-    assert first["rain_mm"] is None and first["validation_status"] == "NO_CHECKS" and first["rule_score"] is None and first["injected_fault"] is None
+    assert first["rain_mm"] is None and first["validation_status"] == "QC_PASSED" and first["check_status"] == "OK" and first["rule_score"] == 0.0
+    assert first["injected_fault"] is None
     ts = [o["timestamp"] for o in obs["items"]]
     assert ts == sorted(ts, reverse=True)                                                              # newest first
     st = (await async_client.get("/api/stations?status=active")).json()
@@ -168,12 +169,20 @@ async def test_start_stream_store_inject_and_stop(async_client: AsyncClient, man
     assert hit[0].temperature_c - clean[-1] > 15.0                       # the spike is in the stored raw value, as sent
     assert all(r.injected_fault is None for r in await stored("KOKX"))   # only the targeted station
 
-    # no checks exist for temperature, pressure and humidity: no detection and no score, however big the spike
-    assert (await async_client.get("/api/anomalies")).json()["total"] == 0
-    stats = (await async_client.get("/api/anomalies/stats")).json()
-    assert stats["total_anomalies"] == 0 and stats["meteorological_extremes"] == 0 and stats["sensor_faults"] == 0
-    assert (await async_client.get("/api/anomalies/alerts/active")).json() == []
-    assert all(r.check_status == "NO_CHECKS" and r.rule_score is None for r in await stored())
+    # S4: the temperature checks see the injected spike and the detection is stored with its evidence; the untouched station raises nothing
+    an = (await async_client.get("/api/anomalies?station_id=KTLX")).json()
+    assert an["total"] >= 1 and all(e["station_id"] == "KTLX" and e["variable"] in ("temperature", "humidity", "multiple") for e in an["items"])
+    assert any("rate_of_change" in e["classification"] for e in an["items"])                  # a 25 C step in a fraction of a second
+    ev = an["items"][0]
+    assert ev["raw_values"]["temperature"] > 30 and ev["evidence"] and ev["score_kind"] == "uncalibrated rule score" and "confidence" not in ev
+    assert all(h["evidence"]["threshold"]["basis"] == "assumed" for h in ev["evidence"])
+    assert (await async_client.get("/api/anomalies?station_id=KOKX")).json()["total"] == 0
+    stats = (await async_client.get("/api/anomalies/stats?hours=1")).json()
+    assert stats["total_anomalies"] == an["total"] and stats["meteorological_extremes"] == 0       # an isolated spike is not a genuine extreme
+    assert len((await async_client.get("/api/anomalies/alerts/active")).json()) >= 1
+    rows = await stored()
+    assert all(r.check_status in ("OK", "UNCERTAIN", "SUSPECT") and r.rule_score is not None for r in rows)
+    assert all(r.check_status == "OK" for r in rows if r.station_id == "KOKX")
 
     s = await async_client.post("/api/simulation/stop", headers=h)
     assert s.json()["running"] is False
@@ -216,7 +225,8 @@ async def test_rain_readings_are_checked_stored_raw_and_flagged_only_when_a_chec
     assert good["validation_status"] == "OK" and good["checks_run"] is True and good["is_anomaly"] is False and good["stored"] is True
     bad = await proc(StreamReading("RG-1", t + timedelta(minutes=5), "fake", temperature_c=21.0, rain_mm=-3.0))
     assert bad["validation_status"] == "SUSPECT" and bad["is_anomaly"] is True and bad["is_fault"] is True and bad["classification"] == "negative_value"
-    assert {"temperature", "neighbour"} <= {n["check"] for n in bad["not_run"]}      # the temperature check does not exist yet and says so
+    assert "neighbour" in {n["check"] for n in bad["not_run"]}                       # the neighbour check says why it did not run
+    assert {"rate_of_change", "spike_vs_history"} <= {n["check"] for n in bad["not_run"]}   # temperature has checks now; those needing history say so
     await proc(StreamReading("RG-1", t + timedelta(minutes=10), "fake", rain_mm=0.0))
 
     raw = [r for r in await stored("RG-1")]
@@ -229,7 +239,7 @@ async def test_rain_readings_are_checked_stored_raw_and_flagged_only_when_a_chec
     assert an["total"] == 1 and an["page"] == 1
     ev = an["items"][0]
     assert ev["station_id"] == "RG-1" and ev["severity"] == "HIGH" and ev["is_fault"] is True and ev["classification"] == "negative_value"
-    assert ev["score_kind"] == "uncalibrated rule score" and ev["anomaly_score"] > 0.9 and ev["raw_values"] == {"rain_mm": -3.0}
+    assert ev["score_kind"] == "uncalibrated rule score" and ev["anomaly_score"] > 0.9 and ev["raw_values"] == {"temperature": 21.0, "rain_mm": -3.0}
     assert ev["evidence"][0]["check"] == "negative_value" and "confidence" not in ev          # no confidence: the platform has none
     assert (await async_client.get("/api/anomalies?severity=low")).json()["total"] == 0
     assert (await async_client.get("/api/anomalies?classification=negative")).json()["total"] == 1
@@ -241,6 +251,28 @@ async def test_rain_readings_are_checked_stored_raw_and_flagged_only_when_a_chec
     # the alert list only shows the last 24 hours; this reading is from 2026-08-01
     async with database.async_session_factory() as s:
         assert (await s.execute(select(func.count()).select_from(StreamEvent))).scalar_one() == 1
+
+
+@pytest.mark.asyncio
+async def test_a_variable_a_station_never_reports_is_not_run_but_one_that_vanishes_is_a_dropout(async_client: AsyncClient, manager):
+    proc = ReadingProcessor()
+    t = datetime(2026, 8, 1, 12, 0, tzinfo=timezone.utc)
+    # a Weather-Union-like station: temperature and humidity, never pressure, 15 polls
+    for i in range(15):
+        out = await proc(StreamReading("WU-1", t + timedelta(minutes=i), "fake", temperature_c=24.0 + 0.01 * i, humidity_pct=60.0 - 0.02 * i))
+        assert out["validation_status"] == "OK" and out["is_anomaly"] is False
+        assert [n for n in out["not_run"] if n["check"] == "pressure"] and "not reported" in next(n for n in out["not_run"] if n["check"] == "pressure")["reason"]
+    # a station whose humidity was present and then disappears
+    for i in range(15):
+        await proc(StreamReading("ES-1", t + timedelta(minutes=i), "fake", temperature_c=24.0 + 0.01 * i, pressure_hpa=1000.0 - 0.01 * i, humidity_pct=60.0 - 0.02 * i))
+    gone = await proc(StreamReading("ES-1", t + timedelta(minutes=15), "fake", temperature_c=24.15, pressure_hpa=999.85))
+    assert gone["validation_status"] == "SUSPECT" and gone["classification"] == "dropout" and gone["is_fault"] is True
+    # a station with a null temperature on every poll never gets a dropout either
+    for i in range(5):
+        out = await proc(StreamReading("WU-2", t + timedelta(minutes=i), "fake", humidity_pct=55.0 + 0.1 * i))
+        assert out["is_anomaly"] is False
+    an = (await async_client.get("/api/anomalies")).json()
+    assert an["total"] == 1 and an["items"][0]["station_id"] == "ES-1" and an["items"][0]["classification"] == "dropout"
 
 
 # ---------------------------------------------------------------------------------------------------- WebSocket (fake client = starlette's test client)
@@ -275,8 +307,9 @@ def test_websocket_streams_readings_and_an_injected_spike_appears():
             assert spiked is not None
             f0 = seen[0]
             assert f0["station_id"] == f0["data"]["station_id"] == "KTLX" and isinstance(f0["data"]["temperature"], float)
-            assert f0["data"]["validation_status"] == "NO_CHECKS" and f0["data"]["checks_run"] is False and f0["data"]["stored"] is True
-            assert not {"anomaly_score", "is_anomaly", "severity"} & set(f0["data"])    # no invented verdict on T/P/RH
+            assert f0["data"]["validation_status"] == "OK" and f0["data"]["checks_run"] is True and f0["data"]["stored"] is True
+            assert f0["data"]["anomaly_score"] == 0.0 and f0["data"]["is_anomaly"] is False        # a real verdict from the checks (S4), not an invented one
+            assert any(n["check"] == "spike_vs_history" for n in f0["data"]["not_run"])             # and it says what could not run yet
             assert "source" not in f0 and "source" not in f0["data"]                   # the label is on stored readings only
             c.post("/api/simulation/stop", headers=h)
             seen_states = []

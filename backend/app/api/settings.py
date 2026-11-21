@@ -23,6 +23,8 @@ from backend.app.config import settings
 from backend.app.rainfall.providers import OpenMeteoError, OpenMeteoProvider
 from backend.app.rainfall.service import pick_cluster
 from backend.app.rainfall.weather_union import BudgetExhausted, CallBudget, WeatherUnionClient
+from backend.app.stream import control as stream_control
+from backend.app.stream import runtime as stream_runtime
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/settings", tags=["settings"])
@@ -58,6 +60,7 @@ def _state() -> Dict[str, Any]:
     view["cities"] = rs.cities()
     view["accumulation_modes"] = list(rs.ACCUMULATION_MODES)
     view["interval_limits_seconds"] = [rs.MIN_INTERVAL_S, rs.MAX_INTERVAL_S]
+    view["stream"]["status"] = stream_runtime.get_manager().status().as_dict()      # the active source and its state, no secret
     view["feed_running"] = svc is not None
     if svc is not None:
         st = svc.status()
@@ -79,6 +82,25 @@ class SettingsUpdate(BaseModel):
     weather_union_accumulation_mode: Optional[Literal["cumulative", "per_reading"]] = None
     narrator_url: Optional[str] = Field(None, max_length=500)
     narrator_token: Optional[str] = Field(None, max_length=400)
+    # telemetry stream (slice S3b); values are validated in stream_settings.py. The MQTT password is write-only.
+    stream_active_source: Optional[str] = Field(None, max_length=20)
+    stream_station_mode: Optional[str] = Field(None, max_length=10)
+    stream_city: Optional[str] = Field(None, max_length=80)
+    stream_station_cap: Optional[int] = None
+    stream_station_ids: Optional[List[str]] = Field(None, max_length=200)
+    stream_simulator_interval_seconds: Optional[float] = None
+    stream_open_meteo_interval_seconds: Optional[float] = None
+    stream_weather_union_interval_seconds: Optional[float] = None
+    stream_esp32_interval_seconds: Optional[float] = None
+    stream_esp32_station_ids: Optional[List[str]] = Field(None, max_length=20)
+    stream_esp32_latitude: Optional[float] = None
+    stream_esp32_longitude: Optional[float] = None
+    stream_mqtt_host: Optional[str] = Field(None, max_length=255)
+    stream_mqtt_port: Optional[int] = None
+    stream_mqtt_topic_prefix: Optional[str] = Field(None, max_length=120)
+    stream_mqtt_username: Optional[str] = Field(None, max_length=128)
+    stream_mqtt_password: Optional[str] = Field(None, max_length=400)
+    stream_mqtt_tls: Optional[bool] = None
     clear: List[str] = Field(default_factory=list, max_length=10)       # remove a saved override (the .env value applies again)
 
 
@@ -100,10 +122,16 @@ async def update_settings(body: SettingsUpdate) -> Dict[str, Any]:
         except Exception as e:                                                   # bad city/key combination: report, do not crash
             feed_error = f"the feed could not be restarted: {type(e).__name__}"
             logger.warning("[SETTINGS] %s", feed_error)
+    stream_error: Optional[str] = None
+    stream_changed = [k for k in changes if k.startswith(("stream_", "weather_union_"))]
+    if stream_changed:                       # restarts the active source when a setting that concerns it changed (never the rain feed)
+        stream_error = await stream_control.apply_changes(stream_runtime.get_manager(), stream_changed)
     state = _state()
     state["saved"] = sorted(changes)
     if feed_error:
         state["feed_error"] = feed_error
+    if stream_error:
+        state["stream_error"] = stream_error
     return state
 
 

@@ -66,6 +66,11 @@ class Settings(BaseSettings):
     OPEN_METEO_BASE_URL: str = "https://api.open-meteo.com"
     OPEN_METEO_CUSTOMER_BASE_URL: str = "https://customer-api.open-meteo.com"
     OPEN_METEO_DAILY_CALL_BUDGET: int = 9000          # the free non-commercial allowance is 10,000 calls a day
+    # Telemetry stream, ESP32 / MQTT source (slice S3b). Defaults only: Settings can override them; the password is a secret (write-only).
+    MQTT_HOST: str = ""
+    MQTT_PORT: int = 1883
+    MQTT_USERNAME: str = ""
+    MQTT_PASSWORD: str = ""
     # The platform's own MCP endpoint for other people's agents (POST /api/mcp): read-only tools, a token per person made in Settings.
     MCP_AUDIT_LOG: str = "data/mcp_audit.jsonl"       # one JSON line per tool call (arguments capped, secrets redacted)
     MCP_RATE_PER_MINUTE: int = 120                    # tool calls per minute across all tokens
