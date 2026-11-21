@@ -1,10 +1,10 @@
 /**
  * DataMend — Typed REST API Service Client (the ORIGINAL dashboard contract, restored in slice S2b from commit ab3b0b3).
  *
- * NOT BUILT on the server yet: every endpoint below belongs to slices S3 (telemetry streams, stations, observations, data sources)
- * and S4 (T/P/RH checks, anomalies, the fault injector). Until then they answer 404 or 503, and the views say so with an empty state
- * (see isNotBuilt). Nothing here is mocked. The request shapes and the TypeScript types are the contract the backend is built to
- * (listed in TODO.md, S3 and S4).
+ * Wired to the backend of slices S3a and S3b: stations, observations, anomalies, data sources, the simulator, the fault injector and the
+ * stream settings. Still NOT BUILT on the server (they answer 404): /health*, /metrics, /inference, /feedback, /telemetry/process,
+ * /upload; no view that is mounted calls them. A 404 on a mounted call is shown as an empty state (see isNotBuilt), anything else as the
+ * server's own answer. Nothing here is mocked.
  */
 
 import {
@@ -24,15 +24,28 @@ import {
   OperatorFeedbackRecord,
 } from '../types';
 import { storedToken } from '../validation/api';
+import { apiDetail, needsSignIn } from './stream';
 
 export const API_BASE_URL = '/api';
 
 /** An HTTP answer that was not 2xx. `status` lets a view tell "not built yet" from a real failure. */
 export class ServiceError extends Error {
-  constructor(public status: number, message: string) {
+  /** The server's own words (its `detail`), without the status line around them. */
+  public detail: string;
+  constructor(public status: number, message: string, detail = '') {
     super(message);
+    this.detail = detail;
   }
 }
+
+/** One line for the screen: "409: the simulator is not the running source ..." for a server answer, else the error's text. */
+export function errorText(err: unknown): string {
+  if (err instanceof ServiceError) return err.detail ? `${err.status}: ${err.detail}` : err.message;
+  return err instanceof Error ? err.message : String(err);
+}
+
+/** True when the server asked for an admin sign-in (401 or 403). */
+export const isAuthError = (err: unknown): boolean => err instanceof ServiceError && needsSignIn(err.status);
 
 /** True when the endpoint is simply not there (yet): 404, 405, 501, 502 or 503 (a dev proxy with nothing behind it answers 502). */
 export function isNotBuilt(err: unknown): boolean {
@@ -48,7 +61,7 @@ function request(url: string, init: RequestInit = {}): Promise<Response> {
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const errorBody = await res.text().catch(() => '');
-    throw new ServiceError(res.status, `API error (${res.status} ${res.statusText}): ${errorBody}`);
+    throw new ServiceError(res.status, `API error (${res.status} ${res.statusText}): ${errorBody}`, apiDetail(errorBody));
   }
   return res.json();
 }
@@ -292,6 +305,48 @@ export async function processTelemetryReading(reading: {
 
 export async function fetchStationPredictiveHealth(stationId: string): Promise<StationHealthSnapshot> {
   const res = await request(`${API_BASE_URL}/stations/${encodeURIComponent(stationId)}/health`);
+  return handleResponse(res);
+}
+
+// ---------------------------------------------------------------------------
+// Stream settings (GET and PUT /api/settings, the `stream` block and the stream_* fields)
+// ---------------------------------------------------------------------------
+export interface StreamSettingsView {
+  source_ids: string[];
+  station_modes: string[];
+  cities: string[];
+  max_station_cap: number;
+  interval_limits_seconds: Record<string, [number, number]>;
+  active_source: string;
+  active_source_origin?: string;
+  station_set: { mode: string; city: string; cap: number; station_ids: string[]; mode_origin?: string };
+  intervals_seconds: Record<string, number>;
+  esp32: { station_ids: string[]; latitude: number | null; longitude: number | null };
+  mqtt: { host: string; port: number; topic_prefix: string; username: string; password_set: boolean; tls: boolean };
+  external_point: { latitude: number; longitude: number; station_id: string; station_name?: string } | null;
+  status?: Record<string, unknown>;
+}
+
+export interface StreamSettingsAnswer {
+  editing_enabled: boolean;
+  stream: StreamSettingsView;
+  saved?: string[];
+  stream_error?: string;
+  feed_error?: string;
+}
+
+export async function fetchStreamSettings(): Promise<StreamSettingsAnswer> {
+  const res = await request(`${API_BASE_URL}/settings`);
+  return handleResponse(res);
+}
+
+/** PUT only the fields given (stream_* names, plus `clear` to remove a saved override). A 422 carries the server's validation message. */
+export async function saveStreamSettings(update: Record<string, unknown>): Promise<StreamSettingsAnswer> {
+  const res = await request(`${API_BASE_URL}/settings`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(update),
+  });
   return handleResponse(res);
 }
 

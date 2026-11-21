@@ -1,11 +1,14 @@
 // Overview (the command centre) of the ORIGINAL dashboard, restored in slice S2b: context strip, the globe with a station dossier beside it,
 // the station registry and the flagged-incident stream. Data: the globe, registry and dossier read the 580-gauge catalogue and the stored
-// station cycle through the shell's StationContext; the temperature, pressure and humidity readings read GET /api/observations and the
-// WebSocket (slices S3 and S4, NOT BUILT: the tiles show dashes and say so). Changed against the original: no fallback station (KTLX), no
-// default health score of 98, no "SUPPORTED" spatial-consensus claim, no "Live" label without a stream.
+// station cycle through the shell's StationContext; the temperature, pressure and humidity tiles show the latest reading of the selected
+// station from the WebSocket or, failing that, the latest stored observation (GET /api/observations); dashes only when there is none.
+// Pins are coloured by the real verdict of the station's checked rows or latest stream reading, grey otherwise. Changed against the
+// original: no fallback station (KTLX), no default health score of 98, no "SUPPORTED" spatial-consensus claim, no "Live" label without a stream.
 import { useEffect, useMemo, useState } from 'react';
 import { fetchObservations, isNotBuilt } from '../services/api';
-import { InferenceResult, Observation } from '../types';
+import { describeStream, fmtUtc, pinState } from '../services/stream';
+import type { StreamObservation } from '../services/stream';
+import { Observation } from '../types';
 import { StatusBadge } from '../design-system/components/StatusBadge';
 import { NetworkMap } from '../design-system/components/NetworkMap';
 import { StationGlobe3D } from '../design-system/components/StationGlobe3D';
@@ -21,22 +24,25 @@ import { globeState, queueQuery } from '../validation/lib';
 import type { QueueRow } from '../validation/types';
 
 interface OverviewViewProps {
-  latestTelemetry: InferenceResult | null;
-  historyBuffer: InferenceResult[];
+  latestByStation: Record<string, StreamObservation>;
   onNavigate: (tab: string) => void;
 }
 
-export function OverviewView({ latestTelemetry, historyBuffer, onNavigate }: OverviewViewProps) {
-  const { openSettings, streamConnected } = useSystemConfiguration();
-  const { stationId, select, stations, gauges, cycle, selectedCycle, entry, loading } = useStation();
+export function OverviewView({ latestByStation, onNavigate }: OverviewViewProps) {
+  const { openSettings, streamConnected, streamStatus } = useSystemConfiguration();
+  const stream = describeStream(streamConnected, streamStatus);
+  const { stationId, select, stations, gauges, streamStations, cycle, selectedCycle, entry, loading } = useStation();
   const [mapViewMode, setMapViewMode] = useState<'3D' | '2D'>('3D');
   const [queue, setQueue] = useState<QueueRow[] | null>(null);
   const [stationLatestObs, setStationLatestObs] = useState<Observation | null>(null);
   const [obsNotBuilt, setObsNotBuilt] = useState(false);
 
-  const pins = useMemo(() => buildPins(gauges, cycle), [gauges, cycle]);
-  const flatPins = useMemo(() => pins.map((p) => ({ station_id: p.station_id, name: p.label, latitude: p.latitude, longitude: p.longitude, state: p.state })), [pins]);
+  const streamStates = useMemo(() => Object.fromEntries(Object.entries(latestByStation).map(([id, o]) => [id, pinState(o)])), [latestByStation]);
+  const pins = useMemo(() => buildPins(gauges, cycle, streamStations, streamStates), [gauges, cycle, streamStations, streamStates]);
+  // the flat map fits its view to the pins it draws, so the far-away stream stations are left to the globe
+  const flatPins = useMemo(() => pins.filter((p) => p.positionSource !== 'stream').map((p) => ({ station_id: p.station_id, name: p.label, latitude: p.latitude, longitude: p.longitude, state: p.state })), [pins]);
   const gauge = gauges.find((g) => g.station_id === stationId);
+  const streamStation = streamStations.find((s) => s.station_id === stationId);
 
   // flagged rainfall rows waiting for a reviewer (the real incident stream of today)
   useEffect(() => {
@@ -56,13 +62,14 @@ export function OverviewView({ latestTelemetry, historyBuffer, onNavigate }: Ove
     return () => { current = false; };
   }, [stationId]);
 
-  const packets = stationId ? historyBuffer.filter((p) => p.station_id === stationId) : [];
-  const activeObs: InferenceResult | null =
-    packets.length > 0 ? packets[packets.length - 1] : latestTelemetry && latestTelemetry.station_id === stationId ? latestTelemetry : null;
+  const activeObs: StreamObservation | null = stationId ? latestByStation[stationId] ?? null : null;
 
-  const currentTemp = activeObs?.temperature ?? activeObs?.raw_values?.temperature ?? stationLatestObs?.temperature ?? null;
-  const currentHumidity = activeObs?.humidity ?? activeObs?.raw_values?.humidity ?? stationLatestObs?.humidity ?? null;
-  const currentPressure = activeObs?.pressure ?? activeObs?.raw_values?.pressure ?? stationLatestObs?.pressure ?? null;
+  // the newest of the stream reading and the stored one is shown; never a mix of the two
+  const useLive = activeObs !== null && (stationLatestObs === null || new Date(activeObs.timestamp) >= new Date(stationLatestObs.timestamp));
+  const currentTemp = useLive ? activeObs!.temperature : stationLatestObs?.temperature ?? null;
+  const currentHumidity = useLive ? activeObs!.humidity : stationLatestObs?.humidity ?? null;
+  const currentPressure = useLive ? activeObs!.pressure : stationLatestObs?.pressure ?? null;
+  const shownTime = useLive ? activeObs!.timestamp : stationLatestObs?.timestamp ?? null;
   const dew = dewPoint(currentTemp, currentHumidity);
 
   const state = globeState(selectedCycle);
@@ -81,7 +88,7 @@ export function OverviewView({ latestTelemetry, historyBuffer, onNavigate }: Ove
                 Geospatial Station Topology
               </h3>
               <p className="text-[11px] text-slate-600">
-                {loading ? 'Loading the station catalogue…' : `${gauges.length} Weather Union gauges plus stations from uploaded files. Click a pin to select the station.`}
+                {loading ? 'Loading the station catalogue…' : `${gauges.length} Weather Union gauges plus stations from uploaded files and the stream. Click a pin to select the station. Pin colour is the real verdict only; grey means nothing checked.`}
               </p>
             </div>
 
@@ -134,7 +141,7 @@ export function OverviewView({ latestTelemetry, historyBuffer, onNavigate }: Ove
                 <div className="bg-[#F4F6FA] p-2.5 rounded-lg border border-[#D3DCE7]/60">
                   <span className="text-slate-500 block text-[10px]">WGS84 Coordinates</span>
                   <span className="text-slate-900 font-semibold">
-                    {gauge ? `${gauge.latitude.toFixed(4)}°N, ${gauge.longitude.toFixed(4)}°E` : selectedCycle?.latitude != null && selectedCycle.longitude != null ? `${selectedCycle.latitude.toFixed(4)}°N, ${selectedCycle.longitude.toFixed(4)}°E` : 'no position'}
+                    {gauge ? `${gauge.latitude.toFixed(4)}°N, ${gauge.longitude.toFixed(4)}°E` : streamStation && streamStation.latitude != null && streamStation.longitude != null ? `${streamStation.latitude.toFixed(4)}°N, ${streamStation.longitude.toFixed(4)}°E` : selectedCycle?.latitude != null && selectedCycle.longitude != null ? `${selectedCycle.latitude.toFixed(4)}°N, ${selectedCycle.longitude.toFixed(4)}°E` : 'no position'}
                   </span>
                 </div>
                 <div className="bg-[#F4F6FA] p-2.5 rounded-lg border border-[#D3DCE7]/60">
@@ -163,17 +170,17 @@ export function OverviewView({ latestTelemetry, historyBuffer, onNavigate }: Ove
               <div className="mt-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] uppercase font-bold text-slate-500 font-mono tracking-wider">Temperature, pressure, humidity</span>
-                  {activeObs ? (
+                  {shownTime && useLive && stream.live ? (
                     <span className="text-[10px] font-mono text-emerald-600 flex items-center gap-1 font-semibold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live stream
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live · {fmtUtc(shownTime)} UTC
                     </span>
-                  ) : stationLatestObs ? (
+                  ) : shownTime ? (
                     <span className="text-[10px] font-mono text-sky-600 flex items-center gap-1 font-semibold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-sky-500" /> Recorded observation
+                      <span className="w-1.5 h-1.5 rounded-full bg-sky-500" /> Last reading · {fmtUtc(shownTime)} UTC ({stream.label.toLowerCase()})
                     </span>
                   ) : (
                     <span className="text-[10px] font-mono text-slate-500 flex items-center gap-1 font-semibold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400" /> {streamConnected ? 'Waiting for a reading' : 'No live stream connected'}
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400" /> {stream.live ? 'Waiting for a reading' : `No reading yet (${stream.label.toLowerCase()})`}
                     </span>
                   )}
                 </div>
@@ -198,7 +205,7 @@ export function OverviewView({ latestTelemetry, historyBuffer, onNavigate }: Ove
                   <span className="text-slate-900 font-bold">{reading(dew, 1, '°C')}</span>
                 </div>
                 {obsNotBuilt && !activeObs && (
-                  <p className="text-[11px] text-slate-500 font-sans">Stored observations are not built yet. Planned in slice S3.</p>
+                  <p className="text-[11px] text-slate-500 font-sans">GET /api/observations did not answer (404, 501, 502 or 503).</p>
                 )}
               </div>
             </div>
@@ -313,7 +320,7 @@ export function OverviewView({ latestTelemetry, historyBuffer, onNavigate }: Ove
               ))
             )}
 
-            <div className="pt-2 text-[10px] uppercase font-bold text-slate-500 font-mono tracking-wider">Temperature, pressure, humidity anomalies</div>
+            <div className="pt-2 text-[10px] uppercase font-bold text-slate-500 font-mono tracking-wider">Stream detections (T, P, RH, rain)</div>
             <AnomalyFeed limit={3} onOpen={() => onNavigate('alerts')} />
           </div>
         </div>

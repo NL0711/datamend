@@ -1,14 +1,17 @@
-// The temperature, pressure and humidity anomaly list of the ORIGINAL contract (GET /api/anomalies), as a compact card list.
-// The endpoint is NOT BUILT yet (slice S4): while it answers 404 or 503 the list says so; it never shows invented events.
+// The detections of the stream (GET /api/anomalies): readings on which a check really fired, as a compact card list. With `evidence` each
+// card opens to the evidence of every check that fired (the check, its reason, the numbers it used) and the checks that could not run.
+// The score is the uncalibrated rule score. Nothing is shown that the API did not return; an empty list says so.
 import { useEffect, useState } from 'react';
-import { fetchAnomalies, isNotBuilt } from '../services/api';
+import { fetchAnomalies, isNotBuilt, errorText } from '../services/api';
+import { evidenceFacts, fmtScore, notRunLines } from '../services/stream';
 import { AnomalyEvent } from '../types';
 import { StatusBadge } from '../design-system/components/StatusBadge';
 import { EmptyState } from '../design-system/components/EmptyState';
-import { severityVariant } from './severity';
+import { severityVariant, verdictVariant } from './severity';
 
-export function AnomalyFeed({ stationId, limit = 4, onOpen }: { stationId?: string | null; limit?: number; onOpen?: () => void }) {
+export function AnomalyFeed({ stationId, limit = 4, onOpen, evidence = false }: { stationId?: string | null; limit?: number; onOpen?: () => void; evidence?: boolean }) {
   const [items, setItems] = useState<AnomalyEvent[] | null>(null);
+  const [total, setTotal] = useState<number>(0);
   const [notBuilt, setNotBuilt] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,18 +19,14 @@ export function AnomalyFeed({ stationId, limit = 4, onOpen }: { stationId?: stri
     let current = true;
     setItems(null); setError(null); setNotBuilt(false);
     fetchAnomalies({ station_id: stationId || undefined, limit })
-      .then((r) => { if (current) setItems(r.items); })
-      .catch((e) => { if (!current) return; if (isNotBuilt(e)) setNotBuilt(true); else setError(e instanceof Error ? e.message : String(e)); });
+      .then((r) => { if (current) { setItems(r.items); setTotal(r.total); } })
+      .catch((e) => { if (!current) return; if (isNotBuilt(e)) setNotBuilt(true); else setError(errorText(e)); });
     return () => { current = false; };
   }, [stationId, limit]);
 
   if (notBuilt) {
     return (
-      <EmptyState
-        className="!p-6"
-        title="No anomaly stream connected"
-        description="Temperature, pressure and humidity anomalies are not built yet. Planned in slice S4 (the T/P/RH checks)."
-      />
+      <EmptyState className="!p-6" title="Detections not available" description="GET /api/anomalies did not answer (404, 501, 502 or 503)." />
     );
   }
   if (error) return <div className="p-3 text-xs text-rose-700 font-mono border border-rose-300 bg-rose-50 rounded-lg">{error}</div>;
@@ -35,33 +34,61 @@ export function AnomalyFeed({ stationId, limit = 4, onOpen }: { stationId?: stri
   if (items.length === 0) {
     return (
       <div className="p-6 text-center text-xs text-slate-500 font-sans border border-dashed border-[#D3DCE7] rounded-lg">
-        No anomalies recorded{stationId ? ` for ${stationId}` : ''}.
+        No detections recorded{stationId ? ` for ${stationId}` : ''}. A reading appears here only when a check fired on it.
       </div>
     );
   }
   return (
     <div className="space-y-2.5">
-      {items.slice(0, limit).map((ev) => (
-        <div
-          key={ev.id}
-          onClick={onOpen}
-          className="p-3 bg-[#F4F6FA] hover:bg-[#EDF1F7] border border-[#D3DCE7]/70 rounded-lg cursor-pointer transition-all space-y-1.5 font-mono text-xs"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <StatusBadge label={ev.severity} variant={severityVariant(ev.severity)} size="sm" />
-              <span className="font-bold text-slate-900">{ev.station_id}</span>
+      {items.slice(0, limit).map((ev) => {
+        const hits = ev.evidence ?? [];
+        const notRun = notRunLines(ev.not_run as { check: string; reason: string }[] | undefined);
+        return (
+          <div
+            key={ev.id}
+            onClick={onOpen}
+            className={`p-3 bg-[#F4F6FA] border border-[#D3DCE7]/70 rounded-lg transition-all space-y-1.5 font-mono text-xs ${onOpen ? 'hover:bg-[#EDF1F7] cursor-pointer' : ''}`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {ev.verdict ? <StatusBadge label={ev.verdict} variant={verdictVariant(ev.verdict)} size="sm" /> : <StatusBadge label={ev.severity} variant={severityVariant(ev.severity)} size="sm" />}
+                <span className="font-bold text-slate-900">{ev.station_id}</span>
+                {ev.variable && <span className="text-[10px] text-slate-500">{ev.variable}</span>}
+              </div>
+              <span className="text-[10px] text-slate-500">
+                {new Date(ev.timestamp).toISOString().slice(0, 19).replace('T', ' ')} UTC
+              </span>
             </div>
-            <span className="text-[10px] text-slate-500">
-              {new Date(ev.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
+            <div className="text-slate-700 font-sans font-semibold text-[11px] truncate">{ev.classification.replace(/_/g, ' ')}</div>
+            <div className="flex items-center justify-between text-[10px] text-slate-500">
+              <span>Rule score (uncalibrated): {fmtScore(ev.anomaly_score)} · severity {ev.severity}</span>
+              {ev.is_fault && <span className="text-rose-600 font-bold">fault-kind check fired</span>}
+            </div>
+            {ev.reason && <div className="text-[11px] text-slate-600 font-sans">{ev.reason}</div>}
+            {evidence && (hits.length > 0 || notRun.length > 0) && (
+              <details className="text-[11px]" onClick={(e) => e.stopPropagation()}>
+                <summary className="cursor-pointer font-bold text-slate-700">Evidence ({hits.length} check{hits.length === 1 ? '' : 's'} fired{notRun.length ? `, ${notRun.length} not run` : ''})</summary>
+                <ul className="mt-1.5 space-y-1.5">
+                  {hits.map((h, i) => (
+                    <li key={`${h.check}-${i}`} className="p-2 bg-white border border-[#D3DCE7] rounded">
+                      <div className="font-bold text-slate-800">{h.check}{h.variable ? ` · ${h.variable}` : ''}{h.kind ? ` · ${h.kind}` : ''}</div>
+                      <div className="text-slate-600 font-sans">{h.reason}</div>
+                      <div className="text-[10px] text-slate-500 break-words">{evidenceFacts(h.evidence).join(' · ')}</div>
+                    </li>
+                  ))}
+                </ul>
+                {notRun.length > 0 && (
+                  <div className="mt-1.5 text-[10px] text-slate-500">
+                    <div className="font-bold uppercase tracking-wider">Not run</div>
+                    {notRun.map((l) => <div key={l}>{l}</div>)}
+                  </div>
+                )}
+              </details>
+            )}
           </div>
-          <div className="text-slate-700 font-sans font-semibold text-[11px] truncate">{ev.classification.replace(/_/g, ' ')}</div>
-          <div className="flex items-center justify-between text-[10px] text-slate-500">
-            <span>Rule score: {(ev.anomaly_score * 100).toFixed(0)}%</span>
-          </div>
-        </div>
-      ))}
+        );
+      })}
+      {total > items.length && <p className="text-[10px] text-slate-500 font-mono">Showing {items.length} of {total} detections.</p>}
     </div>
   );
 }

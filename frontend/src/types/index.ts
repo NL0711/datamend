@@ -1,19 +1,29 @@
 // Types of the ORIGINAL dashboard service contract (restored from commit ab3b0b3 of github.com/NL0711/datamend, slice S2b).
-// The endpoints behind these types are NOT built yet (slices S3 and S4 build them as new code); every view that reads them shows an
-// honest empty state while the endpoint answers 404 or 503. Changes against the original: the data source list lost NOAA_ISD and
+// The stations, observations, anomalies, data sources and simulator endpoints behind these types exist now (slices S3a, S3b); the
+// health, metrics, inference and feedback ones do not, and a view that reads a missing endpoint shows an honest empty state.
+// Changes against the original: the data source list lost NOAA_ISD and
 // HISTORICAL_REPLAY (ISD was removed in S1) and gained WEATHER_UNION (S3); the view ids follow the new rail.
 
+/** A stored stream reading (GET /api/observations). A variable the source does not report is null, never filled. */
 export interface Observation {
   id?: number;
   timestamp: string;
   station_id: string;
-  temperature: number;
-  pressure: number;
-  humidity: number;
+  temperature: number | null;
+  pressure: number | null;
+  humidity: number | null;
+  rain_mm?: number | null;
   latitude?: number;
   longitude?: number;
   elevation?: number;
+  /** QC_PASSED, QC_FLAGGED, NO_DATA or NO_CHECKS (the dashboard's names). */
   validation_status?: string;
+  /** The raw verdict (OK, UNCERTAIN, SUSPECT, NO_DATA, NO_CHECKS). */
+  check_status?: string;
+  /** Uncalibrated rule score 0..1; null when no check ran. */
+  rule_score?: number | null;
+  /** The id of the source that produced the reading (stored with it). */
+  source?: string;
 }
 
 export interface FeatureAttribution {
@@ -175,8 +185,9 @@ export interface SpatialConsensusResult {
 }
 
 export interface DataSourceListResponse {
-  active_source: DataSourceType;
-  active_source_id: string;
+  /** null while no source is running or selected */
+  active_source: DataSourceType | null;
+  active_source_id: string | null;
   sources: DataSourceStatus[];
   timestamp: string;
 }
@@ -219,6 +230,23 @@ export interface AnomalyEvent {
   provider?: string;
   device_id?: string;
   created_at: string;
+  /** From the stream's detections (S3a/S4): the variable the checks were about, the verdict, the evidence of every check that fired. */
+  variable?: string;
+  verdict?: string;
+  score_kind?: string;
+  evidence?: EvidenceHit[];
+  not_run?: { check: string; reason: string }[];
+}
+
+/** One check that fired on a stored reading, with the numbers it used (the server's own evidence object). */
+export interface EvidenceHit {
+  check: string;
+  layer?: string;
+  kind?: string;
+  weight?: number;
+  reason: string;
+  variable?: string;
+  evidence?: Record<string, unknown>;
 }
 
 export interface AnomalyEventDetail extends AnomalyEvent {

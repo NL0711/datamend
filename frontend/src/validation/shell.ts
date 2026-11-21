@@ -41,17 +41,27 @@ export function pageForTab(tab: string): PageId {
 /** A page named by its id (the restored views pass "live", "alerts" and so on); an unknown name opens the Overview. */
 export const pageFromId = (id: string): PageId => (ALL_PAGES.has(id) ? (id as PageId) : 'overview');
 
-export interface StationEntry { id: string; place: string; city: string; source: 'catalogue' | 'upload' }
+export interface StationEntry { id: string; place: string; city: string; source: 'catalogue' | 'upload' | 'stream' }
 export const UPLOAD_GROUP = 'From uploaded files';
+export const STREAM_GROUP = 'Other stations';
 
-/** The 580 catalogue gauges, then any station that only exists in stored rows (an uploaded file), once each. */
-export function buildStationList(gauges: GaugeStation[], cycle: Pick<StationCycle, 'station_id' | 'place' | 'city'>[]): StationEntry[] {
+/** A station the stream API lists (GET /api/stations): id, name, optional position. */
+export interface StreamStationInfo { station_id: string; name: string; latitude?: number | null; longitude?: number | null }
+
+/** The 580 catalogue gauges, then any station that only exists in stored rows (an uploaded file), then stations only the stream API
+ *  lists (the simulator's, an ESP32's), once each. */
+export function buildStationList(gauges: GaugeStation[], cycle: Pick<StationCycle, 'station_id' | 'place' | 'city'>[], streamStations: StreamStationInfo[] = []): StationEntry[] {
   const out: StationEntry[] = gauges.map((g) => ({ id: g.station_id, place: g.place, city: g.city, source: 'catalogue' as const }));
   const known = new Set(out.map((s) => s.id));
   for (const c of cycle) {
     if (known.has(c.station_id)) continue;
     known.add(c.station_id);
     out.push({ id: c.station_id, place: c.place ?? c.station_id, city: c.city ?? UPLOAD_GROUP, source: 'upload' });
+  }
+  for (const s of streamStations) {
+    if (known.has(s.station_id)) continue;
+    known.add(s.station_id);
+    out.push({ id: s.station_id, place: s.name || s.station_id, city: STREAM_GROUP, source: 'stream' });
   }
   return out.sort((a, b) => a.city.localeCompare(b.city) || a.place.localeCompare(b.place) || a.id.localeCompare(b.id));
 }

@@ -1,14 +1,15 @@
 /**
  * frontend/src/components/ContextualStatusStrip.tsx
- * DataMend — Compact 1-Line Operational Context Strip (restored in slice S2b).
- * Shows the active live source and the selected station. Changed against the original: no invented freshness ("Age: 1s"), no fixed
- * "WMO QC VALID" pill, no default coordinates; without a live stream it says so.
+ * DataMend — Compact 1-Line Operational Context Strip (restored in slice S2b, wired to the stream state).
+ * Shows the active live source, the selected station and the stream state from the socket and the server's status frames. Changed
+ * against the original: no invented freshness, no fixed "WMO QC VALID" pill, no default coordinates; without a live stream it says so.
  */
 
 import React from 'react';
 import { useSystemConfiguration } from '../context/SystemConfigurationContext';
 import { StatusBadge } from '../design-system/components/StatusBadge';
 import { useStation } from '../validation/StationContext';
+import { describeStream, fmtUtc } from '../services/stream';
 import { sourceLabel } from './sourceLabel';
 
 interface ContextualStatusStripProps {
@@ -16,9 +17,11 @@ interface ContextualStatusStripProps {
 }
 
 export const ContextualStatusStrip: React.FC<ContextualStatusStripProps> = ({ className = '' }) => {
-  const { activeSource, selectedCity, activeSourceStatus, streamConnected, openSettings } = useSystemConfiguration();
-  const { stationId, entry, gauges } = useStation();
+  const { activeSource, selectedCity, streamConnected, streamStatus, openSettings } = useSystemConfiguration();
+  const { stationId, entry, gauges, streamStations } = useStation();
   const gauge = gauges.find((g) => g.station_id === stationId);
+  const pos = gauge ?? streamStations.find((s) => s.station_id === stationId);
+  const view = describeStream(streamConnected, streamStatus);
 
   return (
     <div
@@ -39,10 +42,10 @@ export const ContextualStatusStrip: React.FC<ContextualStatusStripProps> = ({ cl
           {stationId ? (
             <>
               <span className="text-sky-600 font-bold">{stationId}</span>
-              {entry && <span className="text-slate-500 hidden md:inline">({entry.place}, {entry.city})</span>}
-              {gauge && (
+              {entry && <span className="text-slate-500 hidden md:inline">({entry.place}{entry.source === 'stream' ? '' : `, ${entry.city}`})</span>}
+              {pos && pos.latitude != null && pos.longitude != null && (
                 <span className="text-[11px] text-slate-500 hidden lg:flex items-center gap-1">
-                  {gauge.latitude.toFixed(2)}°N, {gauge.longitude.toFixed(2)}°E
+                  {pos.latitude.toFixed(2)}°N, {pos.longitude.toFixed(2)}°E
                 </span>
               )}
             </>
@@ -54,16 +57,19 @@ export const ContextualStatusStrip: React.FC<ContextualStatusStripProps> = ({ cl
 
       {/* Right: link status and the configure button */}
       <div className="flex items-center gap-3">
-        <StatusBadge
-          label={streamConnected ? activeSourceStatus?.status || 'STREAM OPEN' : 'NO LIVE STREAM'}
-          variant={streamConnected ? 'nominal' : 'neutral'}
-          size="sm"
-          pulse={streamConnected}
-        />
-        {activeSourceStatus?.data_age_seconds !== undefined && (
-          <div className="hidden sm:flex items-center gap-1 text-[11px] text-slate-500">
-            <span>Age: <strong className="text-slate-700">{activeSourceStatus.data_age_seconds}s</strong></span>
-          </div>
+        <span title={view.detail}>
+          <StatusBadge
+            label={view.label}
+            variant={view.tone === 'nominal' ? 'nominal' : view.tone === 'warning' ? 'warning' : view.tone === 'critical' ? 'critical' : 'neutral'}
+            size="sm"
+            pulse={view.live}
+          />
+        </span>
+        {streamStatus && streamStatus.state !== 'stopped' && (
+          <span className="hidden sm:inline text-[11px] text-slate-500">{streamStatus.packet_count} packets</span>
+        )}
+        {streamStatus?.last_reading_at && (
+          <span className="hidden md:inline text-[11px] text-slate-500">last reading {fmtUtc(streamStatus.last_reading_at)} UTC</span>
         )}
 
         <button

@@ -1,6 +1,7 @@
-// Fault injector ("Anomaly Lab") of the ORIGINAL dashboard, restored in slice S2b. It posts to POST /api/simulate/inject, which is NOT BUILT
-// yet (slice S4, together with the T/P/RH checks): until then pressing a button shows that plainly and nothing is injected. When it is
-// built, what it injects is SYNTHETIC by design (a test disturbance on a live or simulated stream) and must be labelled so downstream.
+// Fault injector ("Anomaly Lab") of the ORIGINAL dashboard, restored in slice S2b and wired to POST /api/simulate/inject (slice S3a). It
+// queues a SYNTHETIC fault in the simulator's stream only; the server answers 409 when the simulator is not running, 404 when the station is
+// not a simulator station and 422 for an unknown kind or a bad value, and those answers are shown here word for word. A 401 or 403 shows a
+// sign-in prompt. The effect appears from the next simulator step on the Live page (/ws/live).
 // Changed against the original: no default station (KTLX), the target is the header's selected station or the whole stream, and the
 // preset texts no longer name models or tiers the platform does not have.
 import { useState } from 'react';
@@ -19,9 +20,12 @@ import {
   Loader2,
   Sparkles,
 } from 'lucide-react';
-import { injectAnomaly, isNotBuilt } from '../services/api';
+import { injectAnomaly, isAuthError, errorText } from '../services/api';
+import { describeStream } from '../services/stream';
 import { StatusBadge } from '../design-system/components/StatusBadge';
 import { useStation } from '../validation/StationContext';
+import { useSystemConfiguration } from '../context/SystemConfigurationContext';
+import { AuthNotice } from './AuthNotice';
 
 interface AnomalyInjectorUIProps {
   onNavigateToLive: () => void;
@@ -29,6 +33,9 @@ interface AnomalyInjectorUIProps {
 
 export function AnomalyInjectorUI({ onNavigateToLive }: AnomalyInjectorUIProps) {
   const { stationId, entry } = useStation();
+  const { streamConnected, streamStatus } = useSystemConfiguration();
+  const stream = describeStream(streamConnected, streamStatus);
+  const [needsAuth, setNeedsAuth] = useState<boolean>(false);
   const [allStations, setAllStations] = useState<boolean>(false);
   const [selectedParameter, setSelectedParameter] = useState<string>('temperature');
   const [customType, setCustomType] = useState<string>('SPIKE');
@@ -48,6 +55,7 @@ export function AnomalyInjectorUI({ onNavigateToLive }: AnomalyInjectorUIProps) 
     decay: boolean = false
   ) => {
     setIsInjecting(true);
+    setNeedsAuth(false);
     try {
       const res = await injectAnomaly({
         anomaly_type: anomalyType,
@@ -58,16 +66,16 @@ export function AnomalyInjectorUI({ onNavigateToLive }: AnomalyInjectorUIProps) 
         decay: decay,
       });
       setLastMessage({
-        text: res.message || `Injected a synthetic ${anomalyType} on ${target || 'all stations'} (${param}, magnitude: ${mag})`,
+        text: res.message || `Queued a synthetic ${anomalyType} on ${target || 'all stations'} (${param}, magnitude: ${mag})`,
         isError: false,
       });
-    } catch (err: any) {
-      setLastMessage({
-        text: isNotBuilt(err)
-          ? 'The fault injector is not built yet (planned in slice S4). Nothing was injected.'
-          : `Failed to inject disturbance: ${err.message}`,
-        isError: true,
-      });
+    } catch (err) {
+      if (isAuthError(err)) {
+        setNeedsAuth(true);
+        setLastMessage(null);
+      } else {
+        setLastMessage({ text: errorText(err), isError: true });       // the server's refusal, word for word (409, 404, 422 ...)
+      }
     } finally {
       setIsInjecting(false);
     }
@@ -79,7 +87,7 @@ export function AnomalyInjectorUI({ onNavigateToLive }: AnomalyInjectorUIProps) 
       title: 'Sudden Thermal Spike',
       icon: <Zap className="w-4 h-4 text-rose-500" />,
       badgeVariant: 'critical' as const,
-      description: 'Rapid transient temperature surge (+25°C) to test the rate-of-change and range checks.',
+      description: 'Adds +25 °C to the temperature for 3 steps, the offset halving each step, to test the rate-of-change and range checks.',
       action: () => triggerInjection('SPIKE', 'temperature', 25.0, 3, true),
     },
     {
@@ -87,7 +95,7 @@ export function AnomalyInjectorUI({ onNavigateToLive }: AnomalyInjectorUIProps) 
       title: 'Sensor Calibration Drift',
       icon: <TrendingUp className="w-4 h-4 text-amber-500" />,
       badgeVariant: 'warning' as const,
-      description: 'Gradual linear deviation (+0.25°C/step) to test whether a slow drift is noticed.',
+      description: 'Temperature ramps linearly up to +10 °C over 20 steps to test whether a slow drift is noticed.',
       action: () => triggerInjection('DRIFT', 'temperature', 10.0, 20, false),
     },
     {
@@ -95,7 +103,7 @@ export function AnomalyInjectorUI({ onNavigateToLive }: AnomalyInjectorUIProps) 
       title: 'Frozen / Stuck Transducer',
       icon: <Snowflake className="w-4 h-4 text-sky-500" />,
       badgeVariant: 'info' as const,
-      description: 'Zero variance constant value across consecutive timestamps to test persistence and frozen value checks.',
+      description: 'The temperature repeats its first value for 15 steps (zero variance) to test the frozen-value check.',
       action: () => triggerInjection('FROZEN', 'temperature', 0.0, 15, false),
     },
     {
@@ -103,7 +111,7 @@ export function AnomalyInjectorUI({ onNavigateToLive }: AnomalyInjectorUIProps) 
       title: 'Sensor Channel Dropout',
       icon: <AlertOctagon className="w-4 h-4 text-rose-500" />,
       badgeVariant: 'critical' as const,
-      description: 'Sudden drop to near-zero or impossible baseline to test dropout and boundary violation rules.',
+      description: 'The humidity value is missing (null) for 5 steps; the reading is stored without it, never filled in.',
       action: () => triggerInjection('DROPOUT', 'humidity', -50.0, 5, false),
     },
     {
@@ -111,7 +119,7 @@ export function AnomalyInjectorUI({ onNavigateToLive }: AnomalyInjectorUIProps) 
       title: 'Dew-point Inconsistency',
       icon: <Shuffle className="w-4 h-4 text-amber-500" />,
       badgeVariant: 'warning' as const,
-      description: 'Simultaneous high temperature (+38°C) and 99% RH to test the dew-point consistency check.',
+      description: 'Temperature +12 °C and humidity +35 % (capped at 100 %) at once for 8 steps, to test the dew-point consistency check.',
       action: () => triggerInjection('MULTIVARIATE_INCONSISTENCY', 'humidity', 50.0, 8, false),
     },
     {
@@ -119,8 +127,24 @@ export function AnomalyInjectorUI({ onNavigateToLive }: AnomalyInjectorUIProps) 
       title: 'Severe Storm Front (Genuine Extreme)',
       icon: <CloudLightning className="w-4 h-4 text-purple-500" />,
       badgeVariant: 'extremeMet' as const,
-      description: 'Deep barometric pressure plunge (-22 hPa) with correlated temperature drops: a genuine extreme that must not be called a fault by magnitude alone.',
+      description: 'Pressure -22 hPa, temperature -8 °C and humidity +25 % together for 10 steps: a physically consistent event that must not be called a fault by magnitude alone.',
       action: () => triggerInjection('METEOROLOGICAL_EXTREME', 'pressure', -22.0, 10, false),
+    },
+    {
+      id: 'NOISE_BURST',
+      title: 'Noise Burst',
+      icon: <Radio className="w-4 h-4 text-amber-500" />,
+      badgeVariant: 'warning' as const,
+      description: 'Random scatter with a standard deviation of 8 °C added to the temperature for 10 steps.',
+      action: () => triggerInjection('NOISE_BURST', 'temperature', 8.0, 10, false),
+    },
+    {
+      id: 'DATA_CORRUPTION',
+      title: 'Data Corruption',
+      icon: <AlertOctagon className="w-4 h-4 text-rose-500" />,
+      badgeVariant: 'critical' as const,
+      description: 'The pressure is replaced by the non-physical number 9999.9 for one step and stored as sent (not repaired).',
+      action: () => triggerInjection('DATA_CORRUPTION', 'pressure', 1.0, 1, false),
     },
   ];
 
@@ -136,11 +160,11 @@ export function AnomalyInjectorUI({ onNavigateToLive }: AnomalyInjectorUIProps) 
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-bold text-slate-900 uppercase font-mono tracking-wide">Anomaly Simulation Laboratory</h2>
               <span className="text-[10px] font-mono px-2 py-0.2 rounded bg-amber-500/15 text-amber-700 border border-amber-500/30 font-bold flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-amber-600" /> TESTBED · NOT BUILT YET (S4)
+                <Sparkles className="w-3 h-3 text-amber-600" /> TESTBED · SYNTHETIC FAULTS
               </span>
             </div>
             <p className="text-xs text-slate-600 mt-0.5">
-              Inject synthetic disturbances, hardware faults and atmospheric phenomena into a live telemetry stream
+              Queue synthetic disturbances in the simulator's stream (never in another source). Stream now: <b>{stream.label}</b>{streamStatus?.source_id ? ` (${streamStatus.source_id})` : ''}
             </p>
           </div>
         </div>
@@ -167,6 +191,8 @@ export function AnomalyInjectorUI({ onNavigateToLive }: AnomalyInjectorUIProps) 
           </button>
         </div>
       </div>
+
+      {needsAuth && <AuthNotice text="Injecting a fault needs an admin sign-in." />}
 
       {/* Notification Toast */}
       {lastMessage && (

@@ -2,8 +2,8 @@
 // Header (h-14, sticky): brand, the GLOBAL station picker over the 580 Weather Union gauges, the live-source chip, the UTC clock, Import and
 // Settings. Left rail: Overview, Live, Alerts, Events, Explorer, Review, Injector, Agent with the keys 1 to 8. Pages are hash routes under
 // `#/app/<page>` (validation/shell.ts). ONE selected station lives in StationContext and every page reads it.
-// NOT BUILT: the telemetry stream, stored T/P/RH observations and data sources (slice S3), the T/P/RH anomaly list and the fault injector
-// (slice S4), the agent (slice S6). Those views show an empty state; nothing is mocked here.
+// Wired to the backend (slices S3a, S3b): the /ws/live stream (status and observation frames), stored T/P/RH observations, data sources, the
+// simulator, the fault injector and the stream settings. NOT BUILT: the agent (slice S6). Nothing is mocked here.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AlertTriangle,
@@ -22,7 +22,9 @@ import {
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { TelemetryStreamClient } from './services/websocket';
-import { InferenceResult } from './types';
+import { describeStream, pushRolling } from './services/stream';
+import type { StreamObservation } from './services/stream';
+import { StreamSettings } from './settings/StreamSettings';
 import { OverviewView } from './components/OverviewView';
 import { LiveMonitoringView } from './components/LiveMonitoringView';
 import { AlertCenterView } from './components/AlertCenterView';
@@ -51,7 +53,8 @@ const ICON: Record<string, ComponentType<{ className?: string }>> = {
 };
 
 function AppContent() {
-  const { activeSource, selectedCity, preferences, openSettings, streamConnected, setStreamConnected, sourcesAvailable } = useSystemConfiguration();
+  const { activeSource, selectedCity, preferences, openSettings, streamConnected, setStreamConnected, streamStatus, setStreamStatus, sourcesAvailable } = useSystemConfiguration();
+  const streamView = describeStream(streamConnected, streamStatus);
   const { stationId, select, refresh, stations } = useStation();
 
   const [page, setPage] = useState<PageId>(() => {
@@ -59,8 +62,8 @@ function AppContent() {
     return /^#\/app\/?$/.test(hash) ? preferences.defaultView : pageFromHash(hash);       // a plain "#/app" opens the preferred first page
   });
   const [focus, setFocus] = useState<(EventFocus & { station: string | null }) | null>(null);
-  const [latestByStation, setLatestByStation] = useState<Record<string, InferenceResult>>({});
-  const [historyBuffer, setHistoryBuffer] = useState<InferenceResult[]>([]);
+  const [latestByStation, setLatestByStation] = useState<Record<string, StreamObservation>>({});
+  const [historyBuffer, setHistoryBuffer] = useState<StreamObservation[]>([]);
   const [isStreaming, setIsStreaming] = useState<boolean>(true);
   const [utcTime, setUtcTime] = useState<string>('');
   const isStreamingRef = useRef<boolean>(true);
@@ -95,23 +98,21 @@ function AppContent() {
     return () => window.removeEventListener('keydown', on);
   }, [navigate]);
 
-  // WebSocket live connection (the server side is built in slice S3; until then the socket never opens)
+  // WebSocket live connection to /ws/live: status frames set the stream state, observation frames feed the pages
   useEffect(() => {
     const wsClient = new TelemetryStreamClient({
       onOpen: () => setStreamConnected(true),
-      onClose: () => setStreamConnected(false),
-      onTelemetry: (data: InferenceResult) => {
+      onClose: () => { setStreamConnected(false); setStreamStatus(null); },
+      onStatus: (s) => setStreamStatus(s),
+      onObservation: (data) => {
         if (!isStreamingRef.current) return;
         setLatestByStation((prev) => ({ ...prev, [data.station_id]: data }));
-        setHistoryBuffer((prev) => {
-          const next = [...prev, data];
-          return next.length > 200 ? next.slice(-200) : next;
-        });
+        setHistoryBuffer((prev) => pushRolling(prev, data, 400));
       },
     });
     wsClient.connect();
     return () => { wsClient.disconnect(); };
-  }, [setStreamConnected]);
+  }, [setStreamConnected, setStreamStatus]);
 
   const openRun = (id: number) => { setFocus({ runId: id, rowId: null, station: stationId }); navigate('events'); };
   const go = (t: Tab) => navigate(pageForTab(t));
@@ -122,11 +123,12 @@ function AppContent() {
     <button
       onClick={openSettings}
       className={`flex items-center gap-1.5 px-3 py-1 bg-[#F4F6FA] hover:bg-[#EDF1F7] border rounded-lg transition-all text-xs font-mono shadow-sm ${activeSource ? 'border-sky-500/50' : 'border-[#D3DCE7]'}`}
-      title="Live data source and display preferences"
+      title={`Live data source and display preferences. ${streamView.detail}`}
     >
       <Globe className={`w-3.5 h-3.5 ${activeSource ? 'text-sky-600' : 'text-slate-400'}`} />
       <span className={`font-bold ${activeSource ? 'text-sky-800' : 'text-slate-600'}`}>{sourceLabel(activeSource, selectedCity?.name)}</span>
-      <span className={`w-1.5 h-1.5 rounded-full ml-0.5 ${streamConnected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+      <span className={`w-1.5 h-1.5 rounded-full ml-0.5 ${streamView.tone === 'nominal' ? 'bg-emerald-500 animate-pulse' : streamView.tone === 'warning' ? 'bg-amber-500' : streamView.tone === 'critical' ? 'bg-rose-500' : 'bg-slate-300'}`} />
+      <span className={`text-[10px] font-bold ${streamView.tone === 'nominal' ? 'text-emerald-700' : streamView.tone === 'warning' ? 'text-amber-700' : streamView.tone === 'critical' ? 'text-rose-700' : 'text-slate-500'}`}>{streamView.label}</span>
     </button>
   );
 
@@ -227,11 +229,11 @@ function AppContent() {
               </div>
               <div className="flex items-center justify-between text-slate-500 text-[10px]">
                 <span>Live stream:</span>
-                <span className={streamConnected ? 'text-emerald-700 font-bold' : 'text-slate-600'}>{streamConnected ? 'connected' : 'not connected'}</span>
+                <span className={streamView.tone === 'nominal' ? 'text-emerald-700 font-bold' : streamView.tone === 'warning' ? 'text-amber-700 font-bold' : 'text-slate-600'}>{streamView.key === 'stale' ? 'stale' : streamView.label.toLowerCase()}</span>
               </div>
               <div className="flex items-center justify-between text-slate-500 text-[10px]">
                 <span>Source list:</span>
-                <span className="text-slate-600">{sourcesAvailable ? 'answering' : 'not built (S3)'}</span>
+                <span className="text-slate-600">{sourcesAvailable ? 'answering' : 'not answering'}</span>
               </div>
             </div>
           </div>
@@ -242,8 +244,7 @@ function AppContent() {
             {page === 'overview' && (
               <>
                 <OverviewView
-                  latestTelemetry={stationId ? latestByStation[stationId] || null : null}
-                  historyBuffer={historyBuffer}
+                  latestByStation={latestByStation}
                   onNavigate={(t) => navigate(pageFromId(t))}
                 />
                 <div className="space-y-2">
@@ -289,6 +290,7 @@ function AppContent() {
                   </div>
                   <button onClick={openSettings} className="px-3 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-mono font-bold text-xs rounded-lg shadow">Open display settings</button>
                 </div>
+                <StreamSettings />
                 <SettingsView />
               </div>
             )}
@@ -307,7 +309,7 @@ function AppContent() {
         </div>
         <div className="text-[11px] text-slate-600 hidden sm:block">
           REST <span className="text-sky-600 font-bold">/api</span> | WS <span className="text-sky-600 font-bold">/ws/live</span>{' '}
-          <span className={streamConnected ? 'text-emerald-700 font-bold' : 'text-slate-500'}>{streamConnected ? 'connected' : 'not connected'}</span>
+          <span className={streamView.tone === 'nominal' ? 'text-emerald-700 font-bold' : 'text-slate-500'}>{streamView.label.toLowerCase()}</span>
         </div>
       </footer>
     </div>

@@ -2,13 +2,14 @@
  * frontend/src/context/SystemConfigurationContext.tsx
  * DataMend — system configuration state (restored in slice S2b, then trimmed).
  *
- * Kept: the active telemetry source and Open-Meteo city preset, operator display preferences, the settings drawer, and whether the live
- * stream is connected. REMOVED against the original: the selected station (one global StationContext owns it now), the 6-second polling,
- * the /api/health call, and the invented "system health" states (they said CONNECTED and READY with nothing behind them).
- * The data-source list is read once; while GET /api/data-sources answers 404 or 503 (built in slice S3), `sourcesAvailable` is false.
+ * Kept: the active telemetry source and Open-Meteo city preset, operator display preferences, the settings drawer, whether the live
+ * stream socket is open and the last stream status frame the server sent. REMOVED against the original: the selected station (one global
+ * StationContext owns it now), the 6-second polling, the /api/health call, and the invented "system health" states.
+ * The data-source list is read at start, after a change and when the stream's source changes; while GET /api/data-sources answers 404 or
+ * 503, `sourcesAvailable` is false.
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   DataSourceType,
   DataSourceStatus,
@@ -21,7 +22,10 @@ import {
   selectDataSource,
   configureExternalWeatherSource,
   isNotBuilt,
+  isAuthError,
+  errorText,
 } from '../services/api';
+import type { StreamStatusData } from '../services/stream';
 
 const PREFERENCES_STORAGE_KEY = 'datamend_operator_preferences_v1';
 
@@ -45,12 +49,16 @@ interface SystemConfigurationContextType {
   sourcesAvailable: boolean;
   /** True while the WebSocket /ws/live is open. */
   streamConnected: boolean;
+  /** The last `status` frame of the stream (null until one arrived on this connection). */
+  streamStatus: StreamStatusData | null;
 
   // UI & Drawer State
   isSettingsOpen: boolean;
   isConfiguringCity: boolean;
   isSwitchingSource: boolean;
   error: string | null;
+  /** True when the last failure was a 401 or 403: the action needs an admin sign-in. */
+  errorNeedsSignIn: boolean;
 
   preferences: OperatorPreferences;
 
@@ -61,14 +69,13 @@ interface SystemConfigurationContextType {
   changeSource: (sourceType: DataSourceType) => Promise<void>;
   changeCity: (cityId: string) => Promise<void>;
   setStreamConnected: (connected: boolean) => void;
+  setStreamStatus: (status: StreamStatusData | null) => void;
   updatePreferences: (newPrefs: Partial<OperatorPreferences>) => void;
   refreshSources: () => Promise<void>;
   clearError: () => void;
 }
 
 const SystemConfigurationContext = createContext<SystemConfigurationContextType | undefined>(undefined);
-
-const NOT_BUILT = 'The data-source endpoints are not built yet (planned in slice S3).';
 
 export const SystemConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [preferences, setPreferences] = useState<OperatorPreferences>(() => {
@@ -89,11 +96,14 @@ export const SystemConfigurationProvider: React.FC<{ children: React.ReactNode }
   const [allSources, setAllSources] = useState<DataSourceStatus[]>([]);
   const [sourcesAvailable, setSourcesAvailable] = useState<boolean>(false);
   const [streamConnected, setStreamConnected] = useState<boolean>(false);
+  const [streamStatus, setStreamStatus] = useState<StreamStatusData | null>(null);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isConfiguringCity, setIsConfiguringCity] = useState<boolean>(false);
   const [isSwitchingSource, setIsSwitchingSource] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setErrorText] = useState<string | null>(null);
+  const [errorNeedsSignIn, setErrorNeedsSignIn] = useState<boolean>(false);
+  const setError = useCallback((e: string | null, signIn = false) => { setErrorText(e); setErrorNeedsSignIn(e !== null && signIn); }, []);
 
   useEffect(() => {
     try {
@@ -126,13 +136,21 @@ export const SystemConfigurationProvider: React.FC<{ children: React.ReactNode }
       setAllSources([]);
       setActiveSource(null);
       setActiveSourceStatus(null);
-      if (!isNotBuilt(err)) setError(err instanceof Error ? err.message : 'Could not read the data sources');
+      if (!isNotBuilt(err)) setError(errorText(err));
     }
-  }, []);
+  }, [setError]);
 
   useEffect(() => {
     void refreshSources();
   }, [refreshSources]);
+
+  // the stream's source changed (a source was started, stopped or replaced): read the source list again
+  const lastSourceId = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const id = streamStatus ? streamStatus.source_id : null;
+    if (lastSourceId.current !== undefined && lastSourceId.current !== id) void refreshSources();
+    lastSourceId.current = id;
+  }, [streamStatus, refreshSources]);
 
   // Switch Data Source
   const changeSource = async (sourceType: DataSourceType) => {
@@ -145,7 +163,7 @@ export const SystemConfigurationProvider: React.FC<{ children: React.ReactNode }
       setActiveSourceStatus(status);
       await refreshSources();
     } catch (err: any) {
-      setError(isNotBuilt(err) ? NOT_BUILT : err.message || `Failed to switch telemetry source to ${sourceType}`);
+      setError(isAuthError(err) ? 'Sign in as admin to change the source.' : errorText(err), isAuthError(err));
     } finally {
       setIsSwitchingSource(false);
     }
@@ -170,7 +188,7 @@ export const SystemConfigurationProvider: React.FC<{ children: React.ReactNode }
       setActiveSourceStatus(status);
       await refreshSources();
     } catch (err: any) {
-      setError(isNotBuilt(err) ? NOT_BUILT : err.message || `Failed to configure Open-Meteo for ${city.name}`);
+      setError(isAuthError(err) ? 'Sign in as admin to change the Open-Meteo site.' : errorText(err), isAuthError(err));
     } finally {
       setIsConfiguringCity(false);
     }
@@ -197,10 +215,12 @@ export const SystemConfigurationProvider: React.FC<{ children: React.ReactNode }
         allSources,
         sourcesAvailable,
         streamConnected,
+        streamStatus,
         isSettingsOpen,
         isConfiguringCity,
         isSwitchingSource,
         error,
+        errorNeedsSignIn,
         preferences,
         openSettings,
         closeSettings,
@@ -208,6 +228,7 @@ export const SystemConfigurationProvider: React.FC<{ children: React.ReactNode }
         changeSource,
         changeCity,
         setStreamConnected,
+        setStreamStatus,
         updatePreferences,
         refreshSources,
         clearError,

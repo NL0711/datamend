@@ -1,8 +1,8 @@
 // Event Forensics in the header layout of the ORIGINAL dashboard, restored in slice S2b. The original listed temperature, pressure and
-// humidity anomalies with a "5-tier decomposition" (GET /api/anomalies, NOT BUILT: slice S4). The DATA here is the platform's own, as in
-// S2: the flagged rainfall rows of the selected station's latest stored run with the evidence behind each flag (the run view). The original
-// anomaly list for T/P/RH is shown under the header and stays empty until S4; no tier scores or SHAP-style factors are shown, because the
-// platform computes none.
+// humidity anomalies with a "5-tier decomposition". The DATA here is the platform's own, as in
+// S2: the flagged rainfall rows of the selected station's latest stored run with the evidence behind each flag (the run view). Under it
+// are the stream's detections from GET /api/anomalies with the evidence of every check that fired; no tier scores or SHAP-style
+// factors are shown, because the platform computes none.
 import { useStation } from '../validation/StationContext';
 import type { EventFocus } from '../validation/shell';
 import { StationRunPanel } from './StationRunPanel';
@@ -59,8 +59,8 @@ export function EventDetailView({ focus, onImport, onNavigateToLive }: EventDeta
       <StationRunPanel scope="flagged" focus={focus} onImport={onImport} />
 
       <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-4 shadow-lg space-y-2">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Temperature, pressure, humidity anomalies</h4>
-        <AnomalyFeed stationId={stationId} limit={6} />
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Stream detections (temperature, pressure, humidity, rain)</h4>
+        <AnomalyFeed stationId={stationId} limit={12} evidence />
       </div>
     </div>
   );

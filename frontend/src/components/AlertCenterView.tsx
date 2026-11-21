@@ -2,7 +2,8 @@
 // the right), restored in slice S2b. The DATA is the platform's own, as in S2: an alert is a flagged rainfall row (SUSPECT or UNCERTAIN)
 // that nobody has reviewed yet, read from GET /api/validation/review/queue. The dossier is the evidence pane (original row, evidence behind
 // each flag, review box). There is no alert store, no acknowledge and no notification (NOT IMPLEMENTED). The original read /api/anomalies
-// (temperature, pressure, humidity); that list is shown beside the table through AnomalyFeed and stays empty until slice S4.
+// (temperature, pressure, humidity); that list is shown under the dossier through AnomalyFeed, with the evidence of every check that
+// fired, and lists a reading only when the stream's checks really flagged it.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getNarrator, getQueue, getReviewSummary } from '../validation/api';
 import { ALL_CHECKS, PAGE_SIZE, queueQuery } from '../validation/lib';
@@ -240,8 +241,8 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
           )}
 
           <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-4 shadow-lg space-y-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Temperature, pressure, humidity anomalies</h4>
-            <AnomalyFeed stationId={station || null} limit={5} />
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Stream detections (temperature, pressure, humidity, rain)</h4>
+            <AnomalyFeed stationId={station || null} limit={8} evidence />
           </div>
         </div>
       </div>

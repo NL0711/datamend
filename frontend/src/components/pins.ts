@@ -4,8 +4,24 @@ import type { GlobeStation } from '../globe/StationGlobe3D';
 import { globeState } from '../validation/lib';
 import type { GaugeStation, StationCycle } from '../validation/types';
 
-/** One pin per catalogue gauge, plus stations that exist only in an uploaded file and carry their own coordinates. */
-export function buildPins(gauges: GaugeStation[], cycle: StationCycle[]): GlobeStation[] {
+/** One pin per catalogue gauge, plus stations that exist only in an uploaded file and carry their own coordinates, plus stations only the
+ *  stream API lists (with their position). A stream station's colour is the verdict of its latest reading (`streamState`), else NO_DATA. */
+export function buildPins(
+  gauges: GaugeStation[], cycle: StationCycle[],
+  streamStations: { station_id: string; name: string; latitude?: number | null; longitude?: number | null }[] = [],
+  streamState: Record<string, GlobeStation['state']> = {},
+): GlobeStation[] {
+  const pins = buildGaugePins(gauges, cycle);
+  const known = new Set(pins.map((p) => p.station_id));
+  for (const s of streamStations) {
+    if (known.has(s.station_id) || s.latitude == null || s.longitude == null) continue;
+    pins.push({ station_id: s.station_id, label: s.name, latitude: s.latitude, longitude: s.longitude, state: streamState[s.station_id] ?? 'NO_DATA',
+                checked: 0, suspect: 0, uncertain: 0, runs: 0, positionSource: 'stream' });
+  }
+  return pins;
+}
+
+function buildGaugePins(gauges: GaugeStation[], cycle: StationCycle[]): GlobeStation[] {
   const byId = new Map(cycle.map((c) => [c.station_id, c]));
   const out: GlobeStation[] = gauges.map((g) => {
     const c = byId.get(g.station_id);

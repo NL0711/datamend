@@ -1,117 +1,84 @@
 /**
- * DataMend — Resilient WebSocket Client for Real-Time Telemetry & Anomaly Streams (the ORIGINAL contract, restored in slice S2b).
+ * DataMend — Resilient WebSocket client for the live stream (/ws/live of slices S3a and S3b).
  *
- * NOT BUILT on the server yet: `/ws/live` is built in slice S3. Until then the connection fails and the client retries every few
- * seconds; the shell shows "No live stream connected" while `isConnected()` is false. Nothing is simulated in its place.
+ * The server sends two kinds of frame: `status` (the stream's state, on connect and on every change) and `observation` (one reading).
+ * Frames are parsed by services/stream.ts. The browser sends the HttpOnly `datamend_session` cookie that the sign-in set; a refused
+ * handshake looks like an ordinary close to the browser, so a client that is not signed in just stays DISCONNECTED and retries with a
+ * growing delay (2.5 s up to 60 s). Nothing is simulated in place of a missing stream.
  */
 
-import { InferenceResult } from '../types';
+import { backoffDelay, parseFrame } from './stream';
+import type { StreamObservation, StreamStatusData } from './stream';
 
 export interface WebSocketCallbacks {
-  onTelemetry?: (data: InferenceResult) => void;
+  onObservation?: (data: StreamObservation) => void;
+  onStatus?: (status: StreamStatusData) => void;
   onOpen?: () => void;
-  onClose?: () => void;
+  onClose?: (code: number) => void;
   onError?: (err: Event) => void;
+}
+
+export function liveSocketUrl(loc: { protocol: string; host: string } = window.location): string {
+  return `${loc.protocol === 'https:' ? 'wss:' : 'ws:'}//${loc.host}/ws/live`;
 }
 
 export class TelemetryStreamClient {
   private ws: WebSocket | null = null;
-  private reconnectTimer: any = null;
-  private shouldReconnect: boolean = true;
-  private attempts: number = 0;
-  private callbacks: WebSocketCallbacks;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private shouldReconnect = true;
+  private attempts = 0;
 
-  constructor(callbacks: WebSocketCallbacks) {
-    this.callbacks = callbacks;
-  }
+  constructor(private callbacks: WebSocketCallbacks) {}
 
   public connect(): void {
     this.shouldReconnect = true;
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/live`;
-
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
     try {
-      this.ws = new WebSocket(wsUrl);
-
-      this.ws.onopen = () => {
+      const ws = new WebSocket(liveSocketUrl());
+      this.ws = ws;
+      ws.onopen = () => {
         this.attempts = 0;
-        if (this.callbacks.onOpen) this.callbacks.onOpen();
+        this.callbacks.onOpen?.();
       };
-
-      this.ws.onmessage = (event) => {
-        try {
-          const raw = JSON.parse(event.data);
-          let telemetry: InferenceResult | null = null;
-
-          if (raw && raw.type === 'observation' && raw.data) {
-            telemetry = raw.data as InferenceResult;
-            if (!telemetry.station_id && raw.station_id) {
-              telemetry.station_id = raw.station_id;
-            }
-          } else if (raw && (raw.anomaly_score !== undefined || raw.station_id || raw.temperature !== undefined)) {
-            telemetry = raw as InferenceResult;
-          }
-
-          if (telemetry && this.callbacks.onTelemetry) {
-            this.callbacks.onTelemetry(telemetry);
-          }
-        } catch (err) {
-          console.warn('Malformed WebSocket message received:', err);
-        }
+      ws.onmessage = (event) => {
+        const frame = parseFrame(event.data);
+        if (!frame) return;
+        if (frame.kind === 'status') this.callbacks.onStatus?.(frame.status);
+        else this.callbacks.onObservation?.(frame.observation);
       };
-
-      this.ws.onerror = (err) => {
-        if (this.callbacks.onError) this.callbacks.onError(err);
-      };
-
-      this.ws.onclose = () => {
-        if (this.callbacks.onClose) this.callbacks.onClose();
-        if (this.shouldReconnect) {
-          // 2.5 s, then doubling up to 60 s while the server has no /ws/live (slice S3), so an absent stream is not hammered
-          const delay = Math.min(60000, 2500 * 2 ** this.attempts);
-          this.attempts += 1;
-          this.reconnectTimer = setTimeout(() => {
-            this.connect();
-          }, delay);
-        }
+      ws.onerror = (err) => this.callbacks.onError?.(err);
+      ws.onclose = (ev) => {
+        if (this.ws === ws) this.ws = null;
+        this.callbacks.onClose?.(ev.code);
+        this.scheduleReconnect();
       };
     } catch (err) {
       console.error('WebSocket connection error:', err);
-      if (this.shouldReconnect) {
-        this.reconnectTimer = setTimeout(() => {
-          this.connect();
-        }, 3000);
-      }
+      this.scheduleReconnect();
     }
+  }
+
+  private scheduleReconnect(): void {
+    if (!this.shouldReconnect) return;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    const delay = backoffDelay(this.attempts);
+    this.attempts += 1;
+    this.reconnectTimer = setTimeout(() => this.connect(), delay);
   }
 
   public disconnect(): void {
     this.shouldReconnect = false;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
+    this.reconnectTimer = null;
+    const ws = this.ws;
+    this.ws = null;
+    if (ws) {
+      ws.onclose = null;
+      ws.close();
     }
   }
 
   public isConnected(): boolean {
     return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
   }
-}
-
-export function createTelemetryWebSocket(onMessage: (data: any) => void): WebSocket {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/ws/live`;
-  const ws = new WebSocket(wsUrl);
-
-  ws.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      onMessage(data);
-    } catch (err) {
-      console.error('Failed to parse WebSocket message:', err);
-    }
-  };
-
-  return ws;
 }
