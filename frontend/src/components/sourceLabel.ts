@@ -4,7 +4,7 @@ import type { DataSourceType } from '../types';
 export function sourceLabel(source: DataSourceType | null, cityName?: string): string {
   switch (source) {
     case 'SIMULATED':
-      return 'SIMULATED AWS';
+      return 'AUTOMATIC WEATHER STATIONS';
     case 'EXTERNAL_API':
       return cityName ? `OPEN-METEO: ${cityName.toUpperCase()}` : 'OPEN-METEO';
     case 'WEATHER_UNION':
