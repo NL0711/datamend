@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, MapPin, Search, X } from 'lucide-react';
 import { useStation } from './StationContext';
 import { filterStations, groupByCity, moveActive } from './shell';
+import { OPEN_PICKER_EVENT } from './guide';
 
 export function StationPicker() {
   const { stationId, select, stations, entry, loading, error } = useStation();
@@ -18,6 +19,11 @@ export function StationPicker() {
   const groups = useMemo(() => groupByCity(shown), [shown]);
   useEffect(() => { setActive(0); }, [query, city]);
   useEffect(() => { if (open) input.current?.focus(); }, [open]);
+  useEffect(() => {                                    // the Start here guide and the empty states open the picker from outside
+    const on = () => setOpen(true);
+    window.addEventListener(OPEN_PICKER_EVENT, on);
+    return () => window.removeEventListener(OPEN_PICKER_EVENT, on);
+  }, []);
   useEffect(() => {
     if (!open) return;
     const away = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false); };

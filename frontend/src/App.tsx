@@ -45,11 +45,16 @@ import { RunsView } from './validation/RunsView';
 import { SettingsView } from './validation/SettingsView';
 import { StationProvider, useStation } from './validation/StationContext';
 import { StationPicker } from './validation/StationPicker';
-import { RAIL, hashForPage, pageForKey, pageForTab, pageFromHash, pageFromId } from './validation/shell';
+import { hashForPage, pageForKey, pageForTab, pageFromHash, pageFromId } from './validation/shell';
 import type { EventFocus, PageId } from './validation/shell';
+import { PAGE_INFO, RAIL_GROUPS, railKey, railTitle } from './validation/guide';
+import { PageIntro } from './components/PageIntro';
+import { StartGuide } from './components/StartGuide';
+import { Legend } from './components/Legend';
 
 const ICON: Record<string, ComponentType<{ className?: string }>> = {
   overview: Compass, live: Eye, alerts: AlertTriangle, events: FileSearch, explorer: Database, review: ShieldCheck, injector: Zap, agent: Bot,
+  import: Upload, settings: Sliders,
 };
 
 function AppContent() {
@@ -66,6 +71,7 @@ function AppContent() {
   const [historyBuffer, setHistoryBuffer] = useState<StreamObservation[]>([]);
   const [isStreaming, setIsStreaming] = useState<boolean>(true);
   const [utcTime, setUtcTime] = useState<string>('');
+  const [guideNonce, setGuideNonce] = useState(0);
   const isStreamingRef = useRef<boolean>(true);
   isStreamingRef.current = isStreaming;
 
@@ -116,8 +122,6 @@ function AppContent() {
 
   const openRun = (id: number) => { setFocus({ runId: id, rowId: null, station: stationId }); navigate('events'); };
   const go = (t: Tab) => navigate(pageForTab(t));
-
-  const navItems = RAIL.map(({ id, label }, i) => ({ id, label, short: String(i + 1) }));
 
   const sourceChip = (
     <button
@@ -186,7 +190,8 @@ function AppContent() {
             <span>{utcTime || '00:00:00 UTC'}</span>
           </div>
 
-          {headerButton('import', Upload, 'Import', 'Upload or import a file')}
+          <Legend onShowGuide={() => { setGuideNonce((n) => n + 1); navigate('overview'); }} />
+          {headerButton('import', Upload, 'Import', 'Bring in your own data: upload a file or paste a link')}
           {headerButton('settings', Sliders, 'Settings', 'Settings (press S)')}
         </div>
       </header>
@@ -195,29 +200,35 @@ function AppContent() {
       <div className="flex-1 min-h-0 flex overflow-hidden">
         <aside className="w-16 sm:w-56 bg-[#FFFFFF] border-r border-[#D3DCE7] flex flex-col justify-between shrink-0 select-none overflow-y-auto">
           <nav className="p-2 sm:p-3 space-y-1" aria-label="main">
-            <div className="px-3 py-1.5 text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider hidden sm:block">Operations Rail</div>
-
-            {navItems.map((tab) => {
-              const Icon = ICON[tab.id];
-              const isActive = page === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => navigate(tab.id)}
-                  aria-current={isActive ? 'page' : undefined}
-                  title={`${tab.label} (Press ${tab.short})`}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all group ${
-                    isActive ? 'bg-sky-500 text-slate-950 shadow-md font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-[#EDF1F7]'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-slate-950' : 'text-sky-600'}`} />
-                  <span className="hidden sm:inline truncate">{tab.label}</span>
-                  <span className={`ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded hidden sm:inline ${isActive ? 'bg-slate-950/20 text-slate-950' : 'text-slate-500 group-hover:text-slate-500'}`}>
-                    {tab.short}
-                  </span>
-                </button>
-              );
-            })}
+            {RAIL_GROUPS.map((group) => (
+              <div key={group.label} className="space-y-1">
+                <div className="px-3 pt-2 pb-1 text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider hidden sm:block">{group.label}</div>
+                {group.pages.map((id) => {
+                  const Icon = ICON[id];
+                  const isActive = page === id;
+                  const key = railKey(id);
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => navigate(id)}
+                      aria-current={isActive ? 'page' : undefined}
+                      title={railTitle(id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all group ${
+                        isActive ? 'bg-sky-500 text-slate-950 shadow-md font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-[#EDF1F7]'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-slate-950' : 'text-sky-600'}`} />
+                      <span className="hidden sm:inline truncate">{PAGE_INFO[id].title}</span>
+                      {(key || id === 'settings') && (
+                        <span className={`ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded hidden sm:inline ${isActive ? 'bg-slate-950/20 text-slate-950' : 'text-slate-500 group-hover:text-slate-500'}`}>
+                          {key ?? 'S'}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
 
           <div>
@@ -241,14 +252,16 @@ function AppContent() {
 
         <main className={`flex-1 min-w-0 overflow-y-auto ${densityPadding}`}>
           <PageBoundary resetKey={page}>
+            <PageIntro page={page} />
             {page === 'overview' && (
               <>
+                <StartGuide key={guideNonce} onNavigate={navigate} />
                 <OverviewView
                   latestByStation={latestByStation}
                   onNavigate={(t) => navigate(pageFromId(t))}
                 />
                 <div className="space-y-2">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Platform counts (stored rainfall runs)</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Counts from uploaded-file runs</h3>
                   <PlatformCounts onOpenRun={openRun} go={go} />
                 </div>
               </>
@@ -262,7 +275,8 @@ function AppContent() {
                   onToggleStreaming={() => setIsStreaming((s) => !s)}
                 />
                 <div className="space-y-2">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Rainfall gauge feed (Weather Union, polled by the server)</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Rain-gauge feed (Weather Union, rain only, polled by the server)</h3>
+                  <p className="text-xs text-slate-600">A separate poller from the input stream above. It is set under Settings, "Rain-gauge feed".</p>
                   <LiveFeedView onOpenRun={openRun} stationId={stationId} onSelectStation={select} />
                 </div>
               </>
@@ -271,6 +285,7 @@ function AppContent() {
               <AlertCenterView
                 onNavigateToEvent={(r) => { setFocus({ runId: r.run_id, rowId: r.id, station: r.station_id }); select(r.station_id); navigate('events'); }}
                 onLocateOnGlobe={(s) => { select(s); navigate('overview'); }}
+                onImport={() => navigate('import')}
               />
             )}
             {page === 'events' && <EventDetailView focus={focus} onImport={() => navigate('import')} onNavigateToLive={() => navigate('live')} />}
@@ -281,14 +296,14 @@ function AppContent() {
             {page === 'import' && <RunsView onOpen={(id) => { refresh(); setFocus({ runId: id, rowId: null, station: null }); navigate('events'); }} />}
             {page === 'settings' && (
               <div className="space-y-4">
+                <StreamSettings />
                 <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Display and live source</h3>
-                    <p className="text-xs text-slate-600">Page density, motion, the first page, the live telemetry source and the Open-Meteo site.</p>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Display preferences</h3>
+                    <p className="text-xs text-slate-600">Page density, motion and the first page. The same window also has a source switch and the Open-Meteo site; the "Input stream" form above is the full version.</p>
                   </div>
-                  <button onClick={openSettings} className="px-3 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-mono font-bold text-xs rounded-lg shadow">Open display settings</button>
+                  <button onClick={openSettings} className="px-3 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-mono font-bold text-xs rounded-lg shadow">Open display preferences</button>
                 </div>
-                <StreamSettings />
                 <SettingsView />
               </div>
             )}
