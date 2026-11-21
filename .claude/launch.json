@@ -10,13 +10,27 @@
     {
       "name": "backend-local",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-c", "import os,tempfile; t=tempfile.gettempdir().replace(chr(92),'/'); os.environ.update(DATABASE_URL='sqlite+aiosqlite:///'+t+'/datamend_ui_check.db', RUNTIME_SETTINGS_PATH=t+'/datamend_ui_check_settings.json', FEED_HISTORY_PATH=t+'/datamend_ui_check_feed.db', WEATHER_UNION_API_KEY='', WEATHER_UNION_CITY='', GEMINI_API_KEY='', FEED_HISTORY_URL='', ADMIN_TOKEN='ui-check-token', ISD_REPLAY_DIR=t+'/datamend_ui_check_isd'); import uvicorn; uvicorn.run('backend.app.main:app', host='127.0.0.1', port=8000)"],
-      "port": 8000
+      "runtimeArgs": ["-c", "import os,tempfile; t=tempfile.gettempdir().replace(chr(92),'/'); os.environ.update(DATABASE_URL='sqlite+aiosqlite:///'+t+'/datamend_ui_check.db', RUNTIME_SETTINGS_PATH=t+'/datamend_ui_check_settings.json', FEED_HISTORY_PATH=t+'/datamend_ui_check_feed.db', WEATHER_UNION_API_KEY='', WEATHER_UNION_CITY='', GEMINI_API_KEY='', FEED_HISTORY_URL='', ADMIN_TOKEN='ui-check-token', ISD_REPLAY_DIR=t+'/datamend_ui_check_isd'); import uvicorn; uvicorn.run('backend.app.main:app', host='127.0.0.1', port=8010)"],
+      "port": 8010
     },
     {
       "name": "frontend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "frontend", "run", "dev"],
+      "port": 5199
+    },
+    {
+      "name": "frontend-built",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "frontend", "run", "preview", "--", "--port", "5299", "--strictPort"],
+      "env": { "BACKEND_URL": "http://localhost:8010" },
+      "port": 5299
+    },
+    {
+      "name": "frontend-local",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "frontend", "run", "dev"],
+      "env": { "BACKEND_URL": "http://localhost:8010" },
       "port": 5199
     }
   ]
