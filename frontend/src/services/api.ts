@@ -350,6 +350,80 @@ export async function saveStreamSettings(update: Record<string, unknown>): Promi
   return handleResponse(res);
 }
 
+// ---- the agent (PROTOTYPE; backend/app/api/agent.py) ----
+export interface AgentStatus {
+  connected: boolean;
+  provider: string;
+  model: string | null;
+  reason?: string;
+  prototype: boolean;
+  note: string;
+  max_tool_calls: number;
+  token_budget: number;
+  timeout_seconds: number;
+}
+export interface AgentProposal {
+  id: number;
+  task_id: string;
+  action: string;
+  station_id: string | null;
+  run_id: number | null;
+  row_ref: string | null;
+  args: Record<string, unknown>;
+  status: 'proposed' | 'accepted' | 'dismissed';
+  review_id: number | null;
+}
+export interface AgentTaskResult {
+  task_id: string;
+  status: string;
+  agent_connected: boolean;
+  abstain_reason: string;
+  explanation: { text: string; generated: boolean } | null;
+  baseline_explanation?: string | null;
+  baseline_generator?: string | null;
+  selected: { action: string; args: Record<string, unknown>; rationale?: string } | null;
+  rejected_alternatives: { action: string | null; reason: string }[];
+  gate_result: { ok: boolean; reason: string } | null;
+  outcome: { status: string; detail: string } | null;
+  tool_call_count: number;
+  model_id?: string | null;
+  proposals: AgentProposal[];
+}
+export interface AgentEventRow {
+  id: number;
+  step: number;
+  node: string;
+  note: string;
+  model_id: string | null;
+  tool_calls: { tool: string; ok: boolean; error: string }[];
+  decision: unknown;
+  rejected_alternatives: { action: string | null; reason: string }[];
+  gate_result: { ok: boolean; reason: string } | null;
+  outcome: { status: string; detail: string } | null;
+  time_utc: string;
+}
+
+export async function fetchAgentStatus(): Promise<AgentStatus> {
+  return handleResponse(await request(`${API_BASE_URL}/agent/status`));
+}
+export async function askAgent(stationId: string, text: string): Promise<AgentTaskResult> {
+  const res = await request(`${API_BASE_URL}/agent/tasks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ station_id: stationId, request: text }),
+  });
+  return handleResponse(res);
+}
+export async function fetchAgentEvents(taskId: string): Promise<{ task_id: string; events: AgentEventRow[] }> {
+  return handleResponse(await request(`${API_BASE_URL}/agent/tasks/${encodeURIComponent(taskId)}/events`));
+}
+export async function fetchAgentProposals(stationId: string): Promise<{ proposals: AgentProposal[] }> {
+  return handleResponse(await request(`${API_BASE_URL}/agent/proposals?station_id=${encodeURIComponent(stationId)}`));
+}
+export async function decideAgentProposal(id: number, decision: 'accept' | 'dismiss'): Promise<AgentProposal> {
+  return handleResponse(await request(`${API_BASE_URL}/agent/proposals/${id}/${decision}`, { method: 'POST' }));
+}
+
 export async function submitOperatorFeedback(payload: OperatorFeedbackPayload): Promise<OperatorFeedbackRecord> {
   const res = await request(`${API_BASE_URL}/feedback`, {
     method: 'POST',

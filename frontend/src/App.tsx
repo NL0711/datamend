@@ -31,10 +31,10 @@ import { AlertCenterView } from './components/AlertCenterView';
 import { EventDetailView } from './components/EventDetailView';
 import { DataExplorerView } from './components/DataExplorerView';
 import { AnomalyInjectorUI } from './components/AnomalyInjectorUI';
+import { AgentView } from './components/AgentView';
 import { sourceLabel } from './components/sourceLabel';
 import { SettingsCenter } from './settings/SettingsCenter';
 import { SystemConfigurationProvider, useSystemConfiguration } from './context/SystemConfigurationContext';
-import { EmptyState } from './design-system/components/EmptyState';
 import { AdminChip } from './validation/Login';
 import { OverviewView as PlatformCounts } from './validation/OverviewView';
 import type { Tab } from './validation/OverviewView';
@@ -277,9 +277,7 @@ function AppContent() {
             {page === 'explorer' && <DataExplorerView onImport={() => navigate('import')} />}
             {page === 'review' && <ReviewView key={stationId ?? 'all'} station={stationId ?? ''} onClearStation={() => undefined} />}
             {page === 'injector' && <AnomalyInjectorUI onNavigateToLive={() => navigate('live')} />}
-            {page === 'agent' && (
-              <EmptyState title="Agent" description="Not built yet. Planned in slice S6 (the agent's view over its event log). Nothing is shown here in its place." />
-            )}
+            {page === 'agent' && <AgentView />}
             {page === 'import' && <RunsView onOpen={(id) => { refresh(); setFocus({ runId: id, rowId: null, station: null }); navigate('events'); }} />}
             {page === 'settings' && (
               <div className="space-y-4">

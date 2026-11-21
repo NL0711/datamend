@@ -18,6 +18,10 @@ READ_ONLY_TOOLS = frozenset({
 })
 
 
+# The reviewer decisions of the platform's review loop (validation/review.py DECISIONS); a verdict word such as SUSPECT is not a label.
+REVIEWER_LABELS = ("confirmed_fault", "false_alarm", "genuine_extreme", "needs_followup")
+
+
 @dataclass(frozen=True)
 class ActionSpec:
     required: frozenset
@@ -80,6 +84,8 @@ def check_action(action: Any, args: Any) -> PolicyDecision:
     for key, value in args.items():
         if isinstance(value, (dict, list, tuple, set)) or value is None or (isinstance(value, str) and not value.strip()):
             return PolicyDecision(False, f"argument '{key}' must be a non-empty scalar")
+    if action == "propose_reviewer_label" and args["label"] not in REVIEWER_LABELS:
+        return PolicyDecision(False, f"label must be one of {', '.join(REVIEWER_LABELS)}")
     return PolicyDecision(True)
 
 

@@ -14,6 +14,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.auth import _same as auth_same, require_login, router as auth_router, session_valid_async as auth_session_valid
 from backend.app import mcp_gateway
+try:                                         # the agent needs langgraph (backend/requirements-agent.txt); without it the platform runs and has no /api/agent
+    from backend.app.api.agent import router as agent_router
+except ImportError:                          # pragma: no cover - only without the agent packages
+    agent_router = None
 from backend.app.api.mcp_access import endpoint_router as mcp_endpoint_router, router as mcp_access_router
 from backend.app.api.pipeline import router as pipeline_router
 from backend.app.api.pipeline_explore import router as pipeline_explore_router
@@ -98,6 +102,8 @@ app.include_router(stream_router)
 app.include_router(stream_ws_router)
 app.include_router(mcp_access_router)
 app.include_router(mcp_endpoint_router)
+if agent_router is not None:
+    app.include_router(agent_router)
 mcp_gateway.attach(app)                      # the platform's own narrator and MCP endpoint read the platform through this app
 
 

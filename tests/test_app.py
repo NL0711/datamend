@@ -6,7 +6,7 @@ from httpx import AsyncClient
 
 from backend.app.main import app
 
-EXPECTED_PREFIXES = ("/api/validation", "/api/rainfall", "/api/places", "/api/settings", "/api/auth", "/api/pipeline", "/api/mcp",
+EXPECTED_PREFIXES = ("/api/validation", "/api/rainfall", "/api/places", "/api/settings", "/api/auth", "/api/pipeline", "/api/mcp", "/api/agent",
                      "/api/stations", "/api/observations", "/api/anomalies", "/api/data-sources", "/api/simulation", "/api/simulate")
 LEGACY_PATHS = ["/api/health", "/api/locations", "/api/sources", "/ws/telemetry", "/api/health/fleet", "/api/metrics", "/api/inference"]
 

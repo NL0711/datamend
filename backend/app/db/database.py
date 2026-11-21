@@ -121,6 +121,7 @@ async def init_db() -> None:
     from backend.app.validation import models as _validation_models  # noqa: F401  (registers the tables)
     from backend.app.pipeline import models as _pipeline_models  # noqa: F401  (raw store, jobs, proposals, labels, registry)
     from backend.app.stream import models as _stream_models  # noqa: F401  (telemetry stream readings and events)
+    from backend.app.agent import models as _agent_models  # noqa: F401  (agent events, tasks, proposals)
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

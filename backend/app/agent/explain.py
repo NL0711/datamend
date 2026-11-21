@@ -52,6 +52,8 @@ def allowed_vocabulary(state: AgentState) -> tuple[set, set]:
         _walk([ev.get("ref_id"), ev.get("run_id"), ev.get("row_ref"), ev.get("station_id"), ev.get("evidence_hash")], numbers, words)
         _walk(ev.get("checks"), numbers, words)
     words.update(policy.ALLOWED_ACTIONS)         # naming an allowlisted action is not a claim about the data
+    words.update(policy.REVIEWER_LABELS)         # nor is naming a reviewer label, or a tool the agent itself called
+    words.update(str(c.get("tool", "")).lower() for c in state.get("tool_calls", []))
     return numbers, words
 
 

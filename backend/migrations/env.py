@@ -13,6 +13,7 @@ from backend.app.config import settings
 from backend.app.db.database import Base
 from backend.app.pipeline import models as _pipeline_models  # noqa: F401  (registers the tables)
 from backend.app.stream import models as _stream_models  # noqa: F401
+from backend.app.agent import models as _agent_models  # noqa: F401
 from backend.app.validation import models as _validation_models  # noqa: F401
 
 config = context.config
