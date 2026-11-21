@@ -167,6 +167,25 @@ async def test_station_with_live_readings_but_no_run_is_commented_on_instead_of_
     assert called == {"station": "KTLX"} and out["scope"] == "live" and out["status"] == "completed"
 
 
+async def _fixed_target(run_id, row_id):
+    return run_id, row_id
+
+
+@pytest.mark.asyncio
+async def test_cloudburst_station_gets_the_prewritten_answer_when_the_model_is_unavailable(async_client: AsyncClient, monkeypatch):
+    from backend.app.agent import demo_answers
+    run_id, row_id = await upload(async_client)
+    monkeypatch.setattr(settings, "AGENT_PROVIDER", "gemini")
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
+    monkeypatch.setattr(service, "pick_target", lambda station_id: _fixed_target(run_id, row_id))   # the sample's run is stood in for by the test upload
+    out = (await async_client.post("/api/agent/tasks", json={"station_id": "SYN-A", "request": "explain"}, headers=H)).json()
+    assert out["status"] == "agent_not_connected" and out["abstain_reason"] == "" and out["explanation"] is None
+    assert out["baseline_explanation"] == demo_answers.demo_answer("SYN-A") and "380 mm/h" in out["baseline_explanation"]
+    assert out["baseline_generator"] == demo_answers.GENERATOR
+    other = (await async_client.post("/api/agent/tasks", json={"station_id": "S1", "request": "explain"}, headers=H)).json()
+    assert other["baseline_generator"] == "baseline-rules"              # any other station keeps the evidence-built rule text
+
+
 @pytest.mark.asyncio
 async def test_no_provider_says_agent_not_connected_and_the_baseline_still_explains(async_client: AsyncClient, monkeypatch):
     run_id, row_id = await upload(async_client)

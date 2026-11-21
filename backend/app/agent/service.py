@@ -19,7 +19,7 @@ from typing import Any, Callable, Mapping, Optional
 from sqlalchemy import select
 
 from backend.app import mcp_gateway as gw
-from backend.app.agent import events, live, policy
+from backend.app.agent import demo_answers, events, live, policy
 from backend.app.agent.gemini_model import AgentNotConnected, GeminiAgentModel
 from backend.app.agent.graph import build_agent_graph, result_view
 from backend.app.agent.models import AgentEvent, AgentProposal, AgentTask
@@ -319,6 +319,17 @@ async def run_live_task(app: Any, station_id: str, request: str, *, model_factor
     return view
 
 
+def _with_demo_answer(view: dict, station_id: str) -> None:
+    """Owner's demo exception: when the model is unavailable (no key, bad key, model error) and the station is one of the Cloudburst-1 sample stations,
+    show a pre-written answer instead of an error. It is labelled as pre-written with no model, and it never takes the place of a model answer."""
+    reason = str(view.get("abstain_reason") or "")
+    model_down = view.get("status") == "agent_not_connected" or (view.get("status") == STATUS_ABSTAINED and "model unavailable" in reason)
+    text = demo_answers.demo_answer(station_id) if model_down else None
+    if text:
+        view.update({"status": "agent_not_connected", "abstain_reason": "", "explanation": None, "explanation_generated": False,
+                     "baseline_explanation": text, "baseline_generator": demo_answers.GENERATOR})
+
+
 async def run_task(app: Any, station_id: str, request: str, *, model_factory: Optional[Callable[[], Any]] = None) -> dict:
     """One agent turn for a station. Returns the view the UI shows. The graph runs in a worker thread; this function only wires and stores."""
     import uuid
@@ -341,6 +352,7 @@ async def run_task(app: Any, station_id: str, request: str, *, model_factory: Op
         view = {"prototype": True, "note": PROTOTYPE_NOTE, "task_id": task_id, "status": "agent_not_connected", "agent_connected": False, "abstain_reason": reason,
                 "explanation": None, "explanation_generated": False, "baseline_explanation": base, "baseline_generator": "baseline-rules" if base else None,
                 "selected": None, "rejected_alternatives": [], "gate_result": None, "outcome": None, "tool_call_count": 0}
+        _with_demo_answer(view, station_id)
         await _save(task_id, station_id, request, view)
         return view
 
@@ -364,5 +376,6 @@ async def run_task(app: Any, station_id: str, request: str, *, model_factory: Op
                                               rejected=[], gate_result=None, outcome={"status": STATUS_ABSTAINED, "detail": reason}, note=reason))
         view = {"prototype": True, "note": PROTOTYPE_NOTE, "task_id": task_id, "status": STATUS_ABSTAINED, "agent_connected": True, "abstain_reason": reason, "explanation": None,
                 "explanation_generated": False, "selected": None, "rejected_alternatives": [], "gate_result": None, "outcome": None, "tool_call_count": 0}
+    _with_demo_answer(view, station_id)
     await _save(task_id, station_id, request, view)
     return view
