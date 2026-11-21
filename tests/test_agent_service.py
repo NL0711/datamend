@@ -149,7 +149,22 @@ async def test_forbidden_action_is_rejected_by_policy_and_nothing_is_written(asy
 @pytest.mark.asyncio
 async def test_station_with_no_run_asks_for_clarification(async_client: AsyncClient, monkeypatch):
     out = await ask(async_client, monkeypatch, FakeModel([Candidate("ask_user", {"question": "Which file should I look at?"}, "no data")]), station="NOSUCH-STATION")
-    assert out["status"] == "needs_clarification" and "no evidence" in out["abstain_reason"]
+    # no uploaded run: the agent reads the live feed instead; a station with no stored readings either is asked about, not guessed at
+    assert out["status"] == "needs_clarification" and "no live readings are stored for station NOSUCH-STATION" in out["abstain_reason"]
+
+
+@pytest.mark.asyncio
+async def test_station_with_live_readings_but_no_run_is_commented_on_instead_of_refused(async_client: AsyncClient, monkeypatch):
+    from backend.app.agent import service as agent_service
+    called = {}
+
+    async def fake_live(app, station_id, request, *, model_factory=None):
+        called["station"] = station_id
+        return {"status": "completed", "scope": "live", "abstain_reason": "", "task_id": "t-live"}
+
+    monkeypatch.setattr(agent_service, "run_live_task", fake_live)
+    out = await ask(async_client, monkeypatch, FakeModel([]), station="KTLX")
+    assert called == {"station": "KTLX"} and out["scope"] == "live" and out["status"] == "completed"
 
 
 @pytest.mark.asyncio

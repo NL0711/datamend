@@ -141,7 +141,7 @@ async def test_run_scope_is_still_the_default_and_a_bad_scope_is_refused(async_c
     assert r.status_code == 422
     monkeypatch.setattr(service, "build_model", lambda: FakeLiveModel())
     r = await async_client.post("/api/agent/tasks", json={"station_id": "NOSUCH", "request": "x"}, headers=H)
-    assert r.status_code == 200 and r.json().get("scope") != "live"
+    assert r.status_code == 200 and r.json().get("scope") == "live"      # the default scope with no uploaded run for the station falls back to the live feed
 
 
 @pytest.mark.asyncio

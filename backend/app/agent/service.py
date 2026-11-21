@@ -328,6 +328,8 @@ async def run_task(app: Any, station_id: str, request: str, *, model_factory: Op
     loop = asyncio.get_running_loop()
     bridge = Bridge(loop)
     run_id, row_id = await pick_target(station_id)
+    if run_id is None:      # no uploaded-file run for this station: read its live feed instead of refusing with 'no evidence was read'
+        return await run_live_task(app, station_id, request, model_factory=model_factory)
     try:
         model = (model_factory or build_model)()
     except AgentNotConnected as e:
