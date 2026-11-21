@@ -1,4 +1,10 @@
 // Words for the Agent page (PROTOTYPE of a sandboxed, bounded decision-support agent). Pure helpers, tested in agentText.test.ts.
+import { errorText, isNotBuilt } from '../services/api';
+
+/** The Agent page's error line: an absent /api/agent (404, 405, 501, 502, 503) means the agent packages are not installed on this server. */
+export function agentErrorText(err: unknown): string {
+  return isNotBuilt(err) ? 'Agent service not available on this server (the agent packages are not installed).' : errorText(err);
+}
 
 /** What a task status means, in words. Only "completed" means a proposal was recorded. */
 export function statusWords(status: string): string {

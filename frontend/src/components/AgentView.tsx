@@ -1,11 +1,11 @@
 // Agent page: ask about the SELECTED station, read the generated answer, accept or dismiss what the agent proposed, and open the "why" view
 // (the append-only event log of the task). PROTOTYPE of a sandboxed, bounded decision-support agent: it proposes, a human accepts.
 import { useCallback, useEffect, useState } from 'react';
-import { askAgent, decideAgentProposal, errorText, fetchAgentEvents, fetchAgentProposals, fetchAgentStatus, isAuthError } from '../services/api';
+import { askAgent, decideAgentProposal, fetchAgentEvents, fetchAgentProposals, fetchAgentStatus, isAuthError } from '../services/api';
 import type { AgentEventRow, AgentProposal, AgentStatus, AgentTaskResult } from '../services/api';
 import { useStation } from '../validation/StationContext';
 import { AuthNotice } from './AuthNotice';
-import { describeEvent, describeProposal, statusWords } from './agentText';
+import { agentErrorText, describeEvent, describeProposal, statusWords } from './agentText';
 
 const card = 'bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl p-4 shadow-lg space-y-2';
 const h3 = 'text-xs font-bold uppercase tracking-wider text-slate-900 font-mono';
@@ -21,7 +21,7 @@ export function AgentView() {
   const [proposals, setProposals] = useState<AgentProposal[]>([]);
   const [events, setEvents] = useState<AgentEventRow[] | null>(null);
 
-  const fail = (e: unknown) => { setNeedSignIn(isAuthError(e)); setError(errorText(e)); };
+  const fail = (e: unknown) => { setNeedSignIn(isAuthError(e)); setError(agentErrorText(e)); };
 
   useEffect(() => { fetchAgentStatus().then(setStatus).catch(fail); }, []);
   useEffect(() => {
@@ -58,8 +58,8 @@ export function AgentView() {
           propose a reviewer label, a note, an alert acknowledgement, a re-run or a question. It never changes a verdict, score, evidence or raw data, and a human accepts every proposal.
         </p>
         {status && (status.connected
-          ? <p className="text-xs font-mono text-slate-700">Connected: {status.provider} / {status.model}. Limits per turn: {status.max_tool_calls} tool calls, {status.token_budget} tokens (estimated), {status.timeout_seconds} s.</p>
-          : <p role="status" className="text-xs font-mono text-amber-800">{status.reason ?? 'agent not connected'}. The rule-based explanation still works.</p>)}
+          ? <p className="text-xs font-mono text-slate-700">Agent connected.</p>
+          : <p role="status" className="text-xs font-mono text-amber-800">Agent not connected. The rule-based explanation still works.</p>)}
       </div>
 
       <div className={card}>

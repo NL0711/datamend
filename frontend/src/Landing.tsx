@@ -5,7 +5,7 @@
 const LINKS: [string, string][] = [['How it works', '#how'], ['What it checks', '#checks'], ['Data sources', '#data']];
 
 const STEPS = [
-  { title: 'Check', text: 'Every row of a rain-gauge series goes through rules, the station\'s own history and its neighbours. A row is OK, SUSPECT, UNCERTAIN or has no data.' },
+  { title: 'Check', text: 'Every row of a station\'s series (rainfall, temperature, pressure, humidity) goes through rules, the station\'s own history and, for rain, its neighbours. A row is OK, SUSPECT, UNCERTAIN or has no data.' },
   { title: 'Flag, with evidence', text: 'A flag is never just a score. It carries the value, the threshold, the neighbours and the reason, in plain words you can read.' },
   { title: 'Audit', text: 'A reviewer confirms a fault, calls it a false alarm or a genuine extreme. The decision is stored apart and never changes the verdict.' },
 ];
@@ -17,11 +17,12 @@ const CHECKS: [string, string][] = [
   ['Intensity against counter', 'Rain reported while the counter stays flat.'],
   ['Heavy for this place and season', 'A day in the extreme upper tail of the station\'s own history. Flagged as uncertain, never as a fault on size alone.'],
   ['Neighbour disagreement', 'A wet reading when nearby gauges are dry, or the other way round.'],
+  ['Temperature, pressure, humidity', 'Range, rate of change, frozen sensor and dew-point consistency. A parameter without checks gets no verdicts, and the page says so.'],
 ];
 
 const SOURCES = [
   { tag: 'UPLOAD', title: 'Your own files', text: 'CSV or JSON, per reading or per day. File-level problems reject the file; row-level problems keep the row with a reason.' },
-  { tag: 'LIVE', title: 'Weather Union feed', text: 'Real rain-gauge readings, polled within a daily call budget. Needs an API key and a city.' },
+  { tag: 'LIVE', title: 'Live sources', text: 'The Weather Union gauge feed (needs an API key), Open-Meteo, an ESP32 sensor (not verified on a real device) or a simulator. Every reading keeps its source.' },
 ];
 
 function Mark({ small }: { small?: boolean }) {
@@ -82,10 +83,10 @@ export function Landing() {
           <div className="rain-layer" aria-hidden="true" style={{ right: '0', width: '55%', opacity: 0.55 }} />
           <div className="relative mx-auto max-w-6xl px-5 py-16 md:py-28 grid md:grid-cols-[1.1fr_1fr] gap-14 items-center">
             <div>
-              <h1 className="text-5xl md:text-6xl font-semibold tracking-tight leading-[1.05]">Know which rain readings to trust.</h1>
-              <p className="mt-7 text-lg text-slate-600 max-w-xl leading-relaxed">DataMend checks rain-gauge data, flags what looks wrong and shows the evidence behind every flag, so a reviewer can decide in seconds.</p>
+              <h1 className="text-5xl md:text-6xl font-semibold tracking-tight leading-[1.05]">Know which weather readings to trust.</h1>
+              <p className="mt-7 text-lg text-slate-600 max-w-xl leading-relaxed">DataMend is a data quality platform for weather stations. It checks rainfall, temperature, pressure and humidity, flags what looks wrong and shows the evidence behind every flag, so a reviewer can decide in seconds.</p>
               <div className="mt-8 flex flex-wrap items-center gap-6"><Cta>Sign in</Cta><Cta quiet>See how it works</Cta></div>
-              <p className="mt-6 text-sm text-slate-500">Rainfall only.</p>
+              <p className="mt-6 text-sm text-slate-500">Prototype. Rule-based, uncalibrated checks; the optional model score is not validated.</p>
             </div>
             <Illustration />
           </div>
@@ -142,8 +143,8 @@ export function Landing() {
 
       <footer className="border-t border-slate-200">
         <div className="mx-auto max-w-6xl px-5 py-8 text-sm text-slate-500 flex flex-wrap gap-x-6 gap-y-2 justify-between">
-          <span className="flex items-center gap-2"><Mark small />DataMend, rainfall validation</span>
-          <span>AI explanations are generated text from a separate narrator, marked as such, and never change a verdict.</span>
+          <span className="flex items-center gap-2"><Mark small />DataMend, weather-station data quality</span>
+          <span>Explanations are generated text, marked as such, and never change a verdict.</span>
         </div>
       </footer>
     </div>

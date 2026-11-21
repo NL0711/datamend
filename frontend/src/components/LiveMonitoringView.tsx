@@ -28,6 +28,7 @@ import { dewPoint, reading, vaporPressure } from './pins';
 import { severityVariant } from './severity';
 import { useSystemConfiguration } from '../context/SystemConfigurationContext';
 import { useStation } from '../validation/StationContext';
+import { clockUtc, fmtLatLon } from '../services/geo';
 
 interface LiveMonitoringViewProps {
   latestTelemetry: StreamObservation | null;
@@ -61,7 +62,7 @@ const CHANNELS = [
   { view: 'humidity' as const, key: 'hum' as const, axis: 'humAxis', name: 'Humidity (%)', color: '#818CF8', unit: '%', pad: [5, 5] as const, orientation: 'right' as const, width: 45, active: 'bg-indigo-500/20 text-indigo-800 border border-indigo-500/40 font-bold', activeDot: '#C7D2FE' },
 ];
 
-const clock = (d: Date) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+const clock = clockUtc;   // the chart axis is UTC, like the tables
 const num = (v: number | null | undefined, digits: number): number | null => (v == null || Number.isNaN(v) ? null : Number(v.toFixed(digits)));
 
 function toPoint(p: StreamObservation, idx: number): TelemetryPoint {
@@ -232,7 +233,7 @@ export function LiveMonitoringView({ latestTelemetry, historyBuffer, isStreaming
                   )}
                 </div>
                 <div className="flex items-center gap-3 text-xs text-slate-500 font-mono mt-0.5">
-                  <span>{gauge ? `${gauge.latitude.toFixed(4)}°N, ${gauge.longitude.toFixed(4)}°E` : stationPos ? `${stationPos.latitude!.toFixed(4)}°N, ${stationPos.longitude!.toFixed(4)}°E` : 'position not in the catalogue'}</span>
+                  <span>{gauge ? fmtLatLon(gauge.latitude, gauge.longitude, 4) : stationPos ? fmtLatLon(stationPos.latitude!, stationPos.longitude!, 4) : 'position not in the catalogue'}</span>
                   {entry && entry.source !== 'stream' && (<><span>•</span><span>{entry.city}</span></>)}
                   {lastTime && (<><span>•</span><span>last reading {fmtUtc(lastTime)} UTC</span></>)}
                 </div>
@@ -452,7 +453,7 @@ export function LiveMonitoringView({ latestTelemetry, historyBuffer, isStreaming
                   ))}
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#D3DCE7" opacity={0.5} />
-                <XAxis dataKey="time" stroke="#94A3B8" tick={{ fontSize: 10, fill: '#64748B' }} interval="preserveStartEnd" />
+                <XAxis dataKey="time" stroke="#94A3B8" tick={{ fontSize: 10, fill: '#64748B' }} interval="preserveStartEnd" label={{ value: 'Time (UTC)', position: 'insideBottomRight', offset: -2, fontSize: 10, fill: '#64748B' }} height={40} />
                 {shown.map((c) => (
                   <YAxis
                     key={c.axis}

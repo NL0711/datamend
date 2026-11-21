@@ -6,6 +6,9 @@
 // fired, and lists a reading only when the stream's checks really flagged it.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getNarrator, getQueue, getReviewSummary } from '../validation/api';
+import { errorText, fetchAnomalyStats, isNotBuilt } from '../services/api';
+import { streamStatsLine } from '../services/geo';
+import type { AnomalyStats } from '../types';
 import { ALL_CHECKS, PAGE_SIZE, queueQuery } from '../validation/lib';
 import { EvidencePane } from '../validation/EvidencePane';
 import type { NarratorStatus, QueuePage, QueueRow, ReviewSummary } from '../validation/types';
@@ -38,6 +41,8 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
   const [narrator, setNarrator] = useState<NarratorStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sel, setSel] = useState<{ run: number; id: number } | null>(null);
+  const [streamStats, setStreamStats] = useState<AnomalyStats | null>(null);
+  const [streamStatsError, setStreamStatsError] = useState<string | null>(null);
 
   const station = fleetWide ? '' : stationId ?? '';
 
@@ -49,6 +54,9 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
 
   useEffect(() => { setData(null); load(); }, [load]);
   useEffect(() => { setPage(1); setSel(null); }, [station, status, verdict, check]);
+  useEffect(() => {
+    fetchAnomalyStats(24).then((s) => { setStreamStats(s); setStreamStatsError(null); }).catch((e) => { setStreamStats(null); setStreamStatsError(isNotBuilt(e) ? 'not available on this server' : errorText(e)); });
+  }, []);
   useEffect(() => { getNarrator().then(setNarrator).catch(() => setNarrator(null)); }, []);
 
   const rows = data?.rows ?? [];
@@ -68,10 +76,16 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
 
   return (
     <div className="space-y-6">
-      {/* 4 summary metric cards: counts of the stored flagged rows, all stations */}
+      {/* Stream detections of the last 24 hours (GET /api/anomalies/stats; network-wide, the API has no station filter) */}
+      <div className="bg-[#FFFFFF] border border-[#D3DCE7] rounded-xl px-4 py-3 shadow-lg text-xs font-mono text-slate-700" data-testid="stream-stats">
+        <b className="uppercase tracking-wider text-slate-900">Stream detections, last 24 h, all stations</b>: {streamStatsLine(streamStats, streamStatsError)}
+      </div>
+
+      {/* 4 summary metric cards: counts of the stored flagged rainfall rows (uploaded files), all stations */}
+      <p className="text-[11px] font-mono text-slate-500 -mb-3">The four cards below count the rainfall review queue (rows of imported files), not stream detections.</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          label="Flagged Rows"
+          label="Flagged Rows (rainfall review queue)"
           value={summary?.flagged_rows ?? '…'}
           unit="rows"
           delta={{ value: 'All runs', isNeutral: true }}
@@ -79,7 +93,7 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
           footerRight={<span className="text-slate-600 font-semibold">Rule checks</span>}
         />
         <MetricCard
-          label="Awaiting Review"
+          label="Awaiting Review (rainfall)"
           value={summary?.unreviewed_rows ?? '…'}
           unit="rows"
           delta={{ value: 'Open alerts', isPositive: false }}
@@ -87,7 +101,7 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
           footerRight={<span className="text-amber-600 font-semibold">Needs a reviewer</span>}
         />
         <MetricCard
-          label="Confirmed Faults"
+          label="Confirmed Faults (rainfall)"
           value={summary?.by_decision.confirmed_fault ?? '…'}
           unit="rows"
           delta={{ value: 'Reviewer decision', isNeutral: true }}
@@ -95,7 +109,7 @@ export function AlertCenterView({ onNavigateToEvent, onLocateOnGlobe }: AlertCen
           footerRight={<span className="text-rose-600 font-semibold">Confirmed</span>}
         />
         <MetricCard
-          label="Genuine Extremes Kept"
+          label="Genuine Extremes Kept (rainfall)"
           value={summary?.by_decision.genuine_extreme ?? '…'}
           unit="rows"
           delta={{ value: 'Reviewer decision', isNeutral: true }}

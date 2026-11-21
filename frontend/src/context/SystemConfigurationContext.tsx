@@ -152,6 +152,14 @@ export const SystemConfigurationProvider: React.FC<{ children: React.ReactNode }
     lastSourceId.current = id;
   }, [streamStatus, refreshSources]);
 
+  // keep the data-sources status (packet count, the header's one source of truth) fresh while a stream runs
+  const streamRunning = streamStatus !== null && streamStatus.state !== 'stopped';
+  useEffect(() => {
+    if (!streamRunning) return;
+    const t = setInterval(() => { void refreshSources(); }, 5000);
+    return () => clearInterval(t);
+  }, [streamRunning, refreshSources]);
+
   // Switch Data Source
   const changeSource = async (sourceType: DataSourceType) => {
     if (sourceType === activeSource) return;

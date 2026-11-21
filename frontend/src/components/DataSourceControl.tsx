@@ -173,8 +173,8 @@ export const DataSourceControl: React.FC = () => {
 
       {/* Simulator controls */}
       <div className="p-3 bg-[#F4F6FA] border border-[#D3DCE7]/60 rounded-lg space-y-2">
-        <div className="text-[10px] text-slate-500 uppercase font-mono font-bold tracking-wider">Simulator (starting it makes it the running source)</div>
-        <SimulatorControls onChanged={() => { void loadSources(); void refreshSources(); }} />
+        <div className="text-[10px] text-slate-500 uppercase font-mono font-bold tracking-wider">Simulator (started by the server; choose the source above)</div>
+        <SimulatorControls />
       </div>
 
       {/* Active source details */}

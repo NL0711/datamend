@@ -11,17 +11,19 @@ import { StatusBadge } from '../design-system/components/StatusBadge';
 import { useStation } from '../validation/StationContext';
 import { describeStream, fmtUtc } from '../services/stream';
 import { sourceLabel } from './sourceLabel';
+import { fmtLatLon, packetCount } from '../services/geo';
 
 interface ContextualStatusStripProps {
   className?: string;
 }
 
 export const ContextualStatusStrip: React.FC<ContextualStatusStripProps> = ({ className = '' }) => {
-  const { activeSource, selectedCity, streamConnected, streamStatus, openSettings } = useSystemConfiguration();
+  const { activeSource, activeSourceStatus, selectedCity, streamConnected, streamStatus, openSettings } = useSystemConfiguration();
   const { stationId, entry, gauges, streamStations } = useStation();
   const gauge = gauges.find((g) => g.station_id === stationId);
   const pos = gauge ?? streamStations.find((s) => s.station_id === stationId);
   const view = describeStream(streamConnected, streamStatus);
+  const packets = packetCount(activeSourceStatus);   // the data-sources status, the same number the settings drawer shows
 
   return (
     <div
@@ -45,7 +47,7 @@ export const ContextualStatusStrip: React.FC<ContextualStatusStripProps> = ({ cl
               {entry && <span className="text-slate-500 hidden md:inline">({entry.place}{entry.source === 'stream' ? '' : `, ${entry.city}`})</span>}
               {pos && pos.latitude != null && pos.longitude != null && (
                 <span className="text-[11px] text-slate-500 hidden lg:flex items-center gap-1">
-                  {pos.latitude.toFixed(2)}°N, {pos.longitude.toFixed(2)}°E
+                  {fmtLatLon(pos.latitude, pos.longitude)}
                 </span>
               )}
             </>
@@ -65,8 +67,8 @@ export const ContextualStatusStrip: React.FC<ContextualStatusStripProps> = ({ cl
             pulse={view.live}
           />
         </span>
-        {streamStatus && streamStatus.state !== 'stopped' && (
-          <span className="hidden sm:inline text-[11px] text-slate-500">{streamStatus.packet_count} packets</span>
+        {streamStatus && streamStatus.state !== 'stopped' && packets !== null && (
+          <span className="hidden sm:inline text-[11px] text-slate-500">{packets} packets</span>
         )}
         {streamStatus?.last_reading_at && (
           <span className="hidden md:inline text-[11px] text-slate-500">last reading {fmtUtc(streamStatus.last_reading_at)} UTC</span>
