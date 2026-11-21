@@ -29,9 +29,7 @@ router = APIRouter(prefix="/api/agent", tags=["agent"])
 class TaskRequest(BaseModel):
     station_id: str = Field(min_length=1, max_length=64)
     request: str = Field(min_length=1, max_length=1000)
-    # run: the newest uploaded-file run, falling back to the live feed when the station has none (default); file: the uploaded-file run only, no fallback;
-    # live: the current live feed of the station
-    scope: Literal["run", "file", "live"] = "run"
+    scope: Literal["run", "live"] = "run"       # run: the newest stored run of the station (default); live: the current live feed of the station
     window: Optional[int] = Field(None, ge=1, le=288)       # live only: how many of the newest readings to read (default 60)
 
 
@@ -54,7 +52,7 @@ async def create_task(body: TaskRequest, request: Request, session: AsyncSession
     if body.scope == "live":
         view = await service.run_live_task(request.app, body.station_id.strip(), body.request.strip(), window=body.window or 60)
         return {**view, "proposals": []}
-    view = await service.run_task(request.app, body.station_id.strip(), body.request.strip(), allow_live_fallback=body.scope != "file")
+    view = await service.run_task(request.app, body.station_id.strip(), body.request.strip())
     props = (await session.execute(select(AgentProposal).where(AgentProposal.task_id == view["task_id"]).order_by(AgentProposal.id))).scalars()
     return {**view, "proposals": [_proposal(p) for p in props]}
 

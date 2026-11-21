@@ -120,7 +120,8 @@ async def test_a_signed_token_needs_no_database_and_cannot_be_forged_or_outlive_
 @pytest.mark.asyncio
 async def test_an_expired_stored_legacy_session_is_refused(async_client: AsyncClient):
     from backend.app.db.database import async_session_factory
-    legacy = "legacy-stored-session-token"
+    import secrets
+    legacy = "legacy-stored-" + secrets.token_hex(8)         # random: the test database persists between runs
     async with async_session_factory() as s:
         s.add(auth_api.AdminSession(token_hash=auth_api._digest(legacy), expires_at=1.0))      # long expired
         await s.commit()

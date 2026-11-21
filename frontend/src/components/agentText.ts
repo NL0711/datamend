@@ -19,7 +19,7 @@ export function agentErrorText(err: unknown): string {
 export function statusWords(status: string): string {
   switch (status) {
     case 'completed':
-      return 'Done. The answer is generated text from the evidence the agent read.';
+      return 'Done: the action was recorded as a proposal for a human.';
     case 'agent_not_connected':
       return 'Agent not connected. The rule-based explanation below is shown instead.';
     case 'abstained':
