@@ -28,8 +28,13 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-SESSION_TTL_S = 12 * 3600
+def session_ttl_s() -> int:
+    return max(600, int(settings.SESSION_TTL_HOURS * 3600))
+
+
 SESSION_COOKIE = "datamend_session"
+_SIGNED_PREFIX = "v1."
+_revoked: Dict[str, float] = {}                  # digests of signed tokens that were signed out, until they would have expired (this process only)
 MAX_FAILURES, WINDOW_S = 8, 300.0
 TOKEN_MAX_FAILURES = 10
 _MAX_CLIENTS = 5000
@@ -74,6 +79,37 @@ def _digest(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
+def _signing_key() -> bytes:
+    """SESSION_SECRET when set; otherwise derived from the admin credentials, so changing the admin password signs every session out."""
+    if settings.SESSION_SECRET:
+        return settings.SESSION_SECRET.encode()
+    return hashlib.sha256(f"datamend-session-v1|{settings.ADMIN_EMAIL}|{settings.ADMIN_PASSWORD}|{settings.ADMIN_TOKEN}".encode()).digest()
+
+
+def _mac(body: str) -> str:
+    return hmac.new(_signing_key(), body.encode(), hashlib.sha256).hexdigest()
+
+
+def new_signed_token(expires_at: float) -> str:
+    """A self-contained session token: ``v1.<expiry>.<random>.<hmac>``. It needs no database row, so a restart, redeploy or sleep on a host with an
+    ephemeral disk does not sign the admin out; it only stops working at its expiry, when the secret changes, or when it is signed out here."""
+    body = f"{_SIGNED_PREFIX}{int(expires_at)}.{secrets.token_urlsafe(9)}"
+    return f"{body}.{_mac(body)}"
+
+
+def signed_token_valid(token: Optional[str]) -> bool:
+    if not token or not token.startswith(_SIGNED_PREFIX) or token.count(".") != 3 or not login_enabled():
+        return False
+    body, _, mac = token.rpartition(".")
+    if not _same(mac, _mac(body)):
+        return False
+    try:
+        exp = int(body.split(".")[1])
+    except (ValueError, IndexError):
+        return False
+    return exp > time.time() and _digest(token) not in _revoked
+
+
 async def _store_session(token: str, expires_at: float) -> None:
     try:
         async with async_session_factory() as s:
@@ -86,6 +122,14 @@ async def _store_session(token: str, expires_at: float) -> None:
 
 async def _forget_session(token: str) -> None:
     _sessions.pop(token, None)
+    if token.startswith(_SIGNED_PREFIX):                 # a signed token cannot be deleted; remember it as signed out (until a restart of this process)
+        now = time.time()
+        for k in [k for k, exp in _revoked.items() if exp <= now]:
+            _revoked.pop(k, None)
+        try:
+            _revoked[_digest(token)] = float(int(token.split(".")[1]))
+        except (ValueError, IndexError):
+            pass
     try:
         async with async_session_factory() as s:
             await s.execute(delete(AdminSession).where(AdminSession.token_hash == _digest(token)))
@@ -98,6 +142,8 @@ def session_valid(token: Optional[str]) -> bool:
     """Memory-only check (the cache). Use ``session_valid_async`` where the database may know a session this process does not."""
     if not token:
         return False
+    if signed_token_valid(token):
+        return True
     now = time.time()
     for t in [t for t, exp in _sessions.items() if exp <= now]:
         _sessions.pop(t, None)
@@ -188,13 +234,11 @@ async def login(body: Credentials, request: Request, response: Response) -> Dict
     if not (ok_email and ok_pw):
         record_failure(_failures, client)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "the email or password is wrong")
-    token = secrets.token_urlsafe(32)
-    expires = time.time() + SESSION_TTL_S
-    _sessions[token] = expires
-    await _store_session(token, expires)
+    ttl = session_ttl_s()
+    token = new_signed_token(time.time() + ttl)             # signed, so it survives a restart with no database (the ephemeral disk of a free host)
     # the same token as an HttpOnly cookie, read ONLY by the telemetry WebSocket (a browser cannot set X-Admin-Token on one); HTTP routes ignore it
-    response.set_cookie(SESSION_COOKIE, token, max_age=SESSION_TTL_S, httponly=True, samesite="lax", secure=request.url.scheme == "https", path="/")
-    return {"token": token, "email": settings.ADMIN_EMAIL, "expires_in": SESSION_TTL_S}
+    response.set_cookie(SESSION_COOKIE, token, max_age=ttl, httponly=True, samesite="lax", secure=request.url.scheme == "https", path="/")
+    return {"token": token, "email": settings.ADMIN_EMAIL, "expires_in": ttl}
 
 
 @router.get("/me")

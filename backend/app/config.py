@@ -132,6 +132,10 @@ class Settings(BaseSettings):
     # the password is still the default). An empty ADMIN_PASSWORD switches the sign-in off.
     ADMIN_EMAIL: str = "admin@admin.com"
     ADMIN_PASSWORD: str = "admin"
+    # Sign-in sessions are signed tokens (no database needed, so a restart or redeploy keeps you signed in). SESSION_SECRET signs them; empty = derived from the
+    # admin credentials (changing the admin password then signs everyone out). SESSION_TTL_HOURS is how long a sign-in lasts (default 7 days).
+    SESSION_SECRET: str = ""
+    SESSION_TTL_HOURS: float = 168.0
     # When true (the default) every /api route except the sign-in itself needs a signed-in session: nobody reads any data without signing in.
     REQUIRE_LOGIN: bool = True
 

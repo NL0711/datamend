@@ -75,9 +75,13 @@ async def test_me_accepts_the_script_token_like_every_other_route(async_client: 
 
 @pytest.mark.asyncio
 async def test_sessions_expire_and_an_empty_password_switches_login_off(async_client: AsyncClient, monkeypatch):
+    import time
     tok = (await login(async_client)).json()["token"]
-    auth_api._sessions[tok] = 0.0
-    assert auth_api.session_valid(tok) is False
+    assert auth_api.session_valid(tok) is True and tok.startswith("v1.")
+    assert auth_api.session_valid(auth_api.new_signed_token(time.time() - 5)) is False        # a signed token past its expiry
+    legacy = "legacy-token-for-the-test"
+    auth_api._sessions[legacy] = 0.0                                                         # a stored-style session past its expiry
+    assert auth_api.session_valid(legacy) is False
     monkeypatch.setattr(settings, "ADMIN_PASSWORD", "")
     assert (await login(async_client)).status_code == 403
 
@@ -95,14 +99,30 @@ async def test_a_session_survives_a_restart_and_logout_ends_it(async_client: Asy
 
 
 @pytest.mark.asyncio
-async def test_only_the_token_hash_is_stored_and_an_expired_stored_session_is_refused(async_client: AsyncClient):
+async def test_a_signed_token_needs_no_database_and_cannot_be_forged_or_outlive_a_password_change(async_client: AsyncClient, monkeypatch):
     from sqlalchemy import select
     from backend.app.db.database import async_session_factory
     tok = (await login(async_client)).json()["token"]
+    async with async_session_factory() as s:        # nothing about a signed session is stored
+        assert (await s.execute(select(auth_api.AdminSession).where(auth_api.AdminSession.token_hash == auth_api._digest(tok)))).first() is None
+    head, _, mac = tok.rpartition(".")
+    assert auth_api.signed_token_valid(tok) is True
+    assert auth_api.signed_token_valid(head + "." + ("0" * len(mac))) is False                # wrong signature
+    parts = tok.split(".")
+    assert auth_api.signed_token_valid(".".join([parts[0], str(int(parts[1]) + 10_000), parts[2], parts[3]])) is False     # a longer expiry does not verify
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "another-password")                        # the signing key is derived from the credentials
+    assert auth_api.signed_token_valid(tok) is False
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", PW)
+    monkeypatch.setattr(settings, "SESSION_SECRET", "a-different-secret")
+    assert auth_api.signed_token_valid(tok) is False
+
+
+@pytest.mark.asyncio
+async def test_an_expired_stored_legacy_session_is_refused(async_client: AsyncClient):
+    from backend.app.db.database import async_session_factory
+    legacy = "legacy-stored-session-token"
     async with async_session_factory() as s:
-        row = (await s.execute(select(auth_api.AdminSession).where(auth_api.AdminSession.token_hash == auth_api._digest(tok)))).scalar_one()
-        assert tok not in row.token_hash and len(row.token_hash) == 64
-        row.expires_at = 1.0                         # long expired
+        s.add(auth_api.AdminSession(token_hash=auth_api._digest(legacy), expires_at=1.0))      # long expired
         await s.commit()
     auth_api._sessions.clear()
-    assert (await async_client.get("/api/auth/me", headers={"X-Admin-Token": tok})).json()["signed_in"] is False
+    assert (await async_client.get("/api/auth/me", headers={"X-Admin-Token": legacy})).json()["signed_in"] is False

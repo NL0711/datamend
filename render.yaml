@@ -34,6 +34,8 @@ services:
         value: "true"
       - key: ADMIN_TOKEN
         sync: false           # optional: a long random string for scripts (X-Admin-Token); the dashboard itself uses the sign-in above
+      - key: SESSION_SECRET
+        sync: false           # optional: signs the sign-in tokens, which survive restarts and redeploys (7 days by default, SESSION_TTL_HOURS). Empty = derived from ADMIN_PASSWORD
       - key: KAGGLE_USERNAME
         sync: false           # optional: lets the server start Kaggle retraining notebooks on your account
       - key: KAGGLE_KEY
