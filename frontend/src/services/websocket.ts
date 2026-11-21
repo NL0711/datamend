@@ -7,6 +7,7 @@
  * growing delay (2.5 s up to 60 s). Nothing is simulated in place of a missing stream.
  */
 
+import { storedToken } from '../validation/api';
 import { backoffDelay, parseFrame } from './stream';
 import type { StreamObservation, StreamStatusData } from './stream';
 
@@ -39,7 +40,8 @@ export class TelemetryStreamClient {
       // then connect straight to the backend's own address with it.
       if (this.ticketPending) return;
       this.ticketPending = true;
-      fetch('/api/stream/ticket', { method: 'POST', credentials: 'include' })
+      const token = storedToken();     // the sign-in travels as X-Admin-Token on every HTTP route (the session cookie is read only by the WebSocket route)
+      fetch('/api/stream/ticket', { method: 'POST', credentials: 'include', headers: token ? { 'X-Admin-Token': token } : {} })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`ticket ${r.status}`))))
         .then((t: { ticket: string }) => this.open(`${direct}?ticket=${encodeURIComponent(t.ticket)}`))
         .catch(() => { this.callbacks.onClose?.(1006); this.scheduleReconnect(); })
